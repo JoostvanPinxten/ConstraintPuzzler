@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="cellIcon">cell.png</file>
+        <file alias="constraintIcon">constraint.png</file>
+        <file alias="gridIcon">grid.png</file>
+    </qresource>
+</RCC>
