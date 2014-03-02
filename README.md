@@ -1,7 +1,9 @@
-ConstraintPuzzler
-=================
+ConstraintPuzzler - the power of deduction
+==========================================
 
 Many number puzzles have many similar properties which allow automatic (analytical or brute-force) solving. ConstraintPuzzler takes advantage of these similarities by allowing the user to describe the structure of the puzzle. As you can express most puzzles in terms of (combinations of) constraints on this structure, it leverages this information to automatically provide a solver that simply interprets the constraints + structure and analytically solves most cases.
+
+In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles.
 
 Usage instructions
 =================
@@ -16,6 +18,13 @@ In the root folder of the project, the *Main.py files are the entry files. These
 
 Development
 ==================
+Due to the nature of the ConstraintPuzzler, there are several ways to do some development:
+- Creating new puzzles based on pre-defined constraints and cell visualizations;
+- Introduce a new kind of Constraint, by implmeneting the contract defined by the Constraint class;
+- Create your own fancy shapes for visualizing a puzzle, including animation;
+- Improving the main algorithm that distributes the logic to the proper places.
+
+I would be happy to see new kinds of puzzles being tackled, be it with existing constraints or with new ones.
 
 How to report issues
 ==================
