@@ -8,14 +8,16 @@ from constraints import Constraint
 class TotalSumValueConstraint(Constraint):
     def __init__(self, group, initialValues):
         super(TotalSumValueConstraint, self).__init__(group, initialValues)
-        
+        self.totalValue = None
     
     def notify(self, cell):
         pass
     
     def applyConstraint(self):
         # look at what cells 
-        
+        if(self.totalValue == None):
+            raise Exception("Total value of sum constraint has not been initialized!")
+            
         openCells = list(self.group.getCells())
         filledCells = []
         valuesUsed = []
@@ -66,6 +68,18 @@ class TotalSumValueConstraint(Constraint):
         return "Total Sum Value Constraint"
     
     def setTotalValue(self, value):
+        from constraints import UniqueValueConstraint
+        values = list(self.initialValues) # copy the initial values
+        values.sort()
+        
+        # simple check to see if the total sum constraint is definitely infeasible
+        hasUniqueValueConstraint = sum([isinstance(constraint, UniqueValueConstraint) for constraint in self.group.constraints]) != 0
+        if(hasUniqueValueConstraint): #if there is also a unique value constraint:
+            minimum = sum(values[:len(self.group.cells)]) # take the sum of the N smallest elements as the minimum number
+        else:
+            minimum = values[0] * len(self.group.cells)
+        if(value < minimum):
+            raise Exception("Infeasible sum value " + str(value) + ",  minimum is " + str(minimum))
         self.totalValue = value
     
     def getTotalValue(self):
