@@ -14,7 +14,6 @@ def centerTextItem(text):
     cursor.select(QtGui.QTextCursor.Document)
     cursor.mergeBlockFormat(form)
     cursor.clearSelection()
-        
    
 class ValueHexagon(QtGui.QGraphicsPolygonItem):
     
@@ -40,7 +39,7 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         self.hintValueItemMap = {}
         
         pen = QtGui.QPen()
-        pen.setColor(QtCore.Qt.red)
+        pen.setColor(QtCore.Qt.black)
         pen.setWidth(2)
         self.setPen(pen)
         
@@ -48,7 +47,6 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
                  
         self.instantiateRepresentation()
         self.updateRepresentation()
-        pass
     
     def mousePressEvent(self, event):
         #self.cell.clicked.emit(self.cell)
@@ -58,15 +56,15 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         
     def instantiateRepresentation(self):
         # for each value, instantiate the hints, hidden by default
-#         for val in self.values:
-#             # this is the static calculation for a block of 3z3
-#             off_x = ((val-1) % 3) * (self.hexSide/3)
-#             off_y = floor((val-1) / 3) * (self.hexSide/3)
-#             t = QtGui.QGraphicsTextItem(str(val))
-#             t.setParentItem(self)
-#             t.setPos(self.position.x()+ off_x, self.position.y() + off_y)
-#             t.setOpacity(0)
-#             self.hintValueItemMap[val] = t
+        for val in self.values:
+            # this is the static calculation for a block of 3z3
+            off_x = (((val-1) % 3) + 0.7) * (self.cellSize/4)
+            off_y = (floor((val-1) / 3) + 0.25) * (self.cellSize/4)
+            t = QtGui.QGraphicsTextItem(str(val))
+            t.setParentItem(self)
+            t.setPos(self.position.x()+ off_x, self.position.y() + off_y)
+            t.setOpacity(0)
+            self.hintValueItemMap[val] = t
 
         # add a big text item to show the set value, hidden by default
         self.valueTextItem = QtGui.QGraphicsTextItem(str(self.cell.getValue()))
@@ -83,7 +81,6 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         # align to center of cell
         centerTextItem(self.valueTextItem)
         self.valueTextItem.setOpacity(0)
-
     
     def updateRepresentation(self):
         if(self.cell.getValue() <> None):
@@ -114,10 +111,10 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
                 if(numValProcessed >= 9):
                     break
                 numValProcessed += 1
-#                 if self.hintsEnabled and val in vals:
-#                     self.hintValueItemMap[val].setOpacity(1)
-#                 else:
-#                     self.hintValueItemMap[val].setOpacity(0)
+                if self.hintsEnabled and val in vals:
+                    self.hintValueItemMap[val].setOpacity(1)
+                else:
+                    self.hintValueItemMap[val].setOpacity(0)
         pass
     
     def setHintsEnabled(self, hintsEnabled):
@@ -127,6 +124,3 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
     def hideHints(self):
         for val in self.values:
             self.hintValueItemMap[val].setOpacity(0)
-#    def update(self):
-#        pass
-#    def 
