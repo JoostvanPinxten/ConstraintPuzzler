@@ -26,36 +26,6 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 
 from utility.puzzlefactory import PuzzleFactory
-def loadSudoku(filename):
-    start = time()
-
-    puzzle = PuzzleFactory.createEmptySudoku()
-    # Set the initial data to work with
-    myFile = open(filename)
-
-    values = range(1,10)
-    stringArray = myFile.readlines()
-    y = 0
-    for line in  stringArray:
-        x = 0
-        for el in line.split(' '):
-            try:
-                if(int(el) in values):
-                    puzzle.grid.setConstraintGridValue(x,y,int(el))
-            except ValueError:
-                pass
-            x += 1
-        y += 1
-
-    # And solve
-
-    solver = Solver(puzzle)
-
-    #print solver
-    #grid.printAsSudoku()
-    #print "Done in", int((time() - start) *1000), "ms"
-    return puzzle, solver
-
 
 class MainWindow(BasicMainWindow):
    
@@ -67,9 +37,8 @@ class MainWindow(BasicMainWindow):
     def openSudoku(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,
     "Open Sudoku", "", "Sudoku Files (*.txt *.sud)")
-        print fileName
-        if fileName != None:
-            loadSudoku(fileName[0])
+        if fileName[0]:
+            self.loadPuzzle(fileName[0])
     
     def initializePuzzleRepresentation(self):
         self.scene = QtGui.QGraphicsScene(self)
@@ -85,7 +54,7 @@ class MainWindow(BasicMainWindow):
         for x in range(0,9):
             for y in range(0,9):
 
-                c = puzzle.grid.getCellFromSquareGrid(x,y)
+                c = self.puzzle.grid.getCellFromSquareGrid(x,y)
                 c.valueChanged.connect(self.cellValueChanged)
                 c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
                 
@@ -111,10 +80,41 @@ class MainWindow(BasicMainWindow):
                                    9*self.cellSize + 4*self.blockPadding, 
                                    self.blockPadding)
             r.setBrush(QtGui.QColor(0,0,0))
-            
+                
+    @staticmethod
+    def parsePuzzle(filename):
+        start = time()
+
+        puzzle = PuzzleFactory.createEmptySudoku()
+        # Set the initial data to work with
+        myFile = open(filename)
+
+        values = range(1,10)
+        stringArray = myFile.readlines()
+        y = 0
+        for line in  stringArray:
+            x = 0
+            for el in line.split(' '):
+                try:
+                    if(int(el) in values):
+                        puzzle.grid.setConstraintGridValue(x,y,int(el))
+                except ValueError:
+                    pass
+                x += 1
+            y += 1
+
+        # And solve
+
+        solver = Solver(puzzle)
+
+        #print solver
+        #grid.printAsSudoku()
+        #print "Done in", int((time() - start) *1000), "ms"
+        return puzzle, solver
+        
 if __name__ == '__main__':
-    puzzle, solver = loadSudoku("./easySudoku.txt")
     app = QtGui.QApplication(sys.argv)
-    mainWin = MainWindow(puzzle,solver)
+    mainWin = MainWindow()
+    #mainWin.loadPuzzle("./easySudoku.txt")
     mainWin.show()
     sys.exit(app.exec_())

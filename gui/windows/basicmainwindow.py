@@ -24,13 +24,11 @@ class BasicMainWindow(QtGui.QMainWindow):
     showNextSelectionState =  QtCore.Signal()
     puzzlePieceProxies = {}
 
-    def __init__(self, puzzle, solver):
+    def __init__(self):
         super(BasicMainWindow, self).__init__()
         self.ui=mainWindowUi.Ui_MainWindow()
         self.ui.setupUi(self)
-        
-        self.puzzle = puzzle
-        self.solver = solver
+
         self.setWindowTitle("ConstraintPuzzler beta v0.1")
         
 #        self.recentFileActs = []
@@ -40,12 +38,7 @@ class BasicMainWindow(QtGui.QMainWindow):
 #        self.view = QtGui.QGraphicsView(self)
 #        self.setCentralWidget(self.view)
 #       
-        self.constraintModel = ConstraintPuzzleModel()
-        self.ui.puzzleTreeView.setModel(self.constraintModel)
-        
-        # set the root as the parent for the puzzle
-        puzzle.setParentItem(self.constraintModel.getItem(QtCore.QModelIndex()))  
-        
+                
         self.selectionState = QtCore.QState()
         self.currentSelectionState = QtCore.QState(self.selectionState)
         self.previousSelectionState = QtCore.QState(self.selectionState)
@@ -54,12 +47,7 @@ class BasicMainWindow(QtGui.QMainWindow):
         self.selectionStatemachine.addState(self.selectionState)
         self.selectionStatemachine.setInitialState(self.selectionState)
         self.selectionState.setInitialState(self.currentSelectionState)
-        
-        self.initializePuzzleRepresentation()
-        self.ui.puzzleGraphicsView.setScene(self.scene)
-        
-        m = self.ui.puzzleTreeView.selectionModel()
-        m.selectionChanged.connect(self.showSelectionInPuzzleView)
+                
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
 
         self.selectionStatemachine.addTransition(self.showNextSelectionState, self.currentSelectionState)
@@ -74,6 +62,25 @@ class BasicMainWindow(QtGui.QMainWindow):
 #
 #        self.setWindowTitle("Constraints solver")
 #        self.resize(800, 600)
+
+    def loadPuzzle(self, filename):
+        self.puzzle, self.solver = self.parsePuzzle(filename)
+        
+        # create a new PuzzleModel
+        self.constraintModel = ConstraintPuzzleModel()
+        self.ui.puzzleTreeView.setModel(self.constraintModel)
+
+        m = self.ui.puzzleTreeView.selectionModel()
+        m.selectionChanged.connect(self.showSelectionInPuzzleView)
+
+        
+        # set the root as the parent for the puzzle
+        self.puzzle.setParentItem(self.constraintModel.getItem(QtCore.QModelIndex()))
+        self.initializePuzzleRepresentation()
+        self.ui.puzzleGraphicsView.setScene(self.scene)
+    
+    def parsePuzzle(self, filename):
+        raise NotImplementedError("This should be implemented to enable loading of puzzles through the main menu")
 
     def createActions(self):
         pass
@@ -170,7 +177,8 @@ class BasicMainWindow(QtGui.QMainWindow):
             self.showNextSelectionState.emit()
             
     def solveButtonClicked(self):
-        self.solver.solve()
+        if(self.solver != None):
+            self.solver.solve()
 
     def undo(self):
         pass

@@ -26,50 +26,8 @@ from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 
-start = time()
 
 from utility.puzzlefactory import PuzzleFactory
-
-#puzzle = PuzzleFactory.createExampleKakuro()
-
-# Set the initial data to work with
-myFile = open("./mediumKakuro.txt")
-
-
-values = range(1,10)
-stringArray = myFile.readlines()
-y = 0
-for line in  stringArray:
-    if(line.startswith("range")):
-        min, max = [int(x) for x in line[line.find("=")+1:].split(",")]
-        puzzle = Puzzle("Test-kakuro", range(min, max+1))
-        
-    if(line.startswith("cell")):
-        x,y = [int(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
-        puzzle.getGrid().addCell(QtCore.QPoint(x,y))
-        
-    if(line.startswith("total")):
-        value = int(line.split("=")[-1])
-        cells = [cell[1:-1].split(",") for cell in line[line.find("(")+1:line.rfind(")")].split(";")]
-        
-        cg = puzzle.addConstraintGroup("Line")
-        for cell in cells:
-            try:
-                c = puzzle.getGrid().searchCellWithPosition(QtCore.QPoint(int(cell[0]), int(cell[1])))
-            except ValueError:
-                print line
-            cg.addCell(c)
-        
-        uvc = cg.addConstraint(UniqueValueConstraint)
-        tsvc = cg.addConstraint(TotalSumValueConstraint)
-        
-        tsvc.setTotalValue(value)
-        
-solver = Solver(puzzle)
-
-#print solver
-#grid.printAsSudoku()
-print "Done in", int((time() - start) *1000), "ms"
 
 class MainWindow(BasicMainWindow):
 
@@ -83,7 +41,6 @@ class MainWindow(BasicMainWindow):
         #self.blockPadding = 3        
         
         self.selectedItems = set()
-        
         
         for c in self.puzzle.getGrid().getCells():
             if( c.getPosition ):
@@ -122,11 +79,52 @@ class MainWindow(BasicMainWindow):
                     triangle = ValueTriangle(constraint, self.cellSize, pos, alignment)
                     self.puzzlePieces[constraint] = triangle
                     self.scene.addItem(triangle)
+    @staticmethod
+    def parsePuzzle(filename):
+            
+        start = time()
+        #puzzle = PuzzleFactory.createExampleKakuro()
 
+        # Set the initial data to work with
+        myFile = open(filename)
+
+        values = range(1,10)
+        stringArray = myFile.readlines()
+        y = 0
+        for line in  stringArray:
+            if(line.startswith("range")):
+                min, max = [int(x) for x in line[line.find("=")+1:].split(",")]
+                puzzle = Puzzle("Test-kakuro", range(min, max+1))
+                
+            if(line.startswith("cell")):
+                x,y = [int(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
+                puzzle.getGrid().addCell(QtCore.QPoint(x,y))
+                
+            if(line.startswith("total")):
+                value = int(line.split("=")[-1])
+                cells = [cell[1:-1].split(",") for cell in line[line.find("(")+1:line.rfind(")")].split(";")]
+                
+                cg = puzzle.addConstraintGroup("Line")
+                for cell in cells:
+                    try:
+                        c = puzzle.getGrid().searchCellWithPosition(QtCore.QPoint(int(cell[0]), int(cell[1])))
+                    except ValueError:
+                        print line
+                    cg.addCell(c)
+                
+                uvc = cg.addConstraint(UniqueValueConstraint)
+                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                
+                tsvc.setTotalValue(value)
+                
+        solver = Solver(puzzle)
+
+        return puzzle, solver
 
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
-    mainWin = MainWindow(puzzle, solver)
+    mainWin = MainWindow()
+    mainWin.loadPuzzle("./mediumKakuro.txt")
     mainWin.show()
     sys.exit(app.exec_())

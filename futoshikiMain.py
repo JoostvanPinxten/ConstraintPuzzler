@@ -26,67 +26,21 @@ from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstra
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 
-start = time()
-
 from utility.puzzlefactory import PuzzleFactory
 
-puzzle = PuzzleFactory.createFutoshikiPuzzle(7)
-# Set the initial data to work with
-myFile = open("./futoshiki.txt")
-
-values = range(1,10)
-stringArray = myFile.readlines()
-y = 0
-addingValues = True
-for line in  stringArray:
-    if line.startswith("relativity"):
-        addingValues = False
-        
-    if addingValues:
-        x = 0
-        for el in line.split(' '):
-            try:
-                if(int(el) in values):
-                    puzzle.grid.setConstraintGridValue(x,y,int(el))
-            except ValueError:
-                pass
-            x += 1
-        y += 1
-    else:
-        cellStrings = line.split(">")
-        if len(cellStrings) == 2:
-            c1, c2 = cellStrings
-            x,y = c1.split(",")
-            x = int(x)
-            y = int(y)
-            cell1 = puzzle.grid.getCellFromSquareGrid(x-1,y-1)
-            
-            x,y = c2.split(",")
-            x = int(x)
-            y = int(y)
-            cell2 = puzzle.grid.getCellFromSquareGrid(x-1,y-1)
-            
-            cg = puzzle.addConstraintGroup("Relativity")
-            constraint = cg.addConstraint(CellGreaterThanCellConstraint)
-            
-            cg.addCell(cell1)
-            cg.addCell(cell2)
-            
-            constraint.setLesserCell(cell1)
-            constraint.setGreaterCell(cell2)
-            
-            
-
-# And solve
-
-solver = Solver(puzzle)
-
-#print solver
-#grid.printAsSudoku()
-print "Done in", int((time() - start) *1000), "ms"
 
 class MainWindow(BasicMainWindow):
+    def createMenus(self):
+        f = self.menuBar().addMenu("File")
+        openFutoshiki = f.addAction("Open Futoshiki")
+        openFutoshiki.triggered.connect(self.openFutoshiki)
     
+    def openFutoshiki(self):
+        fileName = QtGui.QFileDialog.getOpenFileName(self,
+    "Open Futoshiki", "", "Futoshiki Files (*.txt *.fut)")
+        if fileName[0]:
+            self.loadPuzzle(fileName[0])
+            
     def initializePuzzleRepresentation(self):
         self.scene = QtGui.QGraphicsScene(self)
         
@@ -98,8 +52,7 @@ class MainWindow(BasicMainWindow):
         
         self.selectedItems = set()
         
-        
-        for c in puzzle.grid.getCells():
+        for c in self.puzzle.grid.getCells():
             if( isinstance(c, PositionedCell)):
                 rect  = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellSize)
                 self.scene.addItem(rect)
@@ -108,10 +61,68 @@ class MainWindow(BasicMainWindow):
                 self.puzzlePieces[c] = rect
                 proxy = PuzzlePieceProxy(rect)
                 self.puzzlePieceProxies[c] = proxy
+                
+    def parsePuzzle(self, filename):
+        start = time()
 
+        puzzle = PuzzleFactory.createFutoshikiPuzzle(7)
+        # Set the initial data to work with
+        myFile = open("./futoshiki.txt")
+
+        values = range(1,10)
+        stringArray = myFile.readlines()
+        y = 0
+        addingValues = True
+        for line in  stringArray:
+            if line.startswith("relativity"):
+                addingValues = False
+                
+            if addingValues:
+                x = 0
+                for el in line.split(' '):
+                    try:
+                        if(int(el) in values):
+                            puzzle.grid.setConstraintGridValue(x,y,int(el))
+                    except ValueError:
+                        pass
+                    x += 1
+                y += 1
+            else:
+                cellStrings = line.split(">")
+                if len(cellStrings) == 2:
+                    c1, c2 = cellStrings
+                    x,y = c1.split(",")
+                    x = int(x)
+                    y = int(y)
+                    cell1 = puzzle.grid.getCellFromSquareGrid(x-1,y-1)
+                    
+                    x,y = c2.split(",")
+                    x = int(x)
+                    y = int(y)
+                    cell2 = puzzle.grid.getCellFromSquareGrid(x-1,y-1)
+                    
+                    cg = puzzle.addConstraintGroup("Relativity")
+                    constraint = cg.addConstraint(CellGreaterThanCellConstraint)
+                    
+                    cg.addCell(cell1)
+                    cg.addCell(cell2)
+                    
+                    constraint.setLesserCell(cell1)
+                    constraint.setGreaterCell(cell2)
+                   
+        # And solve
+
+        solver = Solver(puzzle)
+
+        #print solver
+        #grid.printAsSudoku()
+        #print "Done in", int((time() - start) *1000), "ms"
+        return puzzle, solver
+    
 if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)
-    mainWin = MainWindow(puzzle, solver)
+    mainWin = MainWindow()
+    mainWin.loadPuzzle("futoshiki.txt")
     mainWin.show()
     sys.exit(app.exec_())
