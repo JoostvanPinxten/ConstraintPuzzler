@@ -6,6 +6,8 @@ Created on 30 dec. 2012
 
 from PySide import QtGui, QtCore
 from math import *
+from structure.cell import Cell
+from constraints import Constraint
 
 def centerTextItem(text):
     form = QtGui.QTextBlockFormat()
@@ -17,10 +19,9 @@ def centerTextItem(text):
    
 class ValueHexagon(QtGui.QGraphicsPolygonItem):
     
-    def __init__(self, cell, cellSize, position, parent=None):
+    def __init__(self, cell, cellSize, position, parent=None, edgeColor=QtCore.Qt.black):
         
         # normalized hexagon
-  
         polygon = QtGui.QPolygonF(
                                   [QtCore.QPointF(
                                       cos(x*pi/3)+1, 
@@ -34,12 +35,17 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         self.cell = cell
         self.position = position
         self.cellSize = cellSize
-        self.values = cell.getGrid().getPuzzle().getValues()
+        if isinstance(cell, Cell):
+            self.values = cell.getGrid().getPuzzle().getValues()
+        else:
+            self.values = []
         self.setCacheMode(QtGui.QGraphicsItem.DeviceCoordinateCache)
         self.hintValueItemMap = {}
         
+        self.edgeColor = edgeColor
+        
         pen = QtGui.QPen()
-        pen.setColor(QtCore.Qt.black)
+        pen.setColor(edgeColor)
         pen.setWidth(2)
         self.setPen(pen)
         
@@ -48,10 +54,7 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         self.instantiateRepresentation()
         self.updateRepresentation()
     
-    def mousePressEvent(self, event):
-        #self.cell.clicked.emit(self.cell)
-        #self.cell.setValue(9)
-        
+    def mousePressEvent(self, event):        
         return QtGui.QGraphicsRectItem.mousePressEvent(self, event)
         
     def instantiateRepresentation(self):
@@ -67,14 +70,16 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
             self.hintValueItemMap[val] = t
 
         # add a big text item to show the set value, hidden by default
-        self.valueTextItem = QtGui.QGraphicsTextItem(str(self.cell.getValue()))
+        val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
+        self.valueTextItem = QtGui.QGraphicsTextItem(str())
         self.valueTextItem.setParentItem(self)
         self.valueTextItem.setPos(self.position.x(), self.position.y() + self.cellSize/6)
         f = QtGui.QFont("Sans serif", self.cellSize/3 ,200)
-        if(self.cell.isInferred()):
-            f.setWeight(0)
-        else:
-            self.valueTextItem.setDefaultTextColor(QtCore.Qt.blue)
+        if isinstance(self.cell, Cell):
+            if(self.cell.isInferred()):
+                f.setWeight(0)
+            else:
+                self.valueTextItem.setDefaultTextColor(QtCore.Qt.blue)
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
         
@@ -83,18 +88,19 @@ class ValueHexagon(QtGui.QGraphicsPolygonItem):
         self.valueTextItem.setOpacity(0)
     
     def updateRepresentation(self):
-        if(self.cell.getValue() <> None):
+        val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
+        if(val <> None):
             # first hide all the hints
             self.hideHints()
             
             # show value text
             self.valueTextItem.setOpacity(1)
-            self.valueTextItem.setPlainText(str(self.cell.getValue()))
+            self.valueTextItem.setPlainText(str(val))
             # re-align to middle of cell
             centerTextItem(self.valueTextItem)
             
             f = self.valueTextItem.font()
-            if(self.cell.isInferred()):
+            if(isinstance(self.cell, Constraint) or self.cell.isInferred()):
                 f.setWeight(0)
                 self.valueTextItem.setDefaultTextColor(QtCore.Qt.black)
             else:
