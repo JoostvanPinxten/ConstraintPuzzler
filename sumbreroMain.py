@@ -19,10 +19,8 @@ from gui.puzzlemodel.puzzletreemodel import *
 
 from gui.ui import mainWindowUi
 from structure.puzzle import Puzzle
-from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from solver.Solver import Solver
 from structure.cell import PositionedCell
-from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
@@ -79,30 +77,29 @@ class MainWindow(BasicMainWindow):
                     # TODO: refactor to utililty class, make much more general
                     # find the position and direction that is most likely:
 
-                    cell1 = cg.getCells()[0]
-                    cell2 = cg.getCells()[1]
-                    
-                    pos1 = cell1.getPosition()
-                    pos2 = cell2.getPosition()
-                    
-                    if(pos1.x() == pos2.x()):
-                        x = pos1.x() 
-                        y = pos1.y() - 1 
-                        alignment = ValueTriangle.BOTTOMLEFT
-                        #
+                    if(cg.name.startswith('Column')):
+                        cell = cg.getCells()[0]
+                        pos = QtCore.QPoint(cell.position.x(), -1)
                     else:
-                        x = pos1.x() - 1
-                        y = pos1.y()
-                        alignment = ValueTriangle.TOPRIGHT  
-                    pos = QtCore.QPoint(x,y)
+                        pos = QtCore.QPoint(-1, cell.position.y())
                     
-                    triangle = ValueTriangle(constraint, self.hexSide, pos, alignment)
-                    self.puzzlePieces[constraint] = triangle
-                    self.scene.addItem(triangle)
+                    if( pos.x() % 2 ):
+                        hexPos = QtCore.QPointF(
+                                                    pos.x() * (hexH + self.hexSide/2) ,
+                                                    pos.y() * 2 * tileR + tileR    
+                                                )
+                    else:
+                        hexPos = QtCore.QPointF(
+                                                    pos.x() * (hexH + self.hexSide/2) ,
+                                                    pos.y() * 2 * tileR
+                                                )
+                    
+                    hex = ValueHexagon(constraint, self.hexSide, hexPos, edgeColor=QtCore.Qt.transparent)
+                    self.puzzlePieces[constraint] = hex
+                    self.scene.addItem(hex)
 
     @staticmethod
     def parsePuzzle(filename):
-        #puzzle = PuzzleFactory.createExampleKakuro()
 
         # Set the initial data to work with
         myFile = open("./simpleSumbrero.txt")
@@ -111,15 +108,33 @@ class MainWindow(BasicMainWindow):
         values = range(1,10)
         stringArray = myFile.readlines()
         y = 0
-        for line in  stringArray:
+        for line in stringArray:
+            line = line.strip() # strip off whitespace
+            
             if(line.startswith("range")):
                 min, max = [int(x) for x in line[line.find("=")+1:].split(",")]
                 puzzle = Puzzle("Test-sumbrero", range(min, max+1))
                 
             if(line.startswith("cell")):
                 x,y = [float(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
-                puzzle.getGrid().addCell(QtCore.QPointF(x,y))
-                                
+                puzzle.getGrid().addCell(QtCore.QPoint(x,y))
+            
+            if(line.startswith("column")):
+                column, value = line.split('=')
+                column = int(column.split('(')[1].split(')')[0])
+                
+                # create a sum constraint
+                cg = puzzle.addConstraintGroup("Column sum " + str(column))
+                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                uvc = cg.addConstraint(UniqueValueConstraint)
+                
+                for cell in puzzle.grid.cells:
+                    if(cell.position.x() == column):
+                        cg.addCell(cell)
+
+                tsvc.setTotalValue(int(value))
+            # TODO: deal with the two different kinds of row sums
+            
         solver = Solver(puzzle)
 
         return puzzle, solver

@@ -1,16 +1,4 @@
-# bereik
 range = 1,9
-
-# cellen
-
-# rij 1
-#cell(4    ,1   )
-#cell(4.75 ,1.43)
-#cell(5.5  ,1.86)
-
-#cell(4.75 ,0.56)
-#cell(5.5 ,1.00)
-#cell(6.25  ,1.43)
 
 cell(0,0)
 cell(0,1)
@@ -31,3 +19,18 @@ cell(3,0)
 cell(3,1)
 cell(3,2)
 cell(3,3)
+
+column(0) = 11
+column(1) = 14
+column(2) = 10
+column(3) = 15
+
+row_descending(0) = 5
+row_descending(1) = 9
+row_descending(2) = 13
+row_descending(3) = 15
+
+row_ascending(0) = 10
+row_ascending(1) = 10
+row_ascending(2) = 10
+row_ascending(3) = 10
