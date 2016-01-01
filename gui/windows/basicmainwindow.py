@@ -68,12 +68,21 @@ class BasicMainWindow(QtGui.QMainWindow):
         self.trans2 = self.previousSelectionState.addTransition(self.showNextSelectionState, self.currentSelectionState)
         
         self.selectionStatemachine.start()        
-#        #self.createActions()
-#        #self.createMenus()
-#        #self.statusBar()
+        self.createActions()
+        self.createMenus()
+        self.createStatusBar()
 #
 #        self.setWindowTitle("Constraints solver")
 #        self.resize(800, 600)
+
+    def createActions(self):
+        pass
+    
+    def createMenus(self):
+        pass
+    
+    def createStatusBar(self):
+        pass
 
     def showSelectionInPuzzleView(self, selectedItems, deselectedItems):
         selectionChanged = False
