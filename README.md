@@ -8,7 +8,9 @@ In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles
 Usage instructions
 =================
 
-ConstraintPuzzler is a Python GUI application.
+ConstraintPuzzler is a Python GUI application. In the root project, there are a few *Main.py files, that start the corresponding GUIs for the puzzles. Among the implemented puzzles are the Sudoku, Kakuro, Futoshiki and Sumbrero are supported.
+
+You can also roll your own puzzle, by using the UniqueConstraint, ExactCoverConstraint, etc.
 
 ## Usage dependencies
 ConstraintPuzzler needs Python 2.7 and uses [Qt via PySide](http://qt-project.org/wiki/Category:LanguageBindings::PySide::Downloads).
