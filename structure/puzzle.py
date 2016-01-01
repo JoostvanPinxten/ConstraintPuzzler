@@ -14,7 +14,6 @@ class Puzzle(Item):
     """ Puzzle is the top-level item which holds the constraint groups and grid """
     def __init__(self, name, values):
         self.values = list(values)
-        self.cells = []
         self.constraintGroups = []
         self.item = PuzzleProxyItem(self)
         
@@ -47,7 +46,7 @@ class Puzzle(Item):
     
     def getNumberOfOpenCells(self):
         nr = 0
-        for c in self.cells:
+        for c in self.grid.cells:
             if(c.hasValue()):
                 nr += 1
         return nr
