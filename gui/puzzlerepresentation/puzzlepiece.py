@@ -4,9 +4,9 @@ Created on 3 jan. 2013
 @author: Juice
 '''
 
-from PySide import QtGui, QtCore
+from PySide6 import QtGui, QtCore, QtWidgets
 
-class PuzzlePiece(QtGui.QGraphicsRectItem):
+class PuzzlePiece(QtWidgets.QGraphicsRectItem):
     
     def __init__(self, parent=None):
         super(PuzzlePiece, self).__init__(parent)

@@ -5,7 +5,7 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
-from PySide import QtGui, QtCore
+from PySide6 import QtGui, QtCore, QtWidgets
 
 from constraints import *
 from structure import *
@@ -32,7 +32,7 @@ from utility.puzzlefactory import PuzzleFactory
 class MainWindow(BasicMainWindow):
 
     def initializePuzzleRepresentation(self):
-        self.scene = QtGui.QGraphicsScene(self)
+        self.scene = QtWidgets.QGraphicsScene(self)
         
 #        self.view.setScene(self.scene)
         self.puzzlePieces = {}
@@ -109,7 +109,7 @@ class MainWindow(BasicMainWindow):
                     try:
                         c = puzzle.getGrid().searchCellWithPosition(QtCore.QPoint(int(cell[0]), int(cell[1])))
                     except ValueError:
-                        print line
+                        print(line)
                     cg.addCell(c)
                 
                 uvc = cg.addConstraint(UniqueValueConstraint)
@@ -122,9 +122,10 @@ class MainWindow(BasicMainWindow):
         return puzzle, solver
 
 if __name__ == '__main__':
+    import sys
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.loadPuzzle("./mediumKakuro.txt")
     mainWin.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

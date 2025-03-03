@@ -1,21 +1,21 @@
-'''
+"""
 Created on 30 dec. 2012
 
 @author: Juice
-'''
+"""
 
-from PySide import QtGui, QtCore
+from PySide6 import QtGui, QtCore, QtWidgets
 from math import *
 
 def centerTextItem(text):
     form = QtGui.QTextBlockFormat()
-    form.setAlignment(QtCore.Qt.AlignCenter)
+    form.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
     cursor = text.textCursor()
-    cursor.select(QtGui.QTextCursor.Document)
+    cursor.select(QtGui.QTextCursor.SelectionType.Document)
     cursor.mergeBlockFormat(form)
     cursor.clearSelection()
 
-class ValueRectangle(QtGui.QGraphicsRectItem):
+class ValueRectangle(QtWidgets.QGraphicsRectItem):
     
     def __init__(self, cell, cellSize, position, parent=None):
         super(ValueRectangle, self).__init__(position.x(), position.y(), cellSize, cellSize, parent)
@@ -23,20 +23,19 @@ class ValueRectangle(QtGui.QGraphicsRectItem):
         self.position = position
         self.cellSize = cellSize
         self.values = cell.getGrid().getPuzzle().getValues()
-        self.setCacheMode(QtGui.QGraphicsItem.DeviceCoordinateCache)
+        self.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.DeviceCoordinateCache)
         self.hintValueItemMap = {}
         
         self.hintsEnabled = True
                  
         self.instantiateRepresentation()
         self.updateRepresentation()
-        pass
-    
+
     def mousePressEvent(self, event):
         #self.cell.clicked.emit(self.cell)
         #self.cell.setValue(9)
         
-        return QtGui.QGraphicsRectItem.mousePressEvent(self, event)
+        return QtWidgets.QGraphicsRectItem.mousePressEvent(self, event)
         
     def instantiateRepresentation(self):
         # for each value, instantiate the hints, hidden by default
@@ -44,21 +43,21 @@ class ValueRectangle(QtGui.QGraphicsRectItem):
             # this is the static calculation for a block of 3z3
             off_x = ((val-1) % 3) * (self.cellSize/3)
             off_y = floor((val-1) / 3) * (self.cellSize/3)
-            t = QtGui.QGraphicsTextItem(str(val))
+            t = QtWidgets.QGraphicsTextItem(str(val))
             t.setParentItem(self)
             t.setPos(self.position.x()+ off_x, self.position.y() + off_y)
             t.setOpacity(0)
             self.hintValueItemMap[val] = t
 
         # add a big text item to show the set value, hidden by default
-        self.valueTextItem = QtGui.QGraphicsTextItem(str(self.cell.getValue()))
+        self.valueTextItem = QtWidgets.QGraphicsTextItem(str(self.cell.getValue()))
         self.valueTextItem.setParentItem(self)
         self.valueTextItem.setPos(self.position.x(), self.position.y() + self.cellSize/6)
         f = QtGui.QFont("Sans serif", self.cellSize/3 ,200)
-        if(self.cell.isInferred()):
-            f.setWeight(0)
+        if self.cell.isInferred():
+            f.setWeight(QtGui.QFont.Weight.Thin)
         else:
-            self.valueTextItem.setDefaultTextColor(QtCore.Qt.blue)
+            self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
         
@@ -68,7 +67,7 @@ class ValueRectangle(QtGui.QGraphicsRectItem):
 
     
     def updateRepresentation(self):
-        if(self.cell.getValue() <> None):
+        if self.cell.getValue() is not None:
             # first hide all the hints
             self.hideHints()
             
@@ -79,12 +78,12 @@ class ValueRectangle(QtGui.QGraphicsRectItem):
             centerTextItem(self.valueTextItem)
             
             f = self.valueTextItem.font()
-            if(self.cell.isInferred()):
-                f.setWeight(0)
-                self.valueTextItem.setDefaultTextColor(QtCore.Qt.black)
+            if self.cell.isInferred():
+                f.setWeight(QtGui.QFont.Weight.Thin)
+                self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Black)
             else:
-                f.setWeight(200)
-                self.valueTextItem.setDefaultTextColor(QtCore.Qt.blue)
+                f.setWeight(QtGui.QFont.Weight.ExtraLight)
+                self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
                             
         else:
             self.valueTextItem.setOpacity(0)
@@ -109,6 +108,3 @@ class ValueRectangle(QtGui.QGraphicsRectItem):
     def hideHints(self):
         for val in self.values:
             self.hintValueItemMap[val].setOpacity(0)
-#    def update(self):
-#        pass
-#    def 

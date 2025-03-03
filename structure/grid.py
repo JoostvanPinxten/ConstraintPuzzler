@@ -18,7 +18,7 @@ class Grid(Item):
         self.parent = parent
     
     def addCell(self, position = None):
-        if position <> None:
+        if position is not None:
             c = PositionedCell(self.values, self, position)
         else:
             c = Cell(self.values, self)
@@ -56,11 +56,11 @@ class Grid(Item):
         for y in range(0,9) :
             for x in range(0,9):
                 val = self.getCellFromSquareGrid(x,y).getValue()
-                if(val == None):
-                    print "-",
+                if val is None:
+                    print("-", end='')
                 else:
-                    print str(val),
-            print ""
+                    print(str(val),end='')
+            print()
         
     def getItem(self):
         return self.item

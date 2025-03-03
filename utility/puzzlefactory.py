@@ -8,7 +8,7 @@ from structure.puzzle import Puzzle
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 
 from math import *
-from PySide import QtCore
+from PySide6 import QtCore
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.exactcoverconstraint import ExactCoverConstraint

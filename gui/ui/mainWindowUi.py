@@ -1,74 +1,99 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'mainwindow.ui'
-#
-# Created: Fri Mar 29 15:07:56 2013
-#      by: pyside-uic 0.2.14 running on PySide 1.1.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'mainwindow.ui'
+##
+## Created by: Qt User Interface Compiler version 6.8.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide import QtCore, QtGui
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QGraphicsView,
+    QGroupBox, QHBoxLayout, QHeaderView, QMainWindow,
+    QMenuBar, QPushButton, QSizePolicy, QStatusBar,
+    QTreeView, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
-        MainWindow.setObjectName("MainWindow")
+        if not MainWindow.objectName():
+            MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(858, 646)
-        self.centralwidget = QtGui.QWidget(MainWindow)
-        self.centralwidget.setObjectName("centralwidget")
-        self.horizontalLayout = QtGui.QHBoxLayout(self.centralwidget)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.puzzleGraphicsView = QtGui.QGraphicsView(self.centralwidget)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Expanding)
+        self.centralwidget = QWidget(MainWindow)
+        self.centralwidget.setObjectName(u"centralwidget")
+        self.horizontalLayout = QHBoxLayout(self.centralwidget)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.puzzleGraphicsView = QGraphicsView(self.centralwidget)
+        self.puzzleGraphicsView.setObjectName(u"puzzleGraphicsView")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(50)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.puzzleGraphicsView.sizePolicy().hasHeightForWidth())
         self.puzzleGraphicsView.setSizePolicy(sizePolicy)
-        self.puzzleGraphicsView.setObjectName("puzzleGraphicsView")
+
         self.horizontalLayout.addWidget(self.puzzleGraphicsView)
+
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtGui.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 858, 21))
-        self.menubar.setObjectName("menubar")
+        self.menubar = QMenuBar(MainWindow)
+        self.menubar.setObjectName(u"menubar")
+        self.menubar.setGeometry(QRect(0, 0, 858, 21))
         MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtGui.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
+        self.statusbar = QStatusBar(MainWindow)
+        self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
-        self.puzzleStructureDockWidget = QtGui.QDockWidget(MainWindow)
-        self.puzzleStructureDockWidget.setFeatures(QtGui.QDockWidget.DockWidgetFloatable|QtGui.QDockWidget.DockWidgetMovable)
-        self.puzzleStructureDockWidget.setObjectName("puzzleStructureDockWidget")
-        self.dockWidgetContents = QtGui.QWidget()
-        self.dockWidgetContents.setObjectName("dockWidgetContents")
-        self.horizontalLayout_2 = QtGui.QHBoxLayout(self.dockWidgetContents)
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.verticalLayout_2 = QtGui.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.puzzleTreeView = QtGui.QTreeView(self.dockWidgetContents)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(150)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.puzzleTreeView.sizePolicy().hasHeightForWidth())
-        self.puzzleTreeView.setSizePolicy(sizePolicy)
-        self.puzzleTreeView.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
-        self.puzzleTreeView.setObjectName("puzzleTreeView")
+        self.puzzleStructureDockWidget = QDockWidget(MainWindow)
+        self.puzzleStructureDockWidget.setObjectName(u"puzzleStructureDockWidget")
+        self.puzzleStructureDockWidget.setFeatures(QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
+        self.dockWidgetContents = QWidget()
+        self.dockWidgetContents.setObjectName(u"dockWidgetContents")
+        self.horizontalLayout_2 = QHBoxLayout(self.dockWidgetContents)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.verticalLayout_2 = QVBoxLayout()
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.puzzleTreeView = QTreeView(self.dockWidgetContents)
+        self.puzzleTreeView.setObjectName(u"puzzleTreeView")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        sizePolicy1.setHorizontalStretch(150)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.puzzleTreeView.sizePolicy().hasHeightForWidth())
+        self.puzzleTreeView.setSizePolicy(sizePolicy1)
+        self.puzzleTreeView.setSelectionMode(QAbstractItemView.SingleSelection)
+
         self.verticalLayout_2.addWidget(self.puzzleTreeView)
-        self.solverGroupBox = QtGui.QGroupBox(self.dockWidgetContents)
-        self.solverGroupBox.setObjectName("solverGroupBox")
-        self.verticalLayout_3 = QtGui.QVBoxLayout(self.solverGroupBox)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.solvePushButton = QtGui.QPushButton(self.solverGroupBox)
-        self.solvePushButton.setObjectName("solvePushButton")
+
+        self.solverGroupBox = QGroupBox(self.dockWidgetContents)
+        self.solverGroupBox.setObjectName(u"solverGroupBox")
+        self.verticalLayout_3 = QVBoxLayout(self.solverGroupBox)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.solvePushButton = QPushButton(self.solverGroupBox)
+        self.solvePushButton.setObjectName(u"solvePushButton")
+
         self.verticalLayout_3.addWidget(self.solvePushButton)
+
+
         self.verticalLayout_2.addWidget(self.solverGroupBox)
+
+
         self.horizontalLayout_2.addLayout(self.verticalLayout_2)
+
         self.puzzleStructureDockWidget.setWidget(self.dockWidgetContents)
-        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.puzzleStructureDockWidget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.puzzleStructureDockWidget)
 
         self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+        QMetaObject.connectSlotsByName(MainWindow)
+    # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QtGui.QApplication.translate("MainWindow", "MainWindow", None, QtGui.QApplication.UnicodeUTF8))
-        self.puzzleStructureDockWidget.setWindowTitle(QtGui.QApplication.translate("MainWindow", "Puzzle structure", None, QtGui.QApplication.UnicodeUTF8))
-        self.solverGroupBox.setTitle(QtGui.QApplication.translate("MainWindow", "Solver steps", None, QtGui.QApplication.UnicodeUTF8))
-        self.solvePushButton.setText(QtGui.QApplication.translate("MainWindow", "Solve", None, QtGui.QApplication.UnicodeUTF8))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.puzzleStructureDockWidget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Puzzle structure", None))
+        self.solverGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Solver steps", None))
+        self.solvePushButton.setText(QCoreApplication.translate("MainWindow", u"Solve", None))
+    # retranslateUi
 

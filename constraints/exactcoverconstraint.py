@@ -4,7 +4,7 @@ Created on 26 jan. 2013
 @author: Juice
 '''
 
-from uniquevalueconstraint import UniqueValueConstraint
+from .uniquevalueconstraint import UniqueValueConstraint
 
 
 class ExactCoverConstraint(UniqueValueConstraint):
@@ -22,7 +22,7 @@ class ExactCoverConstraint(UniqueValueConstraint):
             
         for cell in newValues.keys():
             value = newValues[cell]
-            if(value <> None):
+            if(value is not None):
                 cell.inferValue(value)
         
         self.searchForNakedSet()

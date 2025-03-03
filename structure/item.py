@@ -3,7 +3,7 @@ Created on 30 dec. 2012
 
 @author: Juice
 '''
-from PySide import QtGui, QtCore
+from PySide6 import QtGui, QtCore
 class Item(QtCore.QObject):
 
     def getParentItem(self):

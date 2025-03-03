@@ -4,11 +4,8 @@ Created on 28 dec. 2012
 @author: Juice
 '''
 
-from PySide import QtGui, QtCore
-from PySide.QtCore import Qt
-import sys
-
-import gui.icons.icons_rc
+from PySide6 import QtGui, QtCore
+from PySide6.QtCore import Qt
 
 ParentRole = QtCore.Qt.UserRole + 1
 class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
@@ -68,7 +65,7 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
             else:
                 return item.data(index.column())
         elif role == Qt.DecorationRole:
-            if(index.column() <> 0):
+            if(index.column() != 0):
                 return None
             item = self.getItem(index)
             if (not item):
@@ -93,7 +90,7 @@ class ProxyItem(QtCore.QObject):
         self.parentItem = parent
         self.childItems = []
 
-        if parent <> None:
+        if parent is not None:
             parent.addChild(self)
     
     def parent(self):

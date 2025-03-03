@@ -51,7 +51,7 @@ class UniqueValueConstraint(Constraint):
                 else:
                     continue
             
-            if(continueSearching == True and firstCell <> None):
+            if(continueSearching == True and firstCell is not None):
                 newValuesMap[firstCell] = value
         return newValuesMap
     

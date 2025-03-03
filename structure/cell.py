@@ -3,7 +3,7 @@ Created on 28 dec. 2012
 
 @author: Juice
 '''
-from PySide import QtCore
+from PySide6 import QtCore
 from gui.puzzlemodel.puzzletreemodel import CellProxyItem
 from structure.item import Item
 
@@ -28,7 +28,7 @@ class Cell(Item):
         return self.value
         
     def hasValue(self):
-        return self.getValue() <> None
+        return self.getValue() is not None
     
     def inferValue(self, value):
         self.setValue(value, True)
@@ -62,7 +62,7 @@ class Cell(Item):
         # make sure the set value is not the value that needs to be removed
         if self.value == value:
             raise Exception("value removed that's already set..." + str(self))
-        assert self.value <> value
+        assert self.value is not value
         
         if(value in self.values) and (len(self.values) > 1):
             self.values.remove(value)
@@ -80,13 +80,13 @@ class Cell(Item):
     def __str__(self):
         val = self.getValue();
         valStr = "" 
-        if(val <> None):
+        if(val is not None):
             valStr = ": "+ str(val)
             
         return "[" + ",".join([str(v) for v in self.values]) + valStr +"]"
         
     def isFixed(self):
-        return self.value <> None
+        return self.value is not None
     
     def isInferred(self):
         return self.inferred
@@ -97,7 +97,7 @@ class Cell(Item):
     def checkForSinglePossibility(self):
         if(self.value == None and len(self.values) == 1):
             #print self.values
-            val = iter(self.values).next()
+            val = next(iter(self.values))
 #            #print "single value left: ", val
             self.inferValue(val)
 
@@ -120,7 +120,7 @@ class PositionedCell(Cell):
     def __str__(self):
         val = self.getValue();
         valStr = "" 
-        if(val <> None):
+        if(val is not None):
             valStr = ": "+ str(val)
             
         return "[pos:"+ str(self.position) + ";" + ",".join([str(v) for v in self.values]) + valStr +"]"

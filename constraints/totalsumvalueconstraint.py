@@ -59,7 +59,7 @@ class TotalSumValueConstraint(Constraint):
                 return set([value])
             
             stillAllowed = self.applyConstraintRecursively(leftOverSum - value, leftOverCellCount-1, valuesUsedNow)
-            if stillAllowed <> None:
+            if stillAllowed is not None:
                 allowedSet |= stillAllowed
 
         return allowedSet

@@ -5,15 +5,11 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
-from PySide import QtGui, QtCore
-
-from constraints import *
-from structure import *
-
-from time import *
 from math import *
 
 from constraints import *
+
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from gui.puzzlemodel.puzzletreemodel import *
 
@@ -27,10 +23,13 @@ from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 
 from utility.puzzlefactory import PuzzleFactory
 
+def hexrow(position : QtCore.QPoint, asc:bool =True):
+    return position.y() + position.x() - position.x() % 2
+
 class MainWindow(BasicMainWindow):
 
     def initializePuzzleRepresentation(self):
-        self.scene = QtGui.QGraphicsScene(self)
+        self.scene = QtWidgets.QGraphicsScene(self)
         
 #        self.view.setScene(self.scene)
         self.puzzlePieces = {}
@@ -108,18 +107,19 @@ class MainWindow(BasicMainWindow):
         values = range(1,10)
         stringArray = myFile.readlines()
         y = 0
+        puzzle = None
         for line in stringArray:
             line = line.strip() # strip off whitespace
             
-            if(line.startswith("range")):
-                min, max = [int(x) for x in line[line.find("=")+1:].split(",")]
-                puzzle = Puzzle("Test-sumbrero", range(min, max+1))
+            if line.startswith("range"):
+                minimum, maximum = [int(x) for x in line[line.find("=")+1:].split(",")]
+                puzzle = Puzzle("Test-sumbrero", range(minimum, maximum+1))
                 
-            if(line.startswith("cell")):
+            if line.startswith("cell"):
                 x,y = [float(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
                 puzzle.getGrid().addCell(QtCore.QPoint(x,y))
             
-            if(line.startswith("column")):
+            if line.startswith("column"):
                 column, value = line.split('=')
                 column = int(column.split('(')[1].split(')')[0])
                 
@@ -129,20 +129,50 @@ class MainWindow(BasicMainWindow):
                 uvc = cg.addConstraint(UniqueValueConstraint)
                 
                 for cell in puzzle.grid.cells:
-                    if(cell.position.x() == column):
+                    if cell.position.x() == column:
                         cg.addCell(cell)
 
                 tsvc.setTotalValue(int(value))
-            # TODO: deal with the two different kinds of row sums
-            
+
+            if line.startswith("row_ascending"):
+                row, value = line.split('=')
+                row = int(row.split('(')[1].split(')')[0])
+
+                # create a sum constraint
+                cg = puzzle.addConstraintGroup("Row ascending sum " + str(row))
+                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                tsvc.setTotalValue(int(value))
+
+                uvc = cg.addConstraint(UniqueValueConstraint)
+
+                for cell in puzzle.grid.cells:
+                    print(hexrow(cell.position, asc=True) == row, hexrow(cell.position), row, )
+                    if hexrow(cell.position, asc=True) == row:
+                        cg.addCell(cell)
+
+            if line.startswith("row_descending"):
+                row, value = line.split('=')
+                row = int(row.split('(')[1].split(')')[0])
+
+                # create a sum constraint
+                cg = puzzle.addConstraintGroup("Row descending sum " + str(row))
+                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                tsvc.setTotalValue(int(value))
+                uvc = cg.addConstraint(UniqueValueConstraint)
+
+                for cell in puzzle.grid.cells: # type: ValueHexagon
+                    if hexrow(cell.position, asc=False) == row:
+                        cg.addCell(cell)
+
+
         solver = Solver(puzzle)
 
         return puzzle, solver
         
 if __name__ == '__main__':
-
-    app = QtGui.QApplication(sys.argv)
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.loadPuzzle("simpleSumbrero.txt")
     mainWin.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

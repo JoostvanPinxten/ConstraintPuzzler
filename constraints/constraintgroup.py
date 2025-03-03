@@ -30,7 +30,7 @@ class ConstraintGroup(Item):
         
     def notify(self, cell):
         for c in self.constraints:
-            if(c <> cell):
+            if(c is not cell):
                 c.notify(cell)
             
     def removeValue(self, cell, value):

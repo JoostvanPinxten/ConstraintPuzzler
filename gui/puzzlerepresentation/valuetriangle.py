@@ -4,18 +4,18 @@ Created on 6 jan. 2013
 @author: Juice
 '''
 
-from PySide import QtGui, QtCore
+from PySide6 import QtGui, QtCore, QtWidgets
 from math import *
 
 def centerTextItem(text):
     form = QtGui.QTextBlockFormat()
-    form.setAlignment(QtCore.Qt.AlignCenter)
+    form.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
     cursor = text.textCursor()
-    cursor.select(QtGui.QTextCursor.Document)
+    cursor.select(QtGui.QTextCursor.SelectionType.Document)
     cursor.mergeBlockFormat(form)
     cursor.clearSelection()
         
-class ValueTriangle(QtGui.QGraphicsPolygonItem):
+class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
     TOPLEFT=0
     TOPRIGHT=1
     BOTTOMRIGHT=2
@@ -35,30 +35,31 @@ class ValueTriangle(QtGui.QGraphicsPolygonItem):
             self.alignment = alignment
         # combine a horizontal flag with a vertical flag: e.g. AlignLeft with AlignTop to create a layout thingy
         
-        self.setCacheMode(QtGui.QGraphicsItem.DeviceCoordinateCache)
+        self.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.DeviceCoordinateCache)
         
         self.instantiateRepresentation()
         self.updateRepresentation()
-        self.setPen(QtGui.QPen(QtCore.Qt.white))
-        self.surrounding = QtGui.QGraphicsRectItem(QtCore.QRect(0,0, self.cellSize, self.cellSize), self)
-        self.surrounding.setBrush(QtCore.Qt.transparent)
-        
+        self.setPen(QtGui.QPen(QtGui.QColorConstants.White))
+        self.surrounding = QtWidgets.QGraphicsRectItem(QtCore.QRect(0,0, self.cellSize, self.cellSize), self)
+        self.surrounding.setBrush(QtGui.QColorConstants.Transparent)
+        self.surrounding.setPen(QtGui.QColorConstants.Transparent)
+
         pass
     
     def mousePressEvent(self, event):
         # TODO: be able to set the value?
-        return QtGui.QGraphicsRectItem.mousePressEvent(self, event)
+        return QtWidgets.QGraphicsRectItem.mousePressEvent(self, event)
         
     def instantiateRepresentation(self):
         # add a big text item to show the set value, hidden by default
-        self.valueTextItem = QtGui.QGraphicsTextItem(str(self.constraint.getTotalValue()))
+        self.valueTextItem = QtWidgets.QGraphicsTextItem(str(self.constraint.getTotalValue()))
         self.valueTextItem.setParentItem(self)
         self.valueTextItem.setPos(0, self.cellSize/6)
         f = QtGui.QFont("Sans serif", self.cellSize/4 ,0)
-        self.valueTextItem.setDefaultTextColor(QtCore.Qt.white)
+        self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.White)
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
-        self.setBrush(QtCore.Qt.black)
+        self.setBrush(QtGui.QColorConstants.Black)
         # align to center of cell
         centerTextItem(self.valueTextItem)
         self.valueTextItem.setOpacity(1)
@@ -75,5 +76,3 @@ class ValueTriangle(QtGui.QGraphicsPolygonItem):
             #self.valueTextItem.setPos(0, self.cellSize/6)
             self.valueTextItem.setPos(-self.cellSize/6,self.cellSize/2)
             centerTextItem(self.valueTextItem)
-        pass
-    

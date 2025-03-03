@@ -4,25 +4,19 @@ Created on 26 jan. 2013
 @author: Juice
 '''
 
-from PySide import QtGui, QtCore
-
-# from constraints import *
-# from structure import *
-
-# from time import *
-# from math import *
+from PySide6 import QtGui, QtCore, QtWidgets, QtStateMachine
 
 from gui.ui import mainWindowUi
 from gui.puzzlemodel.puzzletreemodel import *
 
-class BasicMainWindow(QtGui.QMainWindow):
+class BasicMainWindow(QtWidgets.QMainWindow):
 #    MaxRecentFiles = 5
 #    windowList = []
     
     acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
     
     showNextSelectionState =  QtCore.Signal()
-    puzzlePieceProxies = {}
+    puzzlePieceProxies = {} # dict[PuzzlePieceProxy]
 
     def __init__(self):
         super(BasicMainWindow, self).__init__()
@@ -39,11 +33,11 @@ class BasicMainWindow(QtGui.QMainWindow):
 #        self.setCentralWidget(self.view)
 #       
                 
-        self.selectionState = QtCore.QState()
-        self.currentSelectionState = QtCore.QState(self.selectionState)
-        self.previousSelectionState = QtCore.QState(self.selectionState)
+        self.selectionState = QtStateMachine.QState()
+        self.currentSelectionState = QtStateMachine.QState(self.selectionState)
+        self.previousSelectionState = QtStateMachine.QState(self.selectionState)
         
-        self.selectionStatemachine = QtCore.QStateMachine()
+        self.selectionStatemachine = QtStateMachine.QStateMachine()
         self.selectionStatemachine.addState(self.selectionState)
         self.selectionStatemachine.setInitialState(self.selectionState)
         self.selectionState.setInitialState(self.currentSelectionState)
@@ -100,19 +94,19 @@ class BasicMainWindow(QtGui.QMainWindow):
             index = index.sibling(index.row(), 0)
             # iterate the ranges in this row
             while True:
-                if(index == QtCore.QModelIndex()):
+                if index == QtCore.QModelIndex():
                     break
-                if(not index.isValid()):
+                if not index.isValid():
                     break
 
                 item = self.constraintModel.getItem(index)
-                if(isinstance(item, (ConstraintProxyItem, CellProxyItem, ReferencedCellProxyItem, GridProxyItem, ConstraintGroupProxyItem))):
+                if isinstance(item, (ConstraintProxyItem, CellProxyItem, ReferencedCellProxyItem, GridProxyItem, ConstraintGroupProxyItem)):
                     #self.selectedCells |= item.getCells()
                     selectionChanged = True
                     self.selectedItems.add(item)
 
-                # check whether or not to calculate the next index  
-                if(index.row()+1 < itemRange.bottomRight().row()):
+                # check whether to calculate the next index
+                if index.row()+1 < itemRange.bottomRight().row():
                     index = index.sibling(index.row() + 1, 0) 
                 else:
                     break
@@ -123,17 +117,17 @@ class BasicMainWindow(QtGui.QMainWindow):
             index = index.sibling(index.row(), 0)
             # iterate the ranges in this row
             while True:
-                if(index == QtCore.QModelIndex()):
+                if index == QtCore.QModelIndex():
                     break
-                if(not index.isValid()):
+                if not index.isValid():
                     break
 
                 item = self.constraintModel.getItem(index)
-                if(item in self.selectedItems):
+                if item in self.selectedItems:
                     self.selectedItems.remove(item)
                     selectionChanged = True
-                # check whether or not to calculate the next index  
-                if(index.row()+1 < itemRange.bottomRight().row()):
+                # check whether to calculate the next index
+                if index.row()+1 < itemRange.bottomRight().row():
                     index = index.sibling(index.row() + 1, 0) 
                 else:
                     break
@@ -155,19 +149,18 @@ class BasicMainWindow(QtGui.QMainWindow):
             for cell in self.puzzlePieceProxies:
                 #it = self.puzzlePieces[cell]
                 it = self.puzzlePieceProxies[cell]
-                
-                
-                animation = QtCore.QPropertyAnimation(it, "backgroundColor")
+
+                animation = QtCore.QPropertyAnimation(it, QtCore.QByteArray("backgroundColor".encode()), self)
                 
                 animation.setDuration(200)
-                animation.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
+                animation.setEasingCurve(QtCore.QEasingCurve.Type.InOutQuad)
                 
                 group.addAnimation(animation)
                 
                 if cell in selectedCells:
-                    self.currentSelectionState.assignProperty(it, "backgroundColor", QtGui.QColor(255,0,0,100))
+                    self.currentSelectionState.assignProperty(it, "backgroundColor", QtGui.QColor(255,255,0,100))
                 else:
-                    self.currentSelectionState.assignProperty(it, "backgroundColor", QtGui.QColor(255,0,0,0))
+                    self.currentSelectionState.assignProperty(it, "backgroundColor", QtGui.QColor(255,255,0,0))
             
             for anim in self.trans1.animations():
                 self.trans1.removeAnimation(anim)
@@ -177,7 +170,7 @@ class BasicMainWindow(QtGui.QMainWindow):
             self.showNextSelectionState.emit()
             
     def solveButtonClicked(self):
-        if(self.solver != None):
+        if self.solver is not None:
             self.solver.solve()
 
     def undo(self):
