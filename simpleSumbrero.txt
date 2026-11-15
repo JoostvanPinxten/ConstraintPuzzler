@@ -1,5 +1,6 @@
 range = 1,9
 
+# a 4x4 block of hexagons: cell(column,row), odd columns are half a hexagon lower
 cell(0,0)
 cell(0,1)
 cell(0,2)
@@ -20,17 +21,23 @@ cell(3,1)
 cell(3,2)
 cell(3,3)
 
+# straight down
 column(0) = 11
-column(1) = 14
-column(2) = 10
-column(3) = 15
+column(1) = 24
+column(2) = 21
+column(3) = 23
 
-row_descending(0) = 5
-row_descending(1) = 9
-row_descending(2) = 13
-row_descending(3) = 15
+# down-right, numbered by the row where they cross column 0
+row_descending(-1) = 7
+row_descending(0) = 21
+row_descending(1) = 20
+row_descending(2) = 27
+row_descending(3) = 4
 
-row_ascending(0) = 10
-row_ascending(1) = 10
-row_ascending(2) = 10
-row_ascending(3) = 10
+# up-right, numbered by the row where they cross column 0
+row_ascending(0) = 5
+row_ascending(1) = 9
+row_ascending(2) = 24
+row_ascending(3) = 14
+row_ascending(4) = 20
+row_ascending(5) = 7

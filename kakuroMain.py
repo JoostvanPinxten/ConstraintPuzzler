@@ -12,8 +12,8 @@ from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
-from structure.position import Position
 from structure.puzzle import Puzzle
+from utility.puzzlefactory import PuzzleFactory, PuzzleFileError
 from utility.resources import resourcePath
 
 
@@ -67,44 +67,59 @@ class MainWindow(BasicMainWindow):
 
     @staticmethod
     def parsePuzzle(filename):
-
-        # puzzle = PuzzleFactory.createExampleKakuro()
-
-        # Set the initial data to work with
+        """Reads a Kakuro file; see doc/puzzle-files.md for the syntax.
+        Raises PuzzleFileError (naming the line) when the file cannot be parsed."""
         with open(filename) as myFile:
-            stringArray = myFile.readlines()
+            lines = myFile.readlines()
 
-        y = 0
-        for line in stringArray:
-            if line.startswith("range"):
-                min, max = [int(x) for x in line[line.find("=") + 1 :].split(",")]
-                puzzle = Puzzle("Test-kakuro", range(min, max + 1))
+        puzzle = None
+        cells = {}  # Position -> Cell, for the cells declared so far
+        for lineNumber, rawLine in enumerate(lines, start=1):
+            line = rawLine.strip()
+            if not line.startswith(("range", "cell", "total")):
+                continue  # comments and blank lines
 
-            if line.startswith("cell"):
-                x, y = [int(x) for x in line[line.find("(") + 1 : line.find(")")].split(",")]
-                puzzle.getGrid().addCell(Position(x, y))
+            try:
+                if line.startswith("range"):
+                    puzzle = Puzzle("Test-kakuro", PuzzleFactory.parseRange(line.split("=")[1]))
+                    continue
 
-            if line.startswith("total"):
-                value = int(line.split("=")[-1])
-                cells = [
-                    cell[1:-1].split(",")
-                    for cell in line[line.find("(") + 1 : line.rfind(")")].split(";")
-                ]
+                if puzzle is None:
+                    raise ValueError("'range = min,max' must come before cells and totals")
 
-                cg = puzzle.addConstraintGroup("Line")
-                for cell in cells:
-                    try:
-                        c = puzzle.getGrid().searchCellWithPosition(
-                            Position(int(cell[0]), int(cell[1]))
-                        )
-                    except ValueError:
-                        print(line)
-                    cg.addCell(c)
+                if line.startswith("cell"):
+                    position = PuzzleFactory.parsePosition(line[len("cell") :])
+                    if position in cells:
+                        raise ValueError(f"cell {position} is declared twice")
+                    cells[position] = puzzle.getGrid().addCell(position)
 
-                cg.addConstraint(UniqueValueConstraint)
-                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                else:  # total((x,y);(x,y);...) = value
+                    cellText, separator, valueText = line[len("total") :].rpartition("=")
+                    cellText = cellText.strip()
+                    if not separator or not (cellText.startswith("(") and cellText.endswith(")")):
+                        raise ValueError("expected total((x,y);(x,y);...) = value")
+                    positions = PuzzleFactory.parsePositionList(cellText[1:-1])
+                    value = int(valueText)
 
-                tsvc.setTotalValue(value)
+                    for position in positions:
+                        if position not in cells:
+                            raise ValueError(f"cell {position} is used before it is declared")
+                    if len(set(positions)) != len(positions):
+                        raise ValueError("a cell appears more than once in this total")
+
+                    cg = puzzle.addConstraintGroup("Line")
+                    for position in positions:
+                        cg.addCell(cells[position])
+                    cg.addConstraint(UniqueValueConstraint)
+                    tsvc = cg.addConstraint(TotalSumValueConstraint)
+                    tsvc.setTotalValue(value)
+            except PuzzleFileError:
+                raise
+            except Exception as e:
+                raise PuzzleFileError(filename, lineNumber, f"{e} ({line})") from e
+
+        if puzzle is None:
+            raise PuzzleFileError(filename, len(lines), "no 'range = min,max' line found")
 
         solver = Solver(puzzle)
 

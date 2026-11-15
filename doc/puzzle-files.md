@@ -26,7 +26,7 @@ How cells are laid out depends on the grid type:
 |---|---|---|---|---|
 | **Square grid** | Sudoku, Futoshiki | Every position of an N×N square is a cell. | Implicit: the file is a picture of the grid, one line per row. Futoshiki relations use 1-based `x,y`. | `ValueRectangle` |
 | **Free-form grid** | Kakuro | Only the positions you list are cells; everything else is empty (black). | Explicit `cell(x,y)`, any integers. | `ValueRectangle`, clues as `ValueTriangle` |
-| **Hexagonal grid** | Sumbrero | Only the positions you list are cells. | Explicit `cell(x,y)`, starting at 0. | `ValueHexagon` |
+| **Hexagonal grid** | Sumbrero | Only the positions you list are cells. | Explicit `cell(x,y)`, any integers (the example starts at 0). | `ValueHexagon` |
 
 The hexagonal grid uses flat-topped hexagons in columns, with every **odd column shifted down by
 half a hexagon** (an "odd-q" offset layout):
@@ -147,27 +147,41 @@ total((2,1);(2,2)) = 3
 What it builds: one group per `total`, with a `UniqueValueConstraint` and a
 `TotalSumValueConstraint` set to n. A cell is usually in two totals, one across and one down.
 
-Rules and pitfalls:
+Rules:
 
-- **Order:** `range` first, then the cells, then the totals. A total that refers to a cell that
-  was not declared (yet) stops loading with `Exception: Not found Position(x, y)`.
-- **No spaces between the cells of a total.** Write `total((1,1);(2,1)) = 3`. With
-  `total((1,1); (2,1)) = 3` the second cell cannot be read, and the line is printed to the
-  console and the *previous* cell is silently used in its place, giving a wrong puzzle. Spaces
-  around `=` are fine.
-- **Statements start at the beginning of the line.** An indented `  cell(1,1)` is ignored.
+- **Order:** `range` first, then the cells, then the totals.
+- **Whitespace** is allowed anywhere: around `=`, inside `( 1, 1 )`, around `;`, and before a
+  statement (indentation).
 - **List the cells of a total in order, from left to right or top to bottom, with at least two
   cells.** The solver does not care, but the GUI draws the clue triangle next to the first cell:
   to its left when the first two cells are on the same row, above it when they are in the same
   column. Leave column 0 and row 0 free (start your cells at 1) so the clues of the first row
   and column have room.
 
+**Errors.** A file that cannot be read raises a `PuzzleFileError` (a `ValueError`) that names the
+file and line, for example
+`mediumKakuro.txt, line 98: cell Position(9, 9) is used before it is declared (total(...) = 6)`.
+This happens for:
+
+- a missing `range`, or a `cell`/`total` before it;
+- a cell that cannot be read, such as `(2,x)`;
+- a cell that is declared twice, or that appears twice in one total;
+- a total that uses a cell that was not declared (yet).
+
 ## Sumbrero (work in progress)
 
 Parser: `MainWindow.parsePuzzle` in `sumbreroMain.py`. Example: `simpleSumbrero.txt`.
 
-Sumbrero uses the hexagonal grid. Like Kakuro, the file lists the cells, but the clues refer to a
-whole column or diagonal row instead of listing cells.
+Sumbrero uses the hexagonal grid. Like Kakuro, the file lists the cells, but a clue names a whole
+line of hexagons instead of listing its cells. Lines run in three directions:
+
+- a **column** runs straight down;
+- a **descending row** runs down-right;
+- an **ascending row** runs up-right.
+
+Rows are numbered by the row y where they cross column 0, so `row_descending(2)` and
+`row_ascending(2)` both pass through `cell(0,2)`, one going down-right and the other up-right.
+Rows that only cross column 0 outside the grid get numbers below 0 or above the last row.
 
 ```
 range = 1,9
@@ -178,25 +192,33 @@ cell(1,0)
 cell(1,1)
 
 column(0) = 11
-row_ascending(0) = 10
 row_descending(0) = 5
+row_ascending(1) = 9
 ```
 
 | Statement | Meaning |
 |---|---|
 | `range = min,max` | The values every cell can take, inclusive. Must come first. |
-| `cell(x,y)` | A hexagon in column x, row y (0-based; odd columns are shifted down). |
-| `column(c) = n` | All cells with x = c add up to n, without duplicates. |
-| `row_ascending(r) = n` | The cells of diagonal row r add up to n, without duplicates. |
-| `row_descending(r) = n` | As above, for the other diagonal direction. |
+| `cell(x,y)` | A hexagon in column x, row y (odd columns are shifted down). |
+| `column(c) = n` | The cells with x = c add up to n, without duplicates. |
+| `row_descending(r) = n` | The cells with `y - x // 2 == r` (the down-right row through `(0, r)`) add up to n, without duplicates. |
+| `row_ascending(r) = n` | The cells with `y + (x + 1) // 2 == r` (the up-right row through `(0, r)`) add up to n, without duplicates. |
+| anything else | Ignored, so `# ...` lines and blank lines can be used as comments. |
 
-Lines are stripped, so indentation is allowed here; other lines are ignored. Declare all cells
-before the clues: a clue only collects the cells that exist when it is read.
+For the 4×4 block of `simpleSumbrero.txt`, the lines are:
 
-**Known limitation:** which cells belong to diagonal row r is computed by `hexrow()` as
-`y + x - x % 2`, for both directions. `row_ascending(r)` and `row_descending(r)` therefore
-currently select the *same* cells, and those cells do not always form a straight line of
-hexagons. Column clues work as intended. Treat row clues as unfinished until `hexrow()` is fixed.
+```
+ column(1):          (1,0) (1,1) (1,2) (1,3)
+ row_descending(0):  (0,0) (1,0) (2,1) (3,1)     row_descending(-1): (2,0) (3,0)
+ row_ascending(2):   (0,2) (1,1) (2,1) (3,0)     row_ascending(0):   (0,0)
+```
+
+Whitespace is allowed as in Kakuro. Declare all cells before the clues: a clue collects the cells
+that exist when it is read. Mistakes raise a `PuzzleFileError` naming the line, as in Kakuro;
+this includes a clue whose line contains no cells.
+
+In the GUI, each clue is drawn on the extension of its line: just before the first cell, or after
+the last cell if that spot is taken, or one step further out.
 
 ## Opening your own puzzle file
 

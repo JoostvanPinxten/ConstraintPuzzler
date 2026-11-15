@@ -15,150 +15,184 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
 from structure.position import Position
 from structure.puzzle import Puzzle
+from utility.puzzlefactory import PuzzleFactory, PuzzleFileError
 from utility.resources import resourcePath
 
+# Sumbrero cells are flat-topped hexagons, laid out in columns: Position(x, y) is column x,
+# row y, and every odd column is shifted down by half a hexagon. A line of cells runs in one
+# of three directions: straight down (a column), down-right (a descending row) or up-right
+# (an ascending row). Rows are numbered by the row y at which they cross column 0.
 
-def hexrow(position: Position, asc: bool = True):
-    return position.y() + position.x() - position.x() % 2
+COLUMN = "Column"
+DESCENDING_ROW = "Descending row"
+ASCENDING_ROW = "Ascending row"
+
+# per kind of line: (direction towards its start, direction towards its end)
+LINE_DIRECTIONS = {
+    COLUMN: ("N", "S"),
+    DESCENDING_ROW: ("NW", "SE"),
+    ASCENDING_ROW: ("SW", "NE"),
+}
+
+
+def descendingRow(position: Position) -> int:
+    """Index of the row running down-right (south-east) through position."""
+    return position.y() - position.x() // 2
+
+
+def ascendingRow(position: Position) -> int:
+    """Index of the row running up-right (north-east) through position."""
+    return position.y() + (position.x() + 1) // 2
+
+
+def neighbour(position: Position, direction: str) -> Position:
+    """The adjacent position in direction N, S, NE, SE, NW or SW."""
+    x, y = position.x(), position.y()
+    shift = x % 2  # odd columns are half a hexagon lower
+    offsets = {
+        "N": (0, -1),
+        "S": (0, 1),
+        "NE": (1, shift - 1),
+        "SE": (1, shift),
+        "NW": (-1, shift - 1),
+        "SW": (-1, shift),
+    }
+    dx, dy = offsets[direction]
+    return Position(x + dx, y + dy)
+
+
+def lineKind(group):
+    """COLUMN, DESCENDING_ROW or ASCENDING_ROW for a line created by parsePuzzle, else None."""
+    kind = group.getName().rsplit(" ", 1)[0]
+    return kind if kind in LINE_DIRECTIONS else None
+
+
+def clueLayout(puzzle):
+    """Position of the clue of every line sum (keyed by its TotalSumValueConstraint), on the
+    extension of the line: just before its first cell, else just after its last cell, else
+    one step further out, and so on, until a position is free."""
+    occupied = {cell.getPosition() for cell in puzzle.getGrid().getCells()}
+    layout = {}
+    for group in puzzle.getConstraintGroups():
+        kind = lineKind(group)
+        if kind is None or not group.getCells():
+            continue
+        backward, forward = LINE_DIRECTIONS[kind]
+        positions = sorted(
+            (cell.getPosition() for cell in group.getCells()), key=lambda p: (p.x(), p.y())
+        )
+        before, after = positions[0], positions[-1]
+        while True:
+            before, after = neighbour(before, backward), neighbour(after, forward)
+            position = next((p for p in (before, after) if p not in occupied), None)
+            if position is not None:
+                break
+        occupied.add(position)
+        for constraint in group.getConstraints():
+            if isinstance(constraint, TotalSumValueConstraint):
+                layout[constraint] = position
+    return layout
 
 
 class MainWindow(BasicMainWindow):
+    def hexScenePosition(self, position):
+        """Scene coordinates of the hexagon at position"""
+        # see for an explanation of the rotated version (i.e. horizontal iso vertical):
+        # http://www.gamedev.net/page/resources/_/technical/game-programming/coordinates-in-hexagon-based-tile-maps-r1800
+        tileR = self.hexSide / 2 * cos(pi / 6)
+        hexH = self.hexSide / 2 * sin(pi / 6)
+        x = position.x() * (hexH + self.hexSide / 2)
+        y = position.y() * 2 * tileR + (tileR if position.x() % 2 else 0)
+        return QtCore.QPointF(x, y)
+
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
 
-        #        self.view.setScene(self.scene)
         self.puzzlePieces = {}
 
         self.hexSide = 100
-        # self.blockPadding = 3
 
         self.selectedItems = set()
 
         for c in self.puzzle.getGrid().getCells():
-            if c.getPosition:
-                # see for an explanation of the rotated version (i.e. horizontal iso vertical):
-                # http://www.gamedev.net/page/resources/_/technical/game-programming/coordinates-in-hexagon-based-tile-maps-r1800
-                tileR = self.hexSide / 2 * cos(pi / 6)
-                hexH = self.hexSide / 2 * sin(pi / 6)
-                # tileW = 2 * tileR
-                # tileH = self.hexSide/2 + 2 * hexH
+            hexagon = ValueHexagon(c, self.hexSide, self.hexScenePosition(c.getPosition()))
+            self.scene.addItem(hexagon)
+            c.valueChanged.connect(self.cellValueChanged)
+            c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
+            self.puzzlePieces[c] = hexagon
+            proxy = PuzzlePieceProxy(hexagon)
+            self.puzzlePieceProxies[c] = proxy
 
-                pos = c.getPosition()
-                if pos.x() % 2:
-                    hexPos = QtCore.QPointF(
-                        pos.x() * (hexH + self.hexSide / 2), pos.y() * 2 * tileR + tileR
-                    )
-                else:
-                    hexPos = QtCore.QPointF(
-                        pos.x() * (hexH + self.hexSide / 2), pos.y() * 2 * tileR
-                    )
-
-                rect = ValueHexagon(c, self.hexSide, hexPos)
-                self.scene.addItem(rect)
-                c.valueChanged.connect(self.cellValueChanged)
-                c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
-                self.puzzlePieces[c] = rect
-                proxy = PuzzlePieceProxy(rect)
-                self.puzzlePieceProxies[c] = proxy
-
-        for cg in self.puzzle.getConstraintGroups():
-            for constraint in cg.getConstraints():
-                if isinstance(constraint, TotalSumValueConstraint):
-                    # TODO: refactor to utililty class, make much more general
-                    # find the position and direction that is most likely:
-
-                    if cg.name.startswith("Column"):
-                        cell = cg.getCells()[0]
-                        pos = QtCore.QPoint(cell.position.x(), -1)
-                    else:
-                        pos = QtCore.QPoint(-1, cell.position.y())
-
-                    if pos.x() % 2:
-                        hexPos = QtCore.QPointF(
-                            pos.x() * (hexH + self.hexSide / 2), pos.y() * 2 * tileR + tileR
-                        )
-                    else:
-                        hexPos = QtCore.QPointF(
-                            pos.x() * (hexH + self.hexSide / 2), pos.y() * 2 * tileR
-                        )
-
-                    hex = ValueHexagon(
-                        constraint,
-                        self.hexSide,
-                        hexPos,
-                        edgeColor=QtGui.QColor(QtCore.Qt.GlobalColor.transparent),
-                    )
-                    self.puzzlePieces[constraint] = hex
-                    self.scene.addItem(hex)
+        for constraint, position in clueLayout(self.puzzle).items():
+            hexagon = ValueHexagon(
+                constraint,
+                self.hexSide,
+                self.hexScenePosition(position),
+                edgeColor=QtGui.QColor(QtCore.Qt.GlobalColor.transparent),
+            )
+            self.puzzlePieces[constraint] = hexagon
+            self.scene.addItem(hexagon)
 
     @staticmethod
     def parsePuzzle(filename):
-
-        # Set the initial data to work with
+        """Reads a Sumbrero file; see doc/puzzle-files.md for the syntax.
+        Raises PuzzleFileError (naming the line) when the file cannot be parsed."""
         with open(filename) as myFile:
-            stringArray = myFile.readlines()
+            lines = myFile.readlines()
 
-        y = 0
+        # keyword -> (kind of line, index of the line through a position)
+        lineStatements = {
+            "column": (COLUMN, Position.x),
+            "row_descending": (DESCENDING_ROW, descendingRow),
+            "row_ascending": (ASCENDING_ROW, ascendingRow),
+        }
+
         puzzle = None
-        for line in stringArray:
-            line = line.strip()  # strip off whitespace
+        for lineNumber, rawLine in enumerate(lines, start=1):
+            line = rawLine.strip()
+            keyword = line.split("(")[0].split("=")[0].strip()
+            if keyword not in ("range", "cell", *lineStatements):
+                continue  # comments and blank lines
 
-            if line.startswith("range"):
-                minimum, maximum = [int(x) for x in line[line.find("=") + 1 :].split(",")]
-                puzzle = Puzzle("Test-sumbrero", range(minimum, maximum + 1))
+            try:
+                if keyword == "range":
+                    puzzle = Puzzle("Test-sumbrero", PuzzleFactory.parseRange(line.split("=")[1]))
+                    continue
 
-            if line.startswith("cell"):
-                x, y = [int(x) for x in line[line.find("(") + 1 : line.find(")")].split(",")]
-                puzzle.getGrid().addCell(Position(x, y))
+                if puzzle is None:
+                    raise ValueError("'range = min,max' must come before cells and sums")
 
-            if line.startswith("column"):
-                column, value = line.split("=")
-                column = int(column.split("(")[1].split(")")[0])
+                if keyword == "cell":
+                    position = PuzzleFactory.parsePosition(line[len("cell") :])
+                    if any(c.getPosition() == position for c in puzzle.getGrid().getCells()):
+                        raise ValueError(f"cell {position} is declared twice")
+                    puzzle.getGrid().addCell(position)
+                    continue
 
-                # create a sum constraint
-                cg = puzzle.addConstraintGroup("Column sum " + str(column))
-                tsvc = cg.addConstraint(TotalSumValueConstraint)
+                # column(c) = n, row_descending(r) = n or row_ascending(r) = n
+                lineText, separator, valueText = line[len(keyword) :].partition("=")
+                if not separator:
+                    raise ValueError(f"expected {keyword}(n) = value")
+                kind, indexOf = lineStatements[keyword]
+                index = PuzzleFactory.parseIndex(lineText)
+                lineCells = [
+                    c for c in puzzle.getGrid().getCells() if indexOf(c.getPosition()) == index
+                ]
+                if not lineCells:
+                    raise ValueError(f"{kind.lower()} {index} contains no cells")
+
+                cg = puzzle.addConstraintGroup(f"{kind} {index}")
+                for c in lineCells:
+                    cg.addCell(c)
                 cg.addConstraint(UniqueValueConstraint)
+                cg.addConstraint(TotalSumValueConstraint).setTotalValue(int(valueText))
+            except PuzzleFileError:
+                raise
+            except Exception as e:
+                raise PuzzleFileError(filename, lineNumber, f"{e} ({line})") from e
 
-                for cell in puzzle.grid.cells:
-                    if cell.position.x() == column:
-                        cg.addCell(cell)
-
-                tsvc.setTotalValue(int(value))
-
-            if line.startswith("row_ascending"):
-                row, value = line.split("=")
-                row = int(row.split("(")[1].split(")")[0])
-
-                # create a sum constraint
-                cg = puzzle.addConstraintGroup("Row ascending sum " + str(row))
-                tsvc = cg.addConstraint(TotalSumValueConstraint)
-                tsvc.setTotalValue(int(value))
-
-                cg.addConstraint(UniqueValueConstraint)
-
-                for cell in puzzle.grid.cells:
-                    print(
-                        hexrow(cell.position, asc=True) == row,
-                        hexrow(cell.position),
-                        row,
-                    )
-                    if hexrow(cell.position, asc=True) == row:
-                        cg.addCell(cell)
-
-            if line.startswith("row_descending"):
-                row, value = line.split("=")
-                row = int(row.split("(")[1].split(")")[0])
-
-                # create a sum constraint
-                cg = puzzle.addConstraintGroup("Row descending sum " + str(row))
-                tsvc = cg.addConstraint(TotalSumValueConstraint)
-                tsvc.setTotalValue(int(value))
-                cg.addConstraint(UniqueValueConstraint)
-
-                for cell in puzzle.grid.cells:
-                    if hexrow(cell.position, asc=False) == row:
-                        cg.addCell(cell)
+        if puzzle is None:
+            raise PuzzleFileError(filename, len(lines), "no 'range = min,max' line found")
 
         solver = Solver(puzzle)
 
