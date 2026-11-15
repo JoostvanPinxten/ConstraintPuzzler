@@ -54,6 +54,29 @@ class GuiSmokeTest(unittest.TestCase):
     def test_sudoku(self):
         self._smoke("sudokuMain", "easySudoku.txt")
 
+    def test_solve_step_button_advances_the_puzzle(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        try:
+            window.loadPuzzle("easySudoku.txt")
+            assert window.puzzle is not None
+            before = window.puzzle.saveState()
+            openBefore = window.puzzle.getNumberOfOpenCells()
+            window.ui.solveStepPushButton.click()
+            self.assertNotEqual(window.puzzle.saveState(), before)
+            self.assertEqual(window.puzzle.getNumberOfOpenCells(), openBefore - 1)
+            # the easy sudoku is solved by deduction alone, so stepping reaches the solution
+            for _ in range(200):
+                if window.puzzle.isSolved():
+                    break
+                window.ui.solveStepPushButton.click()
+            self.assertTrue(window.puzzle.isSolved())
+        finally:
+            window.close()
+            window.deleteLater()
+            self.app.processEvents()
+
     def test_kakuro(self):
         self._smoke("kakuroMain", "mediumKakuro.txt")
 

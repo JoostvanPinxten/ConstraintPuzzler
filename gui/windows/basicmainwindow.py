@@ -97,6 +97,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         #
 
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
+        self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
         # the running fade of the cell highlight, if any (kept so it is not garbage collected)
         self.highlightAnimation: QtCore.QParallelAnimationGroup | None = None
 
@@ -516,6 +517,35 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             self.refreshCellStyles()
             self.updateHighlight()
             self.updateSelectionInfo()
+
+    def solveStepButtonClicked(self):
+        """Fill in one deducible cell, so the solver can be followed step by step."""
+        if self.solver is None or self.puzzle is None or self.puzzle.isSolved():
+            return
+        try:
+            changed = self.solver.solveStep()
+        except ContradictionError as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Puzzle cannot be solved",
+                "The solver ran into a contradiction:\n\n" + str(e),
+            )
+            return
+        # a cell may have been solved: refresh its colour and the description
+        self.refreshCellStyles()
+        self.updateHighlight()
+        self.updateSelectionInfo()
+        if not changed:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No progress",
+                "A deduction step does not change the puzzle any further."
+                + (
+                    " Use Solve to continue by guessing."
+                    if self.settings.allowGuessing
+                    else " Enable Solver > Allow guessing and use Solve to continue."
+                ),
+            )
 
     def undo(self):
         pass

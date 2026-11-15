@@ -70,6 +70,35 @@ class Test(unittest.TestCase):
         self.assertTrue(solver.solve(), "A single solve() should keep deducing until done")
         self.assertValidSudoku(sudoku)
 
+    def testSolveStepFillsInOneCell(self):
+        sudoku = parseSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+        solver = Solver(sudoku)
+        before = sudoku.saveState()
+
+        openBefore = sudoku.getNumberOfOpenCells()
+        self.assertTrue(solver.solveStep())
+        self.assertNotEqual(sudoku.saveState(), before)
+        self.assertEqual(sudoku.getNumberOfOpenCells(), openBefore - 1, "Fill in one cell")
+
+        steps = 1
+        while solver.solveStep():
+            steps += 1
+            self.assertLess(steps, 200, "Repeated steps should reach a fixpoint")
+        self.assertTrue(sudoku.isSolved())
+        self.assertValidSudoku(sudoku)
+        self.assertFalse(solver.solveStep(), "A solved puzzle no longer changes")
+
+    def testFailedSolveStepRestoresPuzzle(self):
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle({1, 2, 3}, 2, UniqueValueConstraint)
+        tsvc = puzzle.getConstraintGroups()[0].addConstraint(TotalSumValueConstraint)
+        tsvc.setTotalValue(6)
+        before = puzzle.saveState()
+
+        with self.assertRaises(ContradictionError):
+            Solver(puzzle).solveStep()
+
+        self.assertEqual(puzzle.saveState(), before)
+
     def testHardSudokuNeedsGuessing(self):
         sudoku = parseSudokuFile(os.path.join(ROOT, "hardSudoku.txt"))
         solver = Solver(sudoku)
