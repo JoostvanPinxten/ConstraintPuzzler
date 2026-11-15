@@ -41,6 +41,11 @@ class GuiSmokeTest(unittest.TestCase):
             self.assertEqual(len(icon.availableSizes()), 4)
             # fixed white background, independent of a (dark) system palette
             self.assertEqual(window.scene.backgroundBrush().color(), QtGui.QColorConstants.White)
+            # the Name column fits its (indented) contents, so icons don't overlap the Type text
+            tree = window.ui.puzzleTreeView
+            tree.expandAll()
+            self.app.processEvents()
+            self.assertGreaterEqual(tree.header().sectionSize(0), tree.sizeHintForColumn(0))
         finally:
             window.close()
             window.deleteLater()

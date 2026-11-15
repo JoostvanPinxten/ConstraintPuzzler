@@ -79,6 +79,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle(f"{APP_NAME} {getVersion()}")
         self.setWindowIcon(appIcon())
 
+        # Keep the Name column wide enough for the expanded rows (see fitTreeNameColumn). Expanding
+        # many rows at once (expandAll) emits one signal per row, so coalesce them into one fit.
+        self.fitTreeNameColumnTimer = QtCore.QTimer(self)
+        self.fitTreeNameColumnTimer.setSingleShot(True)
+        self.fitTreeNameColumnTimer.timeout.connect(self.fitTreeNameColumn)
+        self.ui.puzzleTreeView.expanded.connect(self.fitTreeNameColumnTimer.start)
+
         #        self.recentFileActs = []
         #
         #        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -137,6 +144,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.constraintModel = ConstraintPuzzleModel()
         buildPuzzleTree(self.puzzle, self.constraintModel.getItem(QtCore.QModelIndex()))
         self.ui.puzzleTreeView.setModel(self.constraintModel)
+        self.fitTreeNameColumn()
 
         m = self.ui.puzzleTreeView.selectionModel()
         m.selectionChanged.connect(self.showSelectionInPuzzleView)
@@ -151,6 +159,14 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         # would be black on black. Give the puzzle a fixed white background regardless of theme.
         self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
         self.ui.puzzleGraphicsView.setScene(self.scene)
+
+    def fitTreeNameColumn(self):
+        """Widen the tree's Name column to fit its visible rows.
+
+        With the default fixed width, deeply indented rows push their icon past the column
+        edge, where it is drawn over the Type text. The column stays resizable by the user.
+        """
+        self.ui.puzzleTreeView.resizeColumnToContents(0)
 
     def parsePuzzle(self, filename) -> tuple[Puzzle, Solver]:
         """Reads filename with puzzleParser and returns the puzzle with a solver for it."""
