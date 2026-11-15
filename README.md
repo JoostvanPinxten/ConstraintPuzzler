@@ -18,25 +18,24 @@ You can also roll your own puzzle, by combining the `UniqueValueConstraint`, `Ex
 
 ## Requirements
 - Python 3.13 or newer
-- [PySide6](https://pypi.org/project/PySide6/) (Qt for Python), see `requirements.txt`
+- [PySide6](https://pypi.org/project/PySide6/) (Qt for Python)
+- [uv](https://docs.astral.sh/uv/) to manage the environment (dependencies are declared in `pyproject.toml` and pinned in `uv.lock`)
 
 ## Installation
 ```
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-source .venv/bin/activate       # Linux / macOS
-pip install -r requirements.txt
+uv sync
 ```
+This creates a `.venv` with PySide6 and the development tools.
 
 ## Running an example
 Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
-| `python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
-| `python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
-| `python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
-| `python sumbreroMain.py` | Sumbrero (work in progress), loads `simpleSumbrero.txt` |
+| `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
+| `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
+| `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
+| `uv run python sumbreroMain.py` | Sumbrero (work in progress), loads `simpleSumbrero.txt` |
 
 Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck. If the puzzle turns out to be contradictory, a message explains why.
 
@@ -56,13 +55,18 @@ Development
 
 The model, constraints and solver do not depend on the GUI; the tree view is built from a finished puzzle by `buildPuzzleTree` in `gui/puzzlemodel/puzzletreemodel.py`.
 
-## Running the tests
+## Tooling and tests
 ```
-python -m unittest discover -v
+uv run pre-commit install            # run ruff (lint + format) on every commit
+uv run pre-commit run --all-files    # ruff check, ruff format, file hygiene
+uv run pyright                       # type checking
+QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s . -p "test_*.py" -t .
 ```
-The tests only exercise the model, constraints and solver, so they do not need PySide6.
+The unit tests only exercise the model, constraints and solver, so they do not need PySide6. The GUI smoke tests in `tests/` start each puzzle window headless (`QT_QPA_PLATFORM=offscreen`).
 
-CI runs lint and the tests on Linux and Windows for every push and pull request.
+CI (GitHub Actions) runs pre-commit, pyright, and the unit and GUI smoke tests on Linux and Windows for every push to `master` and every pull request. Dependabot keeps GitHub Actions and Python dependencies up to date.
+
+To skip the bulk-formatting commit in `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ## AI-assisted workflow
 The repository uses [Claude Code GitHub Actions](https://github.com/anthropics/claude-code-action):
@@ -72,6 +76,11 @@ The repository uses [Claude Code GitHub Actions](https://github.com/anthropics/c
 - **Issue triage**: new issues are labelled automatically, and Claude asks for missing bug-report details.
 
 These require the `CLAUDE_CODE_OAUTH_TOKEN` repository secret (generate it with `claude setup-token`) and the [Claude GitHub App](https://github.com/apps/claude). Repository conventions for Claude are in `CLAUDE.md`.
+
+Working locally with [Claude Code](https://claude.com/claude-code), the project settings in `.claude/` give you:
+- a hook that runs ruff fix + format on every Python file Claude edits;
+- `/test` to run all CI checks locally and summarise them;
+- `/new-constraint` and `/new-puzzle` to scaffold new constraints and puzzle types with tests.
 
 ## Contributing
 Due to the nature of the ConstraintPuzzler, there are several ways to do some development:
