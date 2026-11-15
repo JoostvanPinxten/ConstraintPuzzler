@@ -3,19 +3,14 @@ Created on 28 dec. 2012
 
 @author: Juice
 '''
-from gui.puzzlemodel.puzzletreemodel import ConstraintGroupProxyItem,\
-    ReferencedCellProxyItem
-from structure.item import Item
 from structure.errors import ContradictionError
 
-class ConstraintGroup(Item):
+class ConstraintGroup(object):
     def __init__(self, grid, name="Untitled"):
         self.constraints = []
         self.cells = []
         self.grid = grid
         self.name = name
-        # TODO: factor out, must be notified through signals, this model should not know how it is proxied 
-        self.item = ConstraintGroupProxyItem(self, self.grid.getItem())
 
     def addConstraint(self, constraintType):
         constraint = constraintType(self, self.grid.values)
@@ -24,7 +19,6 @@ class ConstraintGroup(Item):
     
     def addCell(self, cell):
         self.cells.append(cell)
-        ReferencedCellProxyItem(cell, self.getItem())
         
         cell.valueChanged.connect(self.notify)
         #cell.addConstraintGroup(self)
@@ -63,9 +57,6 @@ class ConstraintGroup(Item):
     
     def getType(self):
         return "Abstract Constraint"
-    
-    def getItem(self):
-        return self.item
     
     def getCells(self):
         return self.cells

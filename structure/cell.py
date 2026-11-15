@@ -3,12 +3,10 @@ Created on 28 dec. 2012
 
 @author: Juice
 '''
-from gui.puzzlemodel.puzzletreemodel import CellProxyItem
-from structure.item import Item
 from structure.errors import ContradictionError
 from structure.signal import Signal
 
-class Cell(Item):
+class Cell(object):
     def __init__(self, initialValues, grid):
         super(Cell, self).__init__()
         self.valueChanged = Signal()
@@ -16,8 +14,6 @@ class Cell(Item):
         self.initialValues = set(initialValues)
         self.reset()
         self.grid = grid
-        
-        self.cellItem = CellProxyItem(self, grid.getItem())
 
     def reset(self):
         self.constraintGroups = []

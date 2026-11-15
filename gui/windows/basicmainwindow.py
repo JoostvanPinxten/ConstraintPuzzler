@@ -18,7 +18,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
     
     showNextSelectionState =  QtCore.Signal()
-    puzzlePieceProxies = {} # dict[PuzzlePieceProxy]
 
     def __init__(self):
         super(BasicMainWindow, self).__init__()
@@ -66,16 +65,16 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def loadPuzzle(self, filename):
         self.puzzle, self.solver = self.parsePuzzle(filename)
         
-        # create a new PuzzleModel
+        # create a new PuzzleModel, presenting the puzzle in the tree view
         self.constraintModel = ConstraintPuzzleModel()
+        buildPuzzleTree(self.puzzle, self.constraintModel.getItem(QtCore.QModelIndex()))
         self.ui.puzzleTreeView.setModel(self.constraintModel)
 
         m = self.ui.puzzleTreeView.selectionModel()
         m.selectionChanged.connect(self.showSelectionInPuzzleView)
 
-        
-        # set the root as the parent for the puzzle
-        self.puzzle.setParentItem(self.constraintModel.getItem(QtCore.QModelIndex()))
+        # one animation proxy per cell of the current puzzle
+        self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
         self.ui.puzzleGraphicsView.setScene(self.scene)
     
