@@ -11,6 +11,7 @@ from solver.Solver import Solver
 from structure.errors import ContradictionError
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -111,6 +112,22 @@ class Test(unittest.TestCase):
             Solver(puzzle).solve()
 
         self.assertEqual(puzzle.saveState(), before, "A failed solve must not leave a half-updated puzzle")
+
+    def testFutoshikiFile(self):
+        puzzle = PuzzleFactory.fromFutoshikiFile(os.path.join(ROOT, "futoshiki.txt"))
+        self.assertEqual(len(puzzle.grid.getCells()), 49)
+        self.assertEqual(puzzle.grid.getCellFromSquareGrid(0, 0).getValue(), 5)
+        self.assertEqual(puzzle.grid.getCellFromSquareGrid(6, 0).getValue(), 6)
+
+        relations = [c for c in puzzle.getConstraints() if isinstance(c, CellGreaterThanCellConstraint)]
+        self.assertEqual(len(relations), 24)
+        # first relation in the file: 2,1>3,1
+        self.assertIs(relations[0].greaterCell, puzzle.grid.getCellFromSquareGrid(1, 0))
+        self.assertIs(relations[0].lesserCell, puzzle.grid.getCellFromSquareGrid(2, 0))
+
+        self.assertTrue(Solver(puzzle).solve())
+        for relation in relations:
+            self.assertGreater(relation.greaterCell.getValue(), relation.lesserCell.getValue())
 
     def testSaveAndRestoreState(self):
         sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))

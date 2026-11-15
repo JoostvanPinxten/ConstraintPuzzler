@@ -65,13 +65,53 @@ class PuzzleFactory(object):
         """ Reads a 9x9 sudoku: one row per line, values separated by spaces.
         Anything that is not one of the puzzle values (e.g. '-' or '0') is an empty cell. """
         sudoku = PuzzleFactory.createEmptySudoku()
-        values = sudoku.getValues()
         with open(filename) as f:
-            for y, line in enumerate(f):
-                for x, el in enumerate(line.split()):
-                    if el.isdigit() and int(el) in values:
-                        sudoku.grid.setConstraintGridValue(x, y, int(el))
+            PuzzleFactory.readGridValues(sudoku, f.readlines())
         return sudoku
+
+    @staticmethod
+    def fromFutoshikiFile(filename):
+        """ Reads a square futoshiki: the grid in the sudoku file format, followed by a
+        'relativity' line and one 'x1,y1>x2,y2' line per inequality (1-based coordinates),
+        meaning that cell (x1,y1) is greater than cell (x2,y2). """
+        with open(filename) as f:
+            lines = [line.strip() for line in f]
+
+        if "relativity" in lines:
+            split = lines.index("relativity")
+            gridLines, relationLines = lines[:split], lines[split + 1:]
+        else:
+            gridLines, relationLines = lines, []
+        gridLines = [line for line in gridLines if line]
+
+        puzzle = PuzzleFactory.createFutoshikiPuzzle(len(gridLines))
+        PuzzleFactory.readGridValues(puzzle, gridLines)
+
+        for line in relationLines:
+            if ">" not in line:
+                continue
+            greater, lesser = [[int(v) - 1 for v in cell.split(",")] for cell in line.split(">")]
+            greaterCell = puzzle.grid.getCellFromSquareGrid(*greater)
+            lesserCell = puzzle.grid.getCellFromSquareGrid(*lesser)
+
+            cg = puzzle.addConstraintGroup("Relativity")
+            constraint = cg.addConstraint(CellGreaterThanCellConstraint)
+            cg.addCell(greaterCell)
+            cg.addCell(lesserCell)
+            constraint.setGreaterCell(greaterCell)
+            constraint.setLesserCell(lesserCell)
+
+        return puzzle
+
+    @staticmethod
+    def readGridValues(puzzle, lines):
+        """ Sets the givens of a square grid: one row per line, values separated by
+        whitespace. Anything that is not one of the puzzle values is an empty cell. """
+        values = puzzle.getValues()
+        for y, line in enumerate(lines):
+            for x, el in enumerate(line.split()):
+                if el.isdigit() and int(el) in values:
+                    puzzle.grid.setConstraintGridValue(x, y, int(el))
 
     @staticmethod
     def createVerySimpleKakuro():

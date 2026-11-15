@@ -27,7 +27,7 @@ pip install -r requirements.txt
 ```
 
 ## Running an example
-Start the GUIs from the root folder of the project, as the example puzzle files are loaded with relative paths:
+Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
@@ -40,7 +40,7 @@ Press **Solve** to let the solver deduce as much as it can; it keeps applying th
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle.
 
-Each `*Main.py` file contains a simple parser for a file format specific to the puzzle (the Sudoku parser lives in `PuzzleFactory.fromSudokuFile`), and a subclass of `BasicMainWindow` that determines the layout and shapes of the puzzle.
+Each `*Main.py` file reads a file format specific to the puzzle (the Sudoku and Futoshiki parsers live in `PuzzleFactory.fromSudokuFile` and `PuzzleFactory.fromFutoshikiFile`), and contains a subclass of `BasicMainWindow` that determines the layout and shapes of the puzzle.
 
 Development
 ==================
