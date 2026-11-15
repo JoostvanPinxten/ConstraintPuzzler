@@ -1,6 +1,8 @@
 ConstraintPuzzler - the power of deduction
 ==========================================
 
+[![CI](https://github.com/JoostvanPinxten/ConstraintPuzzler/actions/workflows/ci.yml/badge.svg)](https://github.com/JoostvanPinxten/ConstraintPuzzler/actions/workflows/ci.yml)
+
 Many number puzzles have many similar properties which allow automatic (analytical or brute-force) solving. ConstraintPuzzler takes advantage of these similarities by allowing the user to describe the structure of the puzzle. As you can express most puzzles in terms of (combinations of) constraints on this structure, it leverages this information to automatically provide a solver that simply interprets the constraints + structure and analytically solves most cases.
 
 In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles.
@@ -59,6 +61,17 @@ The model, constraints and solver do not depend on the GUI; the tree view is bui
 python -m unittest discover -v
 ```
 The tests only exercise the model, constraints and solver, so they do not need PySide6.
+
+CI runs lint and the tests on Linux and Windows for every push and pull request.
+
+## AI-assisted workflow
+The repository uses [Claude Code GitHub Actions](https://github.com/anthropics/claude-code-action):
+- **@claude**: mention `@claude` in an issue or PR comment (collaborators only) to ask questions or have it implement changes.
+- **PR review**: every non-draft PR gets an automatic review.
+- **CI auto-fix**: when CI fails on a PR, Claude proposes a fix PR against that branch.
+- **Issue triage**: new issues are labelled automatically, and Claude asks for missing bug-report details.
+
+These require the `CLAUDE_CODE_OAUTH_TOKEN` repository secret (generate it with `claude setup-token`) and the [Claude GitHub App](https://github.com/apps/claude). Repository conventions for Claude are in `CLAUDE.md`.
 
 ## Contributing
 Due to the nature of the ConstraintPuzzler, there are several ways to do some development:
