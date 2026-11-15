@@ -3,9 +3,13 @@ Created on 6 jan. 2013
 
 @author: Juice
 '''
+import os
 import unittest
 from utility.puzzlefactory import PuzzleFactory
 from solver.Solver import Solver
+from structure.errors import ContradictionError
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class Test(unittest.TestCase):
@@ -42,6 +46,52 @@ class Test(unittest.TestCase):
         
         self.assertEqual(c1_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
         self.assertEqual(c2_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
+
+
+    def assertValidSudoku(self, sudoku):
+        self.assertTrue(sudoku.isSolved(), "Not all cells are filled")
+        for cg in sudoku.getConstraintGroups():
+            values = sorted(c.getValue() for c in cg.getCells())
+            self.assertEqual(values, list(range(1, 10)), cg.getName() + " is not a permutation of 1..9")
+
+    def testDeductionRepeatsUntilFixpoint(self):
+        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+        solver = Solver(sudoku)
+
+        self.assertTrue(solver.solve(), "A single solve() should keep deducing until done")
+        self.assertValidSudoku(sudoku)
+
+    def testHardSudokuNeedsGuessing(self):
+        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "hardSudoku.txt"))
+        solver = Solver(sudoku)
+        self.assertFalse(solver.solve(), "Expected deduction alone to get stuck on this puzzle")
+
+        solver.allowGuessing = True
+        self.assertTrue(solver.solve())
+        self.assertValidSudoku(sudoku)
+
+    def testDuplicateValueInRowRaises(self):
+        sudoku = PuzzleFactory.createEmptySudoku()
+        sudoku.grid.setConstraintGridValue(0, 0, 1)
+        with self.assertRaises(ContradictionError):
+            sudoku.grid.setConstraintGridValue(5, 0, 1)
+
+    def testCellWithoutOptionsRaises(self):
+        sudoku = PuzzleFactory.createEmptySudoku()
+        # column 8 already has a 9, so filling 1..8 in row 0 leaves (8,0) without options
+        sudoku.grid.setConstraintGridValue(8, 5, 9)
+        with self.assertRaises(ContradictionError):
+            for x in range(0, 8):
+                sudoku.grid.setConstraintGridValue(x, 0, x + 1)
+
+    def testSaveAndRestoreState(self):
+        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+        state = sudoku.saveState()
+        Solver(sudoku).solve()
+        self.assertNotEqual(sudoku.saveState(), state)
+
+        sudoku.restoreState(state)
+        self.assertEqual(sudoku.saveState(), state)
 
 
 if __name__ == "__main__":

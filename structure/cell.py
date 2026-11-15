@@ -3,16 +3,16 @@ Created on 28 dec. 2012
 
 @author: Juice
 '''
-from PySide6 import QtCore
 from gui.puzzlemodel.puzzletreemodel import CellProxyItem
 from structure.item import Item
 from structure.errors import ContradictionError
+from structure.signal import Signal
 
 class Cell(Item):
-    valueChanged = QtCore.Signal(object)
-    possibleValuesChanged = QtCore.Signal(object)
     def __init__(self, initialValues, grid):
         super(Cell, self).__init__()
+        self.valueChanged = Signal()
+        self.possibleValuesChanged = Signal()
         self.initialValues = set(initialValues)
         self.reset()
         self.grid = grid

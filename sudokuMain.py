@@ -75,33 +75,8 @@ class MainWindow(BasicMainWindow):
 
     @staticmethod
     def parsePuzzle(filename):
-        start = time()
-
-        puzzle = PuzzleFactory.createEmptySudoku()
-        # Set the initial data to work with
-        myFile = open(filename)
-
-        values = range(1,10)
-        stringArray = myFile.readlines()
-        y = 0
-        for line in  stringArray:
-            x = 0
-            for el in line.split(' '):
-                try:
-                    if(int(el) in values):
-                        puzzle.grid.setConstraintGridValue(x,y,int(el))
-                except ValueError:
-                    pass
-                x += 1
-            y += 1
-
-        # And solve
-
+        puzzle = PuzzleFactory.fromSudokuFile(filename)
         solver = Solver(puzzle)
-
-        #print solver
-        #grid.printAsSudoku()
-        #print "Done in", int((time() - start) *1000), "ms"
         return puzzle, solver
 
 if __name__ == '__main__':

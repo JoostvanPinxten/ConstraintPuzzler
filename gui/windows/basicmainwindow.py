@@ -52,8 +52,12 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.trans2 = self.previousSelectionState.addTransition(self.showNextSelectionState, self.currentSelectionState)
         
         self.selectionStatemachine.start()        
+        self.puzzle = None
+        self.solver = None
+
         self.createActions()
         self.createMenus()
+        self.createSolverMenu()
         self.createStatusBar()
 #
 #        self.setWindowTitle("Constraints solver")
@@ -84,6 +88,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def createMenus(self):
         pass
     
+    def createSolverMenu(self):
+        solverMenu = self.menuBar().addMenu("Solver")
+        self.allowGuessingAction = solverMenu.addAction("Allow guessing (backtracking)")
+        self.allowGuessingAction.setCheckable(True)
+
     def createStatusBar(self):
         pass
 
@@ -173,6 +182,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             
     def solveButtonClicked(self):
         if self.solver is not None:
+            self.solver.allowGuessing = self.allowGuessingAction.isChecked()
             try:
                 self.solver.solve()
             except ContradictionError as e:

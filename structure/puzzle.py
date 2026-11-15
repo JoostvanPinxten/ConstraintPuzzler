@@ -44,6 +44,32 @@ class Puzzle(Item):
     def getConstraintGroups(self):
         return self.constraintGroups
     
+    def getConstraints(self):
+        return [c for cg in self.constraintGroups for c in cg.getConstraints()]
+
+    def saveState(self):
+        """ Snapshot of all mutable solving state. The snapshot is immutable and
+        comparable, so it can also be used to detect whether anything changed. """
+        cells = tuple((frozenset(c.values), c.value, c.inferred) for c in self.grid.cells)
+        constraints = tuple(tuple(c.values) for c in self.getConstraints())
+        return (cells, constraints)
+
+    def restoreState(self, state):
+        """ Restore a snapshot made by saveState(). Only possibleValuesChanged is
+        emitted, so the constraints are not triggered by the restore. """
+        cellStates, constraintStates = state
+        for cell, (values, value, inferred) in zip(self.grid.cells, cellStates):
+            cell.values = set(values)
+            cell.value = value
+            cell.inferred = inferred
+        for constraint, values in zip(self.getConstraints(), constraintStates):
+            constraint.values = list(values)
+        for cell in self.grid.cells:
+            cell.possibleValuesChanged.emit(cell)
+
+    def isSolved(self):
+        return all(c.hasValue() for c in self.grid.cells)
+
     def getNumberOfOpenCells(self):
         nr = 0
         for c in self.grid.cells:

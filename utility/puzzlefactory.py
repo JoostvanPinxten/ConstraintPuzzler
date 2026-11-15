@@ -61,6 +61,17 @@ class PuzzleFactory(object):
         return sudoku
     
     @staticmethod
+    def fromSudokuFile(filename):
+        """ Reads a 9x9 sudoku: one row per line, values separated by spaces, '-' for empty cells """
+        sudoku = PuzzleFactory.createEmptySudoku()
+        with open(filename) as f:
+            for y, line in enumerate(f):
+                for x, el in enumerate(line.split()):
+                    if el.isdigit():
+                        sudoku.grid.setConstraintGridValue(x, y, int(el))
+        return sudoku
+
+    @staticmethod
     def createVerySimpleKakuro():
         possibleValues = range(1,10)
         puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))
