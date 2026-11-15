@@ -14,9 +14,9 @@ from structure.cell import Cell
 
 def centerTextItem(text):
     form = QtGui.QTextBlockFormat()
-    form.setAlignment(QtCore.Qt.AlignCenter)
+    form.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
     cursor = text.textCursor()
-    cursor.select(QtGui.QTextCursor.Document)
+    cursor.select(QtGui.QTextCursor.SelectionType.Document)
     cursor.mergeBlockFormat(form)
     cursor.clearSelection()
 
@@ -59,7 +59,7 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
         self.updateRepresentation()
 
     def mousePressEvent(self, event):
-        return QtWidgets.QGraphicsRectItem.mousePressEvent(self, event)
+        return super().mousePressEvent(event)
 
     def instantiateRepresentation(self):
         # for each value, instantiate the hints, hidden by default

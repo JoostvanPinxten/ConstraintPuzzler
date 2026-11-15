@@ -6,7 +6,7 @@ Created on Sat Dec 22 22:25:33 2012
 
 from math import cos, pi, sin
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
@@ -82,7 +82,10 @@ class MainWindow(BasicMainWindow):
                         )
 
                     hex = ValueHexagon(
-                        constraint, self.hexSide, hexPos, edgeColor=QtCore.Qt.transparent
+                        constraint,
+                        self.hexSide,
+                        hexPos,
+                        edgeColor=QtGui.QColor(QtCore.Qt.GlobalColor.transparent),
                     )
                     self.puzzlePieces[constraint] = hex
                     self.scene.addItem(hex)

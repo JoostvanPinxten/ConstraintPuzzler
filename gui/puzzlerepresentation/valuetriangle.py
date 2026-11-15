@@ -51,7 +51,7 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
 
     def mousePressEvent(self, event):
         # TODO: be able to set the value?
-        return QtWidgets.QGraphicsRectItem.mousePressEvent(self, event)
+        return super().mousePressEvent(event)
 
     def instantiateRepresentation(self):
         # add a big text item to show the set value, hidden by default

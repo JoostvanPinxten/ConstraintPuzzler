@@ -7,7 +7,7 @@ Created on 28 dec. 2012
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
-ParentRole = QtCore.Qt.UserRole + 1
+ParentRole = QtCore.Qt.ItemDataRole.UserRole + 1
 
 
 class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
@@ -56,17 +56,17 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
 
         return self.createIndex(parentItem.childNumber(), 0, parentItem)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             item = self.getItem(index)
             if not item:
                 return self.tr("not set")
             else:
                 return item.data(index.column())
-        elif role == Qt.DecorationRole:
+        elif role == Qt.ItemDataRole.DecorationRole:
             if index.column() != 0:
                 return None
             item = self.getItem(index)
@@ -77,10 +77,10 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
         else:
             return None
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
         sections = [self.tr("Name"), self.tr("Type")]
 
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return sections[section]
         else:
             return QtCore.QAbstractItemModel.headerData(self, section, orientation, role)

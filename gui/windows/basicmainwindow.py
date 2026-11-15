@@ -28,6 +28,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     showNextSelectionState = QtCore.Signal()
 
+    # Set by subclasses in initializePuzzleRepresentation()
+    scene: QtWidgets.QGraphicsScene
+    puzzlePieces: dict
+    selectedItems: set
+
     def __init__(self):
         super().__init__()
         self.ui = mainWindowUi.Ui_MainWindow()

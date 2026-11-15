@@ -24,6 +24,16 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check --output-format=github .
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run pyright
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

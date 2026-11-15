@@ -33,6 +33,20 @@ select = [
     "SIM", # flake8-simplify
 ]
 
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+include = ["constraints", "solver", "structure", "utility", "gui", "tests", "*.py"]
+exclude = [
+    "gui/ui/mainWindowUi.py",
+    "gui/icons/icons_rc.py",
+    ".venv",
+    "**/__pycache__",
+]
+# Legacy code initialises many attributes to None and fills them in later. Report these as
+# warnings for now; promote to errors once the call sites are narrowed (e.g. with asserts).
+reportOptionalMemberAccess = "warning"
+
 [tool.ruff.lint.flake8-bugbear]
 # Qt's idiomatic `parent=QModelIndex()` default arguments are immutable value types.
 extend-immutable-calls = ["PySide6.QtCore.QModelIndex"]
