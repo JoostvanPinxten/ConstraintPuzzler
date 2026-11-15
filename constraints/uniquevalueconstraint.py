@@ -28,7 +28,7 @@ class UniqueValueConstraint(Constraint):
     def summary(self):
         return "all different"
 
-    def describe(self):
+    def describe(self, showHints=True):
         placed = placedValues(self.group.getCells())
         if not placed:
             return "The values must all differ; nothing is placed yet."

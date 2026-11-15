@@ -77,7 +77,7 @@ class ExactCoverConstraint(UniqueValueConstraint):
     def summary(self):
         return "each value once"
 
-    def describe(self):
+    def describe(self, showHints=True):
         missing = set(self.group.grid.getValues()) - set(placedValues(self.group.getCells()))
         if not missing:
             return "Every value appears exactly once; complete."

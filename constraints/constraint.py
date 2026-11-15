@@ -39,6 +39,9 @@ class Constraint:
         """A short description of the rule, e.g. "sum = 17", used as its name in the GUI."""
         return self.getType()
 
-    def describe(self):
-        """A one-line description of the rule and of how far it is satisfied."""
+    def describe(self, showHints=True):
+        """A one-line description of the rule and of how far it is satisfied.
+
+        With showHints False, the description leaves out the candidate values the solver has
+        deduced, so it does not give away hints about the solution."""
         return self.summary()

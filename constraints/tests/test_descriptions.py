@@ -51,6 +51,9 @@ class DescriptionTest(unittest.TestCase):
         self.assertIn("16 over 2 open cells", description)
         self.assertIn("candidates: 7, 9", description)
         self.assertEqual(puzzle.saveState(), state, "describe() must not change the puzzle")
+        withoutHints = constraint.describe(showHints=False)
+        self.assertIn("16 over 2 open cells", withoutHints)
+        self.assertNotIn("candidates", withoutHints)
 
         cells[0].setValue(7)
         self.assertIn("7 is placed, so 9 is left for 1 open cell", constraint.describe())
@@ -72,6 +75,9 @@ class DescriptionTest(unittest.TestCase):
 
         self.assertEqual(constraint.summary(), "(1, 1) < (2, 1)")
         self.assertIn("candidates 1, 2, 3 < 1, 2, 3", constraint.describe())
+        self.assertEqual(
+            constraint.describe(showHints=False), "Cell (1, 1) is smaller than cell (2, 1)."
+        )
         lesser.setValue(1)
         greater.setValue(3)
         self.assertIn("satisfied: 1 < 3", constraint.describe())
