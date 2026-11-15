@@ -341,6 +341,7 @@ Claude Code skill scaffolds all of these. By hand:
    `PUZZLE_TYPES`. The launcher, the GUI smoke tests and the standalone build (examples and
    window) all read this registry.
 4. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleType` to the
-   registry entry and implements `initializePuzzleRepresentation()` (one `ValueRectangle`,
-   `ValueTriangle` or `ValueHexagon` per cell, see the existing windows).
+   registry entry and implements `initializePuzzleRepresentation()`: call `newScene()`,
+   then `addCellPiece(cell, ValueRectangle(...))` (or `ValueHexagon`) for every cell, see
+   the existing windows.
 5. Add parser tests to `parsers/tests/test_parsers.py`.

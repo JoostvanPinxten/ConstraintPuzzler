@@ -518,7 +518,7 @@ class CellInputTest(unittest.TestCase):
         self.assertIsNone(self.window.selectedCell())
 
     def test_typing_enters_changes_and_clears_a_value(self):
-        from gui.puzzlerepresentation.valuerectangle import ENTERED_VALUE_COLOR
+        from gui.puzzlerepresentation.cellpiece import ENTERED_VALUE_COLOR
 
         cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
         self.click(cell)
@@ -549,10 +549,7 @@ class CellInputTest(unittest.TestCase):
         self.assertNotIn("is given", self.window.selectionInfoLabel.text())
 
     def test_a_mistake_is_shown_in_red_with_the_cells_it_clashes_with(self):
-        from gui.puzzlerepresentation.valuerectangle import (
-            ENTERED_VALUE_COLOR,
-            VIOLATION_COLOR,
-        )
+        from gui.puzzlerepresentation.cellpiece import ENTERED_VALUE_COLOR, VIOLATION_COLOR
 
         cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
         given = self.grid.getCellFromSquareGrid(1, 0)  # the 6 in the same row

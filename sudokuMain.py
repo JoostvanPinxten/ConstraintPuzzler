@@ -9,7 +9,6 @@ from math import floor
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from utility.puzzletypes import SUDOKU
@@ -19,32 +18,18 @@ class MainWindow(BasicMainWindow):
     puzzleType = SUDOKU
 
     def initializePuzzleRepresentation(self):
-        self.scene = QtWidgets.QGraphicsScene(self)
-
-        #        self.view.setScene(self.scene)
-        self.puzzlePieces = {}
-
+        self.newScene()
         self.cellSize = 55
         self.blockPadding = 3
-
-        self.selectedItems = set()
 
         for x in range(0, 9):
             for y in range(0, 9):
                 c = self.puzzle.grid.getCellFromSquareGrid(x, y)
-                c.valueChanged.connect(self.cellValueChanged)
-                c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
-
-                # calculate the offset
+                # leave room between the 3x3 blocks for the block lines
                 offset_x = self.cellSize * x + floor(x / 3) * self.blockPadding
                 offset_y = self.cellSize * y + floor(y / 3) * self.blockPadding
-
-                r = ValueRectangle(c, self.cellSize, QtCore.QPoint(offset_x, offset_y))
-                self.puzzlePieces[c] = r
-
-                proxy = PuzzlePieceProxy(r)
-                self.puzzlePieceProxies[c] = proxy
-                self.scene.addItem(r)
+                piece = ValueRectangle(c, self.cellSize, QtCore.QPoint(offset_x, offset_y))
+                self.addCellPiece(c, piece)
 
         # draw some lines, to indicate the blocks
         for x in range(0, 4):

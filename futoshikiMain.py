@@ -10,7 +10,6 @@ from PySide6 import QtWidgets
 
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from gui.puzzlerepresentation.inequalitysign import InequalitySign
-from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from structure.cell import PositionedCell
@@ -22,27 +21,16 @@ class MainWindow(BasicMainWindow):
 
     def initializePuzzleRepresentation(self):
         assert self.puzzle is not None
-        self.scene = QtWidgets.QGraphicsScene(self)
-
-        #        self.view.setScene(self.scene)
-        self.puzzlePieces = {}
-
+        self.newScene()
         self.cellSize = 55
         # room between the cells for the inequality signs
         self.cellGap = 22
         self.cellPitch = self.cellSize + self.cellGap
 
-        self.selectedItems = set()
-
         for c in self.puzzle.grid.getCells():
             if isinstance(c, PositionedCell):
-                rect = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellPitch)
-                self.scene.addItem(rect)
-                c.valueChanged.connect(self.cellValueChanged)
-                c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
-                self.puzzlePieces[c] = rect
-                proxy = PuzzlePieceProxy(rect)
-                self.puzzlePieceProxies[c] = proxy
+                piece = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellPitch)
+                self.addCellPiece(c, piece)
 
         self.inequalitySigns = {}
         for constraint in self.puzzle.getConstraints():

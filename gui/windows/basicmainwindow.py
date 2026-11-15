@@ -22,6 +22,7 @@ from gui.puzzlemodel.puzzletreemodel import (
     ReferencedCellProxyItem,
     buildPuzzleTree,
 )
+from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.solverworker import SolveJob, SolveWorker
 from gui.ui import mainWindowUi
@@ -698,7 +699,23 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.refreshPiece(cell)
 
     def initializePuzzleRepresentation(self):
+        """Draw the puzzle: start with newScene(), then addCellPiece() for every cell."""
         raise NotImplementedError
+
+    def newScene(self):
+        """Start drawing a puzzle on a new, empty scene."""
+        self.scene = QtWidgets.QGraphicsScene(self)
+        self.puzzlePieces = {}
+        self.selectedItems = set()
+
+    def addCellPiece(self, cell, piece):
+        """Show a cell with `piece` (e.g. a ValueRectangle): add it to the scene, redraw it
+        when the cell changes, and make it selectable and highlightable."""
+        self.scene.addItem(piece)
+        cell.valueChanged.connect(self.cellValueChanged)
+        cell.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
+        self.puzzlePieces[cell] = piece
+        self.puzzlePieceProxies[cell] = PuzzlePieceProxy(piece)
 
     def cellValueChanged(self, cell):
         self.refreshPiece(cell)
