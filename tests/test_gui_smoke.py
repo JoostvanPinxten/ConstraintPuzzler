@@ -59,6 +59,66 @@ class GuiSmokeTest(unittest.TestCase):
         self._smoke("futoshikiMain", "futoshiki.txt")
 
 
+class SumbreroWindowTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def setUp(self):
+        import sumbreroMain
+
+        self.window = sumbreroMain.MainWindow()
+        self.window.loadPuzzle(str(REPO_ROOT / "simpleSumbrero.txt"))
+        self.addCleanup(self.window.deleteLater)
+        self.addCleanup(self.window.close)
+        assert self.window.puzzle is not None
+        self.puzzle = self.window.puzzle
+
+    def test_clues_sit_in_the_wedge_facing_their_line(self):
+        from math import sqrt
+
+        from PySide6 import QtCore
+
+        import sumbreroMain
+        from gui.puzzlerepresentation.cluehexagon import ClueHexagon
+
+        layout = sumbreroMain.clueLayout(self.puzzle)
+        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
+        for constraint, (position, direction) in layout.items():
+            hexagon = self.window.puzzlePieces[constraint]
+            self.assertIsInstance(hexagon, ClueHexagon)
+            self.assertIs(self.window.clueHexagons[position], hexagon)
+            self.assertIs(hexagon.clues[direction], constraint)
+
+            text = hexagon.textItems[direction]
+            self.assertEqual(text.text(), str(constraint.getTotalValue()))
+            center = text.mapToScene(text.boundingRect().center())
+            self.assertTrue(
+                hexagon.wedge(direction).containsPoint(center, QtCore.Qt.FillRule.OddEvenFill)
+            )
+            # the text fits in the circle inscribed in the wedge (a triangle with side size / 2)
+            self.assertLess(text.font().pixelSize(), hexagon.size / 2 / sqrt(3))
+
+    def test_black_hexagons_frame_the_cells(self):
+        cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
+        frame = set(self.window.clueHexagons)
+        self.assertFalse(cells & frame)
+        import sumbreroMain
+
+        for position in cells:
+            for direction in ("N", "S", "NE", "SE", "NW", "SW"):
+                neighbour = sumbreroMain.neighbour(position, direction)
+                self.assertTrue(neighbour in cells or neighbour in frame)
+
+    def test_solve_button_fills_in_the_cells(self):
+        self.window.solveButtonClicked()
+        self.assertTrue(self.puzzle.isSolved())
+        for cell in self.puzzle.getGrid().getCells():
+            piece = self.window.puzzlePieces[cell]
+            self.assertEqual(piece.valueTextItem.toPlainText(), str(cell.getValue()))
+            self.assertEqual(piece.valueTextItem.opacity(), 1)
+
+
 class LauncherSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
