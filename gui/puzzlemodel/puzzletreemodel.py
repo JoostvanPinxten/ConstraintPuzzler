@@ -22,7 +22,7 @@ def _cellCounts(cells):
 def describeCell(cell):
     """Rich text describing the value or the candidates of a cell and its groups."""
     if cell.hasValue():
-        how = "deduced" if cell.isInferred() else "given"
+        how = "deduced" if cell.isInferred() else "entered" if cell.isEntered() else "given"
         state = f"Value: {cell.getValue()} ({how})"
     else:
         candidates = ", ".join(str(v) for v in sorted(cell.getPossibleValues()))

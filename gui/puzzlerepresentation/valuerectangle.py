@@ -8,6 +8,9 @@ from math import floor
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+# colour of a value the user typed in (given values are blue, deduced values black)
+ENTERED_VALUE_COLOR = QtGui.QColor(0, 120, 60)
+
 
 def centerTextItem(text):
     form = QtGui.QTextBlockFormat()
@@ -85,6 +88,8 @@ class ValueRectangle(QtWidgets.QGraphicsRectItem):
             else:
                 f.setWeight(QtGui.QFont.Weight.ExtraLight)
                 self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
+            if self.cell.isEntered():
+                self.valueTextItem.setDefaultTextColor(ENTERED_VALUE_COLOR)
 
         else:
             self.valueTextItem.setOpacity(0)

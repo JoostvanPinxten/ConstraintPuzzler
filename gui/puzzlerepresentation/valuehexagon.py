@@ -9,6 +9,7 @@ from math import cos, floor, pi, sin, sqrt
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from constraints import Constraint
+from gui.puzzlerepresentation.valuerectangle import ENTERED_VALUE_COLOR
 from structure.cell import Cell
 
 
@@ -120,6 +121,8 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
             else:
                 f.setWeight(QtGui.QFont.Weight.ExtraLight)
                 self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
+            if isinstance(self.cell, Cell) and self.cell.isEntered():
+                self.valueTextItem.setDefaultTextColor(ENTERED_VALUE_COLOR)
 
         else:
             self.valueTextItem.setOpacity(0)
