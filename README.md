@@ -22,7 +22,7 @@ Standalone builds for Windows, Linux and macOS are attached to every [GitHub Rel
 
 ConstraintPuzzler is a Python GUI application. In the root of the project, there are a few `*Main.py` files that start the corresponding GUIs for the puzzles. The supported puzzles are Sudoku, Kakuro and Futoshiki; Sumbrero is a work in progress.
 
-You can also roll your own puzzle, by combining the `UniqueValueConstraint`, `ExactCoverConstraint`, `TotalSumValueConstraint`, `CellGreaterThanCellConstraint`, etc.
+You can also roll your own puzzle, by combining the `UniqueValueConstraint`, `ExactCoverConstraint`, `TotalSumValueConstraint`, `CellGreaterThanCellConstraint`, etc. See [doc/constraints.md](doc/constraints.md) for what each constraint type means, what it deduces and how to set it up.
 
 ## Requirements
 - Python 3.13 or newer
@@ -107,7 +107,7 @@ Working locally with [Claude Code](https://claude.com/claude-code), the project 
 ## Contributing
 Due to the nature of the ConstraintPuzzler, there are several ways to do some development:
 - Creating new puzzles based on pre-defined constraints and cell visualizations;
-- Introduce a new kind of Constraint, by implementing the contract defined by the `Constraint` class (`notify`, `applyConstraint` and `getAllowedValuesForValueList`). When a constraint detects that the puzzle cannot be solved anymore, it raises a `ContradictionError`; the solver uses this to backtrack;
+- Introduce a new kind of Constraint, by implementing the contract defined by the `Constraint` class (`notify`, `applyConstraint` and `getAllowedValuesForValueList`). When a constraint detects that the puzzle cannot be solved anymore, it raises a `ContradictionError`; the solver uses this to backtrack (see [Writing your own constraint](doc/constraints.md#writing-your-own-constraint));
 - Create your own fancy shapes for visualizing a puzzle, including animation;
 - Improving the main algorithm that distributes the logic to the proper places.
 
