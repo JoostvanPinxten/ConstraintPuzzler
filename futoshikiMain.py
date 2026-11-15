@@ -5,6 +5,7 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
+import os
 import sys
 
 from PySide6 import QtGui, QtCore, QtWidgets
@@ -69,10 +70,10 @@ class MainWindow(BasicMainWindow):
 
         puzzle = PuzzleFactory.createFutoshikiPuzzle(7)
         # Set the initial data to work with
-        myFile = open("./futoshiki.txt")
+        with open(filename) as myFile:
+            stringArray = myFile.readlines()
 
         values = range(1,10)
-        stringArray = myFile.readlines()
         y = 0
         addingValues = True
         for line in  stringArray:
@@ -126,6 +127,6 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle("futoshiki.txt")
+    mainWin.loadPuzzle(os.path.join(os.path.dirname(os.path.abspath(__file__)), "futoshiki.txt"))
     mainWin.show()
     sys.exit(app.exec())

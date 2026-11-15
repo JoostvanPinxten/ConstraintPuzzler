@@ -87,10 +87,10 @@ class MainWindow(BasicMainWindow):
         #puzzle = PuzzleFactory.createExampleKakuro()
 
         # Set the initial data to work with
-        myFile = open(filename)
+        with open(filename) as myFile:
+            stringArray = myFile.readlines()
 
         values = range(1,10)
-        stringArray = myFile.readlines()
         y = 0
         for line in  stringArray:
             if(line.startswith("range")):
@@ -123,10 +123,10 @@ class MainWindow(BasicMainWindow):
         return puzzle, solver
 
 if __name__ == '__main__':
-    import sys
+    import os, sys
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle("./mediumKakuro.txt")
+    mainWin.loadPuzzle(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mediumKakuro.txt"))
     mainWin.show()
     sys.exit(app.exec())

@@ -102,11 +102,10 @@ class MainWindow(BasicMainWindow):
     def parsePuzzle(filename):
 
         # Set the initial data to work with
-        myFile = open("./simpleSumbrero.txt")
-
+        with open(filename) as myFile:
+            stringArray = myFile.readlines()
 
         values = range(1,10)
-        stringArray = myFile.readlines()
         y = 0
         puzzle = None
         for line in stringArray:
@@ -171,9 +170,9 @@ class MainWindow(BasicMainWindow):
         return puzzle, solver
         
 if __name__ == '__main__':
-    import sys
+    import os, sys
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle("simpleSumbrero.txt")
+    mainWin.loadPuzzle(os.path.join(os.path.dirname(os.path.abspath(__file__)), "simpleSumbrero.txt"))
     mainWin.show()
     sys.exit(app.exec())
