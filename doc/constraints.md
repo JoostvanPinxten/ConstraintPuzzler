@@ -209,7 +209,7 @@ constraint.setLesserCell(lesserCell)
 ```
 
 In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line `relativity`;
-`PuzzleFactory.fromFutoshikiFile` creates these groups.
+`parsers.parseFutoshikiFile` creates these groups.
 
 ## NonogramConstraint (experimental)
 

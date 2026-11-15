@@ -99,15 +99,40 @@ class SumbreroWindowTest(unittest.TestCase):
             # the text fits in the circle inscribed in the wedge (a triangle with side size / 2)
             self.assertLess(text.font().pixelSize(), hexagon.size / 2 / sqrt(3))
 
+    def test_clues_sit_just_before_their_line(self):
+        from constraints import TotalSumValueConstraint
+        from parsers.sumbrero import ASCENDING_ROW, COLUMN, DESCENDING_ROW, neighbour
+        from sumbreroMain import clueLayout
+
+        layout = clueLayout(self.puzzle)
+        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
+        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
+        for group in self.puzzle.getConstraintGroups():
+            constraint = next(
+                c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
+            )
+            position, direction = layout[constraint]
+            self.assertNotIn(position, cellPositions)
+            # one step in the wedge's direction leads to the first cell of the line
+            first = neighbour(position, direction)
+            self.assertIn(first, [c.getPosition() for c in group.getCells()])
+            expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
+            self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
+        # no two lines share a wedge
+        self.assertEqual(len(set(layout.values())), len(layout))
+        # some hexagons hold more than one sum, like in a Kakuro
+        positions = [position for position, _direction in layout.values()]
+        self.assertLess(len(set(positions)), len(positions))
+
     def test_black_hexagons_frame_the_cells(self):
         cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
         frame = set(self.window.clueHexagons)
         self.assertFalse(cells & frame)
-        import sumbreroMain
+        from parsers.sumbrero import neighbour as hexNeighbour
 
         for position in cells:
             for direction in ("N", "S", "NE", "SE", "NW", "SW"):
-                neighbour = sumbreroMain.neighbour(position, direction)
+                neighbour = hexNeighbour(position, direction)
                 self.assertTrue(neighbour in cells or neighbour in frame)
 
     def test_solve_button_fills_in_the_cells(self):
@@ -283,6 +308,36 @@ class LauncherSmokeTest(unittest.TestCase):
         sudoku.solveButtonClicked()
         assert sudoku.solver is not None
         self.assertFalse(sudoku.solver.allowGuessing)
+
+    def test_examples_are_marked_as_examples(self):
+        for name, (_label, windowClass) in self.launcherModule.PUZZLES.items():
+            self.assertIn(windowClass.defaultExample, windowClass.examples)
+            for example in windowClass.examples:
+                with self.subTest(puzzle=name, example=example):
+                    window = self.launcher.openPuzzle(name, example=example)
+                    index = self.launcher.tabs.indexOf(window)
+                    title = f"{windowClass.puzzleTypeName} example: {example}"
+                    self.assertEqual(self.launcher.tabs.tabText(index), title)
+                    self.assertIn(title, window.windowTitle())
+
+        # every example is listed under File > Examples > <puzzle type>
+        listed = set()
+        for typeAction in self.launcher.examplesMenu.actions():
+            typeMenu = typeAction.menu()
+            assert isinstance(typeMenu, QtWidgets.QMenu)
+            listed |= {(typeMenu.title(), action.text()) for action in typeMenu.actions()}
+        expected = {
+            (label, example)
+            for label, windowClass in self.launcherModule.PUZZLES.values()
+            for example in windowClass.examples
+        }
+        self.assertEqual(listed, expected)
+
+    def test_user_file_is_not_marked_as_example(self):
+        window = self.launcher.openPuzzle("sudoku", str(REPO_ROOT / "hardSudoku.txt"))
+        index = self.launcher.tabs.indexOf(window)
+        self.assertEqual(self.launcher.tabs.tabText(index), "Sudoku - hardSudoku.txt")
+        self.assertNotIn("example", window.windowTitle())
 
     def test_unloadable_file_adds_no_tab(self):
         with self.assertRaises(OSError):

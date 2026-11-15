@@ -44,7 +44,7 @@ Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
-| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of puzzles via the start page, *File > New puzzle* or the **+** button, and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
+| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of example puzzles via the start page, *File > Examples* or the **+** button (or your own via *File > Open file*), and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
 | `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
 | `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
@@ -54,7 +54,7 @@ Press **Solve** to let the solver deduce as much as it can; it keeps applying th
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle.
 
-Each `*Main.py` file reads a file format specific to the puzzle (the Sudoku and Futoshiki parsers live in `PuzzleFactory.fromSudokuFile` and `PuzzleFactory.fromFutoshikiFile`), and contains a subclass of `BasicMainWindow` that determines the layout and shapes of the puzzle.
+Each puzzle type has its own file format (see [doc/puzzle-files.md](doc/puzzle-files.md)), read by a parser in `parsers/` such as `parsers.parseKakuroFile`. Each `*Main.py` file contains a subclass of `BasicMainWindow` that names its parser and determines the layout and shapes of the puzzle.
 
 Development
 ==================
@@ -63,10 +63,11 @@ Development
 - `structure/` - the puzzle model: `Puzzle`, `Grid` and `Cell`
 - `constraints/` - `ConstraintGroup` and the constraint types
 - `solver/` - the `Solver`: repeated deduction, with optional backtracking
+- `parsers/` - the puzzle file parsers, one per puzzle type
 - `utility/` - `PuzzleFactory` for creating (example) puzzles
 - `gui/` - the Qt user interface: main window, tree model and puzzle piece shapes
 
-The model, constraints and solver do not depend on the GUI; the tree view is built from a finished puzzle by `buildPuzzleTree` in `gui/puzzlemodel/puzzletreemodel.py`.
+The model, constraints, parsers and solver do not depend on the GUI; the tree view is built from a finished puzzle by `buildPuzzleTree` in `gui/puzzlemodel/puzzletreemodel.py`.
 
 ## Tooling and tests
 ```
