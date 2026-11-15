@@ -4,6 +4,7 @@ Created on 6 jan. 2013
 @author: Juice
 '''
 import os
+import tempfile
 import unittest
 from utility.puzzlefactory import PuzzleFactory
 from solver.Solver import Solver
@@ -83,6 +84,19 @@ class Test(unittest.TestCase):
         with self.assertRaises(ContradictionError):
             for x in range(0, 8):
                 sudoku.grid.setConstraintGridValue(x, 0, x + 1)
+
+    def testSudokuFileWithZerosForEmptyCells(self):
+        with open(os.path.join(ROOT, "easySudoku.txt")) as f:
+            dashes = f.read()
+        with tempfile.TemporaryDirectory() as tmp:
+            zerosFile = os.path.join(tmp, "zeros.txt")
+            with open(zerosFile, "w") as f:
+                f.write(dashes.replace("-", "0"))
+
+            withZeros = PuzzleFactory.fromSudokuFile(zerosFile)
+        withDashes = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+
+        self.assertEqual(withZeros.saveState(), withDashes.saveState())
 
     def testSaveAndRestoreState(self):
         sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))

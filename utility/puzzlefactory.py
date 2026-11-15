@@ -62,12 +62,14 @@ class PuzzleFactory(object):
     
     @staticmethod
     def fromSudokuFile(filename):
-        """ Reads a 9x9 sudoku: one row per line, values separated by spaces, '-' for empty cells """
+        """ Reads a 9x9 sudoku: one row per line, values separated by spaces.
+        Anything that is not one of the puzzle values (e.g. '-' or '0') is an empty cell. """
         sudoku = PuzzleFactory.createEmptySudoku()
+        values = sudoku.getValues()
         with open(filename) as f:
             for y, line in enumerate(f):
                 for x, el in enumerate(line.split()):
-                    if el.isdigit():
+                    if el.isdigit() and int(el) in values:
                         sudoku.grid.setConstraintGridValue(x, y, int(el))
         return sudoku
 
