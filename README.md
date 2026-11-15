@@ -88,7 +88,7 @@ uv version --bump minor              # or patch / major; also updates uv.lock
 git commit -am "Release vX.Y.Z"      # via a pull request
 git tag vX.Y.Z && git push origin vX.Y.Z   # after merging, on master
 ```
-Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `pyproject.toml`, builds a PyInstaller bundle on Windows, Linux and macOS, smoke-tests each executable (`--smoke-test`) and publishes the archives as a GitHub Release. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts.
+Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `pyproject.toml`, builds a PyInstaller bundle on Windows, Linux and macOS, smoke-tests each executable (`--smoke-test`) and publishes the archives as a GitHub Release. If a release for the tag already exists (for example, one you created by hand), the archives are attached to it. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts.
 
 To build locally: `uv run python -m PyInstaller constraintpuzzler.spec --noconfirm`. The result ends up in `dist/`.
 
