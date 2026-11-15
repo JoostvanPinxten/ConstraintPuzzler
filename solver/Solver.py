@@ -4,6 +4,8 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+import random
+
 from structure.errors import ContradictionError
 
 
@@ -12,6 +14,8 @@ class Solver:
         self.puzzle = puzzle
         # when deduction gets stuck, try values (depth-first, with backtracking)
         self.allowGuessing = allowGuessing
+        # picks the cell that solveStep() fills in
+        self.random = random.Random()
 
     def step(self):
         """A single deduction pass over all cells and constraint groups"""
@@ -19,6 +23,27 @@ class Solver:
             cell.checkForSinglePossibility()
         for cg in self.puzzle.getConstraintGroups():
             cg.applyConstraints()
+
+    def solveStep(self):
+        """Fill in a single cell, e.g. to follow the solver step by step (no guessing).
+        A deduction pass is tried; if it determines the values of one or more cells, the puzzle
+        is reset and only one of those cells, chosen at random, gets its value. If the pass only
+        narrows down possible values, that narrowing is kept, so the next step can progress.
+        Returns whether the puzzle changed. Raises ContradictionError if the pass detects that
+        the puzzle has no solution; the puzzle is then restored to the state it had before."""
+        state = self.puzzle.saveState()
+        openCells = self.puzzle.getOpenCells()
+        try:
+            self.step()
+            solvedCells = [(cell, cell.getValue()) for cell in openCells if cell.hasValue()]
+            if solvedCells:
+                self.puzzle.restoreState(state)
+                cell, value = self.random.choice(solvedCells)
+                cell.inferValue(value)
+        except ContradictionError:
+            self.puzzle.restoreState(state)
+            raise
+        return self.puzzle.saveState() != state
 
     def propagate(self, state=None):
         """Repeat deduction passes until a pass no longer changes anything.

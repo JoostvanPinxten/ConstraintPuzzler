@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -71,6 +71,11 @@ class Ui_MainWindow(object):
         self.solverGroupBox.setObjectName(u"solverGroupBox")
         self.verticalLayout_3 = QVBoxLayout(self.solverGroupBox)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.solveStepPushButton = QPushButton(self.solverGroupBox)
+        self.solveStepPushButton.setObjectName(u"solveStepPushButton")
+
+        self.verticalLayout_3.addWidget(self.solveStepPushButton)
+
         self.solvePushButton = QPushButton(self.solverGroupBox)
         self.solvePushButton.setObjectName(u"solvePushButton")
 
@@ -94,6 +99,10 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.puzzleStructureDockWidget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Puzzle structure", None))
         self.solverGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Solver steps", None))
+#if QT_CONFIG(tooltip)
+        self.solveStepPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Fill in one cell whose value follows from the constraints", None))
+#endif // QT_CONFIG(tooltip)
+        self.solveStepPushButton.setText(QCoreApplication.translate("MainWindow", u"Solve single step", None))
         self.solvePushButton.setText(QCoreApplication.translate("MainWindow", u"Solve", None))
     # retranslateUi
 
