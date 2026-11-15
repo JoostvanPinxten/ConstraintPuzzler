@@ -10,6 +10,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from constraints import TotalSumValueConstraint  # noqa: E402
 from kakuroMain import MainWindow as KakuroWindow  # noqa: E402
 from structure.position import Position  # noqa: E402
 from sumbreroMain import (  # noqa: E402
@@ -172,13 +173,26 @@ class SumbreroParserTest(PuzzleFileTestCase):
             values = [c.getValue() for c in group.getCells()]
             self.assertEqual(len(values), len(set(values)), group.getName())
 
-    def testCluesDoNotOverlapCellsOrEachOther(self):
+    def testCluesSitJustBeforeTheirLine(self):
         layout = clueLayout(self.puzzle)
         self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
         cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
-        cluePositions = list(layout.values())
-        self.assertEqual(len(cluePositions), len(set(cluePositions)))
-        self.assertFalse(cellPositions & set(cluePositions))
+        for group in self.puzzle.getConstraintGroups():
+            constraint = next(
+                c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
+            )
+            position, direction = layout[constraint]
+            self.assertNotIn(position, cellPositions)
+            # one step in the wedge's direction leads to the first cell of the line
+            first = neighbour(position, direction)
+            self.assertIn(first, [c.getPosition() for c in group.getCells()])
+            expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
+            self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
+        # no two lines share a wedge
+        self.assertEqual(len(set(layout.values())), len(layout))
+        # some hexagons hold more than one sum, like in a Kakuro
+        positions = [position for position, _direction in layout.values()]
+        self.assertLess(len(set(positions)), len(positions))
 
     def testEmptyLineIsAnError(self):
         path = self.writeFile("range = 1,9\ncell(0,0)\nrow_ascending(7) = 3\n")

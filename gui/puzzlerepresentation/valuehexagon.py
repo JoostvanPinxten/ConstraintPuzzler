@@ -77,17 +77,12 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
         val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
         self.valueTextItem = QtWidgets.QGraphicsTextItem("")
         self.valueTextItem.setParentItem(self)
+        f = QtGui.QFont("Sans serif", self.cellSize / 3, 200)
         if isinstance(self.cell, Cell):
-            f = QtGui.QFont("Sans serif", self.cellSize / 3, 200)
             if self.cell.isInferred():
                 f.setWeight(QtGui.QFont.Weight.Thin)
             else:
                 self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
-        else:
-            # a clue has up to two digits, and the hexagons of neighbouring columns interlock,
-            # so it needs a smaller font than a cell value to stay inside its own hexagon
-            f = QtGui.QFont("Sans serif")
-            f.setPixelSize(round(self.cellSize * 0.28))
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
 

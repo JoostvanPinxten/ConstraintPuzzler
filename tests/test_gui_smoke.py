@@ -74,36 +74,41 @@ class SumbreroWindowTest(unittest.TestCase):
         assert self.window.puzzle is not None
         self.puzzle = self.window.puzzle
 
-    @staticmethod
-    def textArea(piece):
-        """Scene rectangle covered by the text of a hexagon (centered in its text item)."""
-        from PySide6 import QtCore, QtGui
+    def test_clues_sit_in_the_wedge_facing_their_line(self):
+        from math import sqrt
 
-        text = piece.valueTextItem
-        metrics = QtGui.QFontMetricsF(text.font())
-        width = metrics.horizontalAdvance(text.toPlainText())
-        center = text.sceneBoundingRect().center()
-        return QtCore.QRectF(
-            center.x() - width / 2, center.y() - metrics.height() / 2, width, metrics.height()
-        )
+        from PySide6 import QtCore
 
-    def test_clue_labels_do_not_overlap(self):
-        from PySide6 import QtGui
+        import sumbreroMain
+        from gui.puzzlerepresentation.cluehexagon import ClueHexagon
 
-        clues = [
-            piece
-            for item, piece in self.window.puzzlePieces.items()
-            if item not in self.puzzle.getGrid().getCells()
-        ]
-        self.assertEqual(len(clues), len(self.puzzle.getConstraintGroups()))
-        areas = [self.textArea(piece) for piece in clues]
-        for i, area in enumerate(areas):
-            for other in areas[i + 1 :]:
-                self.assertFalse(area.intersects(other))
-            for cell in self.puzzle.getGrid().getCells():
-                hexagon = self.window.puzzlePieces[cell]
-                outline = hexagon.mapToScene(hexagon.polygon())
-                self.assertFalse(QtGui.QPolygonF(area).intersects(outline))
+        layout = sumbreroMain.clueLayout(self.puzzle)
+        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
+        for constraint, (position, direction) in layout.items():
+            hexagon = self.window.puzzlePieces[constraint]
+            self.assertIsInstance(hexagon, ClueHexagon)
+            self.assertIs(self.window.clueHexagons[position], hexagon)
+            self.assertIs(hexagon.clues[direction], constraint)
+
+            text = hexagon.textItems[direction]
+            self.assertEqual(text.text(), str(constraint.getTotalValue()))
+            center = text.mapToScene(text.boundingRect().center())
+            self.assertTrue(
+                hexagon.wedge(direction).containsPoint(center, QtCore.Qt.FillRule.OddEvenFill)
+            )
+            # the text fits in the circle inscribed in the wedge (a triangle with side size / 2)
+            self.assertLess(text.font().pixelSize(), hexagon.size / 2 / sqrt(3))
+
+    def test_black_hexagons_frame_the_cells(self):
+        cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
+        frame = set(self.window.clueHexagons)
+        self.assertFalse(cells & frame)
+        import sumbreroMain
+
+        for position in cells:
+            for direction in ("N", "S", "NE", "SE", "NW", "SW"):
+                neighbour = sumbreroMain.neighbour(position, direction)
+                self.assertTrue(neighbour in cells or neighbour in frame)
 
     def test_solve_button_fills_in_the_cells(self):
         self.window.solveButtonClicked()

@@ -217,8 +217,18 @@ Whitespace is allowed as in Kakuro. Declare all cells before the clues: a clue c
 that exist when it is read. Mistakes raise a `PuzzleFileError` naming the line, as in Kakuro;
 this includes a clue whose line contains no cells.
 
-In the GUI, each clue is drawn on the extension of its line: just before the first cell, or after
-the last cell if that spot is taken, or one step further out.
+In the GUI the grid is framed by black hexagons, drawn like the clue squares of a Kakuro: a white
+diagonal from the top-right to the bottom-left corner, and the right part cut into three wedges.
+The sum of a line is shown in the black hexagon just before its first cell, in the wedge that
+faces along the line:
+
+| Wedge | Line |
+|---|---|
+| bottom (S) | `column`, running down |
+| lower right (SE) | `row_descending`, running down-right |
+| upper right (NE) | `row_ascending`, running up-right |
+
+So one black hexagon can hold up to three sums, and every line has its own wedge.
 
 ## Opening your own puzzle file
 

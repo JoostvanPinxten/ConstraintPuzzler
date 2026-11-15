@@ -6,9 +6,10 @@ Created on Sat Dec 22 22:25:33 2012
 
 from math import cos, pi, sin
 
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
+from gui.puzzlerepresentation.cluehexagon import ClueHexagon
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 from gui.windows.basicmainwindow import BasicMainWindow
@@ -68,30 +69,32 @@ def lineKind(group):
 
 
 def clueLayout(puzzle):
-    """Position of the clue of every line sum (keyed by its TotalSumValueConstraint), on the
-    extension of the line: just before its first cell, else just after its last cell, else
-    one step further out, and so on, until a position is free."""
-    occupied = {cell.getPosition() for cell in puzzle.getGrid().getCells()}
+    """Where the sum of every line is drawn, keyed by its TotalSumValueConstraint: as
+    (position, direction), the black hexagon just before the first cell of the line and the
+    wedge of that hexagon that faces along the line (S, SE or NE). That hexagon is never a cell
+    (it would be on the line), and different lines never share a wedge."""
     layout = {}
     for group in puzzle.getConstraintGroups():
         kind = lineKind(group)
         if kind is None or not group.getCells():
             continue
         backward, forward = LINE_DIRECTIONS[kind]
-        positions = sorted(
-            (cell.getPosition() for cell in group.getCells()), key=lambda p: (p.x(), p.y())
-        )
-        before, after = positions[0], positions[-1]
-        while True:
-            before, after = neighbour(before, backward), neighbour(after, forward)
-            position = next((p for p in (before, after) if p not in occupied), None)
-            if position is not None:
-                break
-        occupied.add(position)
+        first = min((cell.getPosition() for cell in group.getCells()), key=lambda p: (p.x(), p.y()))
         for constraint in group.getConstraints():
             if isinstance(constraint, TotalSumValueConstraint):
-                layout[constraint] = position
+                layout[constraint] = (neighbour(first, backward), forward)
     return layout
+
+
+def framePositions(puzzle):
+    """The positions of the black hexagons around the grid: every position next to a cell that
+    is not a cell itself (this includes every position that holds a clue)."""
+    cells = {cell.getPosition() for cell in puzzle.getGrid().getCells()}
+    return {
+        neighbour(position, direction)
+        for position in cells
+        for direction in ("N", "S", "NE", "SE", "NW", "SW")
+    } - cells
 
 
 class MainWindow(BasicMainWindow):
@@ -126,15 +129,20 @@ class MainWindow(BasicMainWindow):
             proxy = PuzzlePieceProxy(hexagon)
             self.puzzlePieceProxies[c] = proxy
 
-        for constraint, position in clueLayout(self.puzzle).items():
-            hexagon = ValueHexagon(
-                constraint,
-                self.hexSide,
-                self.hexScenePosition(position),
-                edgeColor=QtGui.QColor(QtCore.Qt.GlobalColor.transparent),
-            )
-            self.puzzlePieces[constraint] = hexagon
+        # black hexagons around the grid; the sum of a line goes in a wedge of the hexagon just
+        # before the line's first cell, like the clue squares of a Kakuro
+        cluesPerPosition = {}
+        for constraint, (position, direction) in clueLayout(self.puzzle).items():
+            cluesPerPosition.setdefault(position, {})[direction] = constraint
+
+        self.clueHexagons = {}
+        for position in sorted(framePositions(self.puzzle), key=lambda p: (p.x(), p.y())):
+            clues = cluesPerPosition.get(position, {})
+            hexagon = ClueHexagon(self.hexSide, self.hexScenePosition(position), clues)
             self.scene.addItem(hexagon)
+            self.clueHexagons[position] = hexagon
+            for constraint in clues.values():
+                self.puzzlePieces[constraint] = hexagon
 
     @staticmethod
     def parsePuzzle(filename):
