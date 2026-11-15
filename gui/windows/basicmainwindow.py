@@ -9,6 +9,7 @@ from PySide6 import QtGui, QtCore, QtWidgets, QtStateMachine
 from gui.ui import mainWindowUi
 import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
 from gui.puzzlemodel.puzzletreemodel import *
+from structure.errors import ContradictionError
 
 class BasicMainWindow(QtWidgets.QMainWindow):
 #    MaxRecentFiles = 5
@@ -172,7 +173,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             
     def solveButtonClicked(self):
         if self.solver is not None:
-            self.solver.solve()
+            try:
+                self.solver.solve()
+            except ContradictionError as e:
+                QtWidgets.QMessageBox.warning(self, "Puzzle cannot be solved",
+                                              "The solver ran into a contradiction:\n\n" + str(e))
 
     def undo(self):
         pass

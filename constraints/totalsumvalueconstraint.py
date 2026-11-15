@@ -34,11 +34,9 @@ class TotalSumValueConstraint(Constraint):
         
         allowedSet = self.applyConstraintRecursively(total, len(openCells), valuesUsed)
         
-        for value in self.values:
-            #print "totalvalue", self.totalValue
+        # iterate over a copy: values are removed from self.values inside the loop
+        for value in list(self.values):
             if(not value in allowedSet):
-                #self.values.remove(value)
-                #print value
                 self.values.remove(value)
                 self.group.removeValueExceptForList(filledCells, value)    
 

@@ -6,6 +6,7 @@ Created on 28 dec. 2012
 from PySide6 import QtCore
 from gui.puzzlemodel.puzzletreemodel import CellProxyItem
 from structure.item import Item
+from structure.errors import ContradictionError
 
 class Cell(Item):
     valueChanged = QtCore.Signal(object)
@@ -34,12 +35,13 @@ class Cell(Item):
         self.setValue(value, True)
     
     def setValue(self, value, isInferred=False):
-        assert value in self.values, "value " + str(value) + " not in my values: "+ str(self.values)
+        if value not in self.values:
+            raise ContradictionError("value " + str(value) + " not in my values: " + str(self.values))
         
         self.inferred = isInferred
         
         self.value = value
-        self.values = [value]
+        self.values = {value}
         
         self.valueChanged.emit(self)
         #for cg in self.constraintGroups:
@@ -56,21 +58,17 @@ class Cell(Item):
         return set(values)
 
     def remove(self, value):
-#        if self.position and self.position.x() == 7 and self.position.y() == 4:
-#            print "test"
-        
         # make sure the set value is not the value that needs to be removed
         if self.value == value:
-            raise Exception("value removed that's already set..." + str(self))
-        assert self.value is not value
-        
-        if(value in self.values) and (len(self.values) > 1):
-            self.values.remove(value)
-        else:
-            pass # redundant remove
-        
+            raise ContradictionError("value removed that's already set..." + str(self))
+
+        if value not in self.values:
+            return # redundant remove
+
+        self.values.remove(value)
         if(len(self.values) == 0):
-            raise Exception("No more options for cell, removed last value:" + str(value) + ", " + str(self))
+            # the puzzle state is contradictory: no value is left for this cell
+            raise ContradictionError("No more options for cell, removed last value:" + str(value) + ", " + str(self))
         self.possibleValuesChanged.emit(self)
 
     def addConstraintGroup(self, group):

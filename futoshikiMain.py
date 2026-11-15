@@ -109,8 +109,9 @@ class MainWindow(BasicMainWindow):
                     cg.addCell(cell1)
                     cg.addCell(cell2)
                     
-                    constraint.setLesserCell(cell1)
-                    constraint.setGreaterCell(cell2)
+                    # "a>b": the left-hand cell is the greater one
+                    constraint.setGreaterCell(cell1)
+                    constraint.setLesserCell(cell2)
                    
         # And solve
 

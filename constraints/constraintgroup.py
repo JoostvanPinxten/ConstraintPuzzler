@@ -6,6 +6,7 @@ Created on 28 dec. 2012
 from gui.puzzlemodel.puzzletreemodel import ConstraintGroupProxyItem,\
     ReferencedCellProxyItem
 from structure.item import Item
+from structure.errors import ContradictionError
 
 class ConstraintGroup(Item):
     def __init__(self, grid, name="Untitled"):
@@ -42,7 +43,7 @@ class ConstraintGroup(Item):
             if c not in cells:
                 if c.hasValue():
                     if(c.getValue() == value):
-                        raise Exception("Trying to remove a value from a cell, but that value was already set")
+                        raise ContradictionError("Trying to remove a value from a cell, but that value was already set")
                 else:
                     c.remove(value)
 

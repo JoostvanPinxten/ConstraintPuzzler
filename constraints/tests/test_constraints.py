@@ -9,6 +9,8 @@ from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 
 from utility.puzzlefactory import PuzzleFactory
 from constraints.uniquevalueconstraint import UniqueValueConstraint
+from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+from structure.errors import ContradictionError
 
 class Test(unittest.TestCase):
 
@@ -58,6 +60,50 @@ class Test(unittest.TestCase):
 
         self.assertEqual(possibleValues, set([9]), 
                          "Exact cover failed to identify single value")
+
+    def testTSVCRemovesAllDisallowedValues(self):
+        """Adjacent disallowed values must all be removed (regression: remove-while-iterating)"""
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle(set(range(1, 10)), 2, UniqueValueConstraint)
+        cg = puzzle.getConstraintGroups()[0]
+        tsvc = cg.addConstraint(TotalSumValueConstraint)
+        tsvc.setTotalValue(4) # only 1+3 is possible
+        tsvc.applyConstraint()
+
+        for cell in puzzle.grid.getCells():
+            self.assertEqual(cell.getPossibleValues(), {1, 3})
+        self.assertEqual(set(tsvc.values), {1, 3})
+
+    def testGreaterThanNarrowsBothCells(self):
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle({1, 2, 3}, 2, CellGreaterThanCellConstraint)
+        constraint = puzzle.getConstraintGroups()[0].getConstraints()[0]
+        lesser, greater = puzzle.grid.getCells()
+        constraint.setLesserCell(lesser)
+        constraint.setGreaterCell(greater)
+
+        constraint.applyConstraint()
+
+        self.assertEqual(lesser.getPossibleValues(), {1, 2})
+        self.assertEqual(greater.getPossibleValues(), {2, 3})
+
+    def testGreaterThanFollowsSetValue(self):
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle({1, 2, 3, 4}, 2, CellGreaterThanCellConstraint)
+        constraint = puzzle.getConstraintGroups()[0].getConstraints()[0]
+        lesser, greater = puzzle.grid.getCells()
+        constraint.setLesserCell(lesser)
+        constraint.setGreaterCell(greater)
+
+        greater.setValue(3)
+        constraint.applyConstraint()
+
+        self.assertEqual(lesser.getPossibleValues(), {1, 2})
+
+    def testRemovingLastValueIsAContradiction(self):
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle({1, 2}, 1, UniqueValueConstraint)
+        cell = puzzle.grid.getCells()[0]
+        cell.remove(1)
+        self.assertEqual(cell.getPossibleValues(), {2})
+        with self.assertRaises(ContradictionError):
+            cell.remove(2)
 
     def testTSVCWithKakuro(self):
         kakuro = PuzzleFactory.createExampleKakuro()
