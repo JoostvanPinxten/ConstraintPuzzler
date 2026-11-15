@@ -7,7 +7,6 @@ Created on 26 jan. 2013
 import html
 import os
 import platform
-from collections.abc import Callable
 
 import PySide6
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -29,6 +28,7 @@ from solver.Solver import Solver
 from structure.entries import EntryError, UserEntries
 from structure.errors import ContradictionError
 from structure.puzzle import Puzzle
+from utility.puzzletypes import PuzzleType
 from utility.resources import resourcePath
 from utility.version import APP_NAME, getVersion
 
@@ -45,15 +45,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #    MaxRecentFiles = 5
     #    windowList = []
 
-    # Set by subclasses: shown in the File menu and the open-file dialog
-    puzzleTypeName = "Puzzle"
-    fileFilter = "Puzzle Files (*.txt)"
-    # Reads a puzzle file into a Puzzle; subclasses set it to one of the `parsers` functions
-    puzzleParser: Callable[[str], Puzzle] | None = None
-    # Set by subclasses: the bundled example puzzles (label -> file name, in menu order) and
-    # the label of the example that is opened when no file is given.
-    examples: dict[str, str] = {}
-    defaultExample: str | None = None
+    # Set by subclasses: the registry entry (utility.puzzletypes) with the type's label,
+    # parser, file filter and bundled examples
+    puzzleType: PuzzleType
 
     # Set by subclasses in initializePuzzleRepresentation()
     scene: QtWidgets.QGraphicsScene
@@ -124,13 +118,14 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #        self.resize(800, 600)
 
     def loadExample(self, label: str | None = None):
-        """Load a bundled example puzzle (``defaultExample`` when no label is given)."""
+        """Load a bundled example puzzle (the type's default example when no label is given)."""
+        puzzleType = self.puzzleType
         if label is None:
-            label = self.defaultExample
-        if label is None or label not in self.examples:
-            raise ValueError(f"{self.puzzleTypeName} has no example {label!r}")
+            label = puzzleType.defaultExample
+        if label is None or label not in puzzleType.examples:
+            raise ValueError(f"{puzzleType.label} has no example {label!r}")
         self.loadPuzzle(
-            resourcePath(self.examples[label]), title=f"{self.puzzleTypeName} example: {label}"
+            resourcePath(puzzleType.examples[label]), title=f"{puzzleType.label} example: {label}"
         )
 
     def loadPuzzle(self, filename, title: str | None = None):
@@ -138,7 +133,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.puzzle, self.solver = self.parsePuzzle(filename)
         self.puzzleFile = filename
         if title is None:
-            title = f"{self.puzzleTypeName} - {os.path.basename(filename)}"
+            title = f"{self.puzzleType.label} - {os.path.basename(filename)}"
         self.puzzleTitle = title
         self.setWindowTitle(f"{APP_NAME} {getVersion()} - {title}")
 
@@ -189,29 +184,24 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.puzzleTreeView.resizeColumnToContents(0)
 
     def parsePuzzle(self, filename) -> tuple[Puzzle, Solver]:
-        """Reads filename with puzzleParser and returns the puzzle with a solver for it."""
-        parser = type(self).puzzleParser
-        if parser is None:
-            raise NotImplementedError(
-                "Set puzzleParser to enable loading of puzzles through the main menu"
-            )
-        puzzle = parser(filename)
+        """Reads filename with the type's parser and returns the puzzle with a solver for it."""
+        puzzle = self.puzzleType.parser(filename)
         return puzzle, Solver(puzzle)
 
     def createMenus(self):
         fileMenu = self.menuBar().addMenu("File")
-        openAction = fileMenu.addAction(f"Open {self.puzzleTypeName}...")
+        openAction = fileMenu.addAction(f"Open {self.puzzleType.label}...")
         openAction.setShortcut(QtGui.QKeySequence.StandardKey.Open)
         openAction.triggered.connect(self.openPuzzleDialog)
-        if self.examples:
+        if self.puzzleType.examples:
             examplesMenu = fileMenu.addMenu("Examples")
-            for label in self.examples:
+            for label in self.puzzleType.examples:
                 action = examplesMenu.addAction(label)
                 action.triggered.connect(lambda _checked=False, lbl=label: self.loadExample(lbl))
 
     def openPuzzleDialog(self):
         fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self, f"Open {self.puzzleTypeName}", "", self.fileFilter
+            self, f"Open {self.puzzleType.label}", "", self.puzzleType.fileFilter
         )
         if fileName:
             self.loadPuzzle(fileName)

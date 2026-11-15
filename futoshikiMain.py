@@ -13,16 +13,12 @@ from gui.puzzlerepresentation.inequalitysign import InequalitySign
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
-from parsers import parseFutoshikiFile
 from structure.cell import PositionedCell
+from utility.puzzletypes import FUTOSHIKI
 
 
 class MainWindow(BasicMainWindow):
-    puzzleTypeName = "Futoshiki"
-    puzzleParser = staticmethod(parseFutoshikiFile)
-    fileFilter = "Futoshiki Files (*.txt *.fut)"
-    examples = {"7x7": "futoshiki.txt"}
-    defaultExample = "7x7"
+    puzzleType = FUTOSHIKI
 
     def initializePuzzleRepresentation(self):
         assert self.puzzle is not None

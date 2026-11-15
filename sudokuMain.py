@@ -12,15 +12,11 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
-from parsers import parseSudokuFile
+from utility.puzzletypes import SUDOKU
 
 
 class MainWindow(BasicMainWindow):
-    puzzleTypeName = "Sudoku"
-    puzzleParser = staticmethod(parseSudokuFile)
-    fileFilter = "Sudoku Files (*.txt *.sud)"
-    examples = {"Easy": "easySudoku.txt", "Medium": "mediumSudoku.txt", "Hard": "hardSudoku.txt"}
-    defaultExample = "Easy"
+    puzzleType = SUDOKU
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)

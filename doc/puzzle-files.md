@@ -335,11 +335,12 @@ Claude Code skill scaffolds all of these. By hand:
 1. Write the parser in `parsers/<name>.py`: `parse<Name>Lines(lines)` returning a `Puzzle`, and a
    `parse<Name>File(filename)` wrapper. Export both from `parsers/__init__.py`. The parser must not
    import PySide6.
-2. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleTypeName`,
-   `fileFilter` and `puzzleParser = staticmethod(parse<Name>File)`, and implements
-   `initializePuzzleRepresentation()` (one `ValueRectangle`, `ValueTriangle` or `ValueHexagon`
-   per cell, see the existing windows).
-3. Add an example `<name>.txt` in the repository root, and add it to `datas` in
-   `constraintpuzzler.spec` so the standalone build includes it.
-4. Register the type in the `PUZZLES` dict in `constraintPuzzlerMain.py`.
-5. Add parser tests to `parsers/tests/test_parsers.py`, and the window to `tests/test_gui_smoke.py`.
+2. Add an example `<name>.txt` in the repository root.
+3. Register the type in `utility/puzzletypes.py`: a `PuzzleType` with its name, label, parser,
+   file filter, examples, default example and `windowModule="<name>Main"`, added to
+   `PUZZLE_TYPES`. The launcher, the GUI smoke tests and the standalone build (examples and
+   window) all read this registry.
+4. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleType` to the
+   registry entry and implements `initializePuzzleRepresentation()` (one `ValueRectangle`,
+   `ValueTriangle` or `ValueHexagon` per cell, see the existing windows).
+5. Add parser tests to `parsers/tests/test_parsers.py`.

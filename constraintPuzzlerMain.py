@@ -9,26 +9,23 @@ python constraintPuzzlerMain.py --smoke-test     # open and close every example,
 """
 
 import argparse
+import importlib
 import sys
 import traceback
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-import futoshikiMain
-import kakuroMain
-import sudokuMain
-import sumbreroMain
 from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.windows.basicmainwindow import BasicMainWindow, appIcon
+from utility.puzzletypes import PUZZLE_TYPES
 from utility.version import APP_NAME, getVersion
 
-# name -> (label, window class). Each window class lists its own example puzzles.
-PUZZLES: dict[str, tuple[str, type[BasicMainWindow]]] = {
-    "sudoku": ("Sudoku", sudokuMain.MainWindow),
-    "kakuro": ("Kakuro", kakuroMain.MainWindow),
-    "futoshiki": ("Futoshiki", futoshikiMain.MainWindow),
-    "sumbrero": ("Sumbrero", sumbreroMain.MainWindow),
-}
+
+def windowClass(name: str) -> type[BasicMainWindow]:
+    """The MainWindow class of a registered puzzle type (see utility.puzzletypes)."""
+    cls = importlib.import_module(PUZZLE_TYPES[name].windowModule).MainWindow
+    assert issubclass(cls, BasicMainWindow) and cls.puzzleType is PUZZLE_TYPES[name]
+    return cls
 
 
 def createWindow(
@@ -40,8 +37,7 @@ def createWindow(
 ) -> BasicMainWindow:
     """Create the window for a puzzle type and load the puzzle file `path`, or else the
     bundled example `example` (the type's default example when both are None)."""
-    _label, windowClass = PUZZLES[name]
-    window = windowClass(settings=settings, embedded=embedded)
+    window = windowClass(name)(settings=settings, embedded=embedded)
     try:
         if path is not None:
             window.loadPuzzle(path)
@@ -65,8 +61,10 @@ class StartPage(QtWidgets.QWidget):
         title = QtWidgets.QLabel("Which example puzzle do you want to solve?")
         title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
-        for name, (label, windowClass) in PUZZLES.items():
-            button = QtWidgets.QPushButton(f"{label} example: {windowClass.defaultExample}")
+        for name, puzzleType in PUZZLE_TYPES.items():
+            button = QtWidgets.QPushButton(
+                f"{puzzleType.label} example: {puzzleType.defaultExample}"
+            )
             button.clicked.connect(lambda _checked=False, n=name: self.exampleChosen.emit(n))
             row = QtWidgets.QHBoxLayout()
             row.addStretch()
@@ -122,14 +120,14 @@ class LauncherWindow(QtWidgets.QMainWindow):
         fileMenu = self.menuBar().addMenu("File")
         self.examplesMenu = fileMenu.addMenu("Examples")
         openMenu = fileMenu.addMenu("Open file")
-        for name, (label, windowClass) in PUZZLES.items():
-            typeMenu = self.examplesMenu.addMenu(label)
-            for example in windowClass.examples:
+        for name, puzzleType in PUZZLE_TYPES.items():
+            typeMenu = self.examplesMenu.addMenu(puzzleType.label)
+            for example in puzzleType.examples:
                 exampleAction = typeMenu.addAction(example)
                 exampleAction.triggered.connect(
                     lambda _checked=False, n=name, e=example: self.openExample(n, e)
                 )
-            openAction = openMenu.addAction(f"{windowClass.puzzleTypeName}...")
+            openAction = openMenu.addAction(f"{puzzleType.label}...")
             openAction.triggered.connect(lambda _checked=False, n=name: self.openPuzzleFile(n))
         fileMenu.addSeparator()
         self.closeTabAction = fileMenu.addAction("Close tab")
@@ -166,7 +164,7 @@ class LauncherWindow(QtWidgets.QMainWindow):
         window = createWindow(
             name, settings=self.settings, embedded=True, path=path, example=example
         )
-        index = self.tabs.addTab(window, window.puzzleTitle or PUZZLES[name][0])
+        index = self.tabs.addTab(window, window.puzzleTitle or PUZZLE_TYPES[name].label)
         self.tabs.setTabToolTip(index, window.puzzleFile or "")
         self.tabs.setCurrentIndex(index)
         self.updateStartPage()
@@ -188,9 +186,9 @@ class LauncherWindow(QtWidgets.QMainWindow):
         self.tryOpenPuzzle(name, example=example)
 
     def openPuzzleFile(self, name: str):
-        _label, windowClass = PUZZLES[name]
+        puzzleType = PUZZLE_TYPES[name]
         fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self, f"Open {windowClass.puzzleTypeName}", "", windowClass.fileFilter
+            self, f"Open {puzzleType.label}", "", puzzleType.fileFilter
         )
         if fileName:
             self.tryOpenPuzzle(name, fileName)
@@ -228,8 +226,8 @@ def smokeTest(app: QtWidgets.QApplication) -> int:
         launcher = LauncherWindow()
         launcher.show()
         expected = 0
-        for name, (_label, windowClass) in PUZZLES.items():
-            for example in windowClass.examples:
+        for name, puzzleType in PUZZLE_TYPES.items():
+            for example in puzzleType.examples:
                 launcher.openPuzzle(name, example=example)
                 expected += 1
                 app.processEvents()
@@ -251,7 +249,7 @@ def parseArguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog=APP_NAME, description="Solve number puzzles.")
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {getVersion()}")
     parser.add_argument(
-        "--puzzle", choices=PUZZLES, help="open this puzzle type's default example directly"
+        "--puzzle", choices=PUZZLE_TYPES, help="open this puzzle type's default example directly"
     )
     parser.add_argument(
         "--smoke-test", action="store_true", help="open and close every puzzle, then exit"

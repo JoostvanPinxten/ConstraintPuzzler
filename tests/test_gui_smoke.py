@@ -13,6 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import shiboken6  # noqa: E402
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets  # noqa: E402
 
+from utility.puzzletypes import PUZZLE_TYPES  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -51,8 +53,14 @@ class GuiSmokeTest(unittest.TestCase):
             window.deleteLater()
             self.app.processEvents()
 
-    def test_sudoku(self):
-        self._smoke("sudokuMain", "easySudoku.txt")
+    def test_every_puzzle_type(self):
+        """Every registered puzzle type opens its default example in its own window."""
+        from utility.puzzletypes import PUZZLE_TYPES
+
+        for puzzleType in PUZZLE_TYPES.values():
+            with self.subTest(puzzle=puzzleType.name):
+                assert puzzleType.defaultExample is not None
+                self._smoke(puzzleType.windowModule, puzzleType.examples[puzzleType.defaultExample])
 
     def test_solve_step_button_advances_the_puzzle(self):
         import sudokuMain
@@ -76,15 +84,6 @@ class GuiSmokeTest(unittest.TestCase):
             window.close()
             window.deleteLater()
             self.app.processEvents()
-
-    def test_kakuro(self):
-        self._smoke("kakuroMain", "mediumKakuro.txt")
-
-    def test_sumbrero(self):
-        self._smoke("sumbreroMain", "simpleSumbrero.txt")
-
-    def test_futoshiki(self):
-        self._smoke("futoshikiMain", "futoshiki.txt")
 
 
 class SumbreroWindowTest(unittest.TestCase):
@@ -514,7 +513,7 @@ class LauncherSmokeTest(unittest.TestCase):
 
         self.assertIs(self.launcher.stack.currentWidget(), self.launcher.startPage)
         buttons = self.launcher.startPage.findChildren(QtWidgets.QPushButton)
-        self.assertEqual(len(buttons), len(self.launcherModule.PUZZLES))
+        self.assertEqual(len(buttons), len(PUZZLE_TYPES))
 
         buttons[1].click()  # kakuro
         self.assertEqual(self.launcher.tabs.count(), 1)
@@ -522,7 +521,7 @@ class LauncherSmokeTest(unittest.TestCase):
         self.assertIsInstance(self.launcher.tabs.widget(0), kakuroMain.MainWindow)
 
     def test_open_and_close_tabs(self):
-        names = list(self.launcherModule.PUZZLES)
+        names = list(PUZZLE_TYPES)
         windows = [self.launcher.openPuzzle(name) for name in names]
         self.launcher.openPuzzle("sudoku")  # a second puzzle of the same type
         self.app.processEvents()
@@ -590,13 +589,13 @@ class LauncherSmokeTest(unittest.TestCase):
         self.assertFalse(self.launcher.settings.showHints)
 
     def test_examples_are_marked_as_examples(self):
-        for name, (_label, windowClass) in self.launcherModule.PUZZLES.items():
-            self.assertIn(windowClass.defaultExample, windowClass.examples)
-            for example in windowClass.examples:
+        for name, puzzleType in PUZZLE_TYPES.items():
+            self.assertIs(self.launcherModule.windowClass(name).puzzleType, puzzleType)
+            for example in puzzleType.examples:
                 with self.subTest(puzzle=name, example=example):
                     window = self.launcher.openPuzzle(name, example=example)
                     index = self.launcher.tabs.indexOf(window)
-                    title = f"{windowClass.puzzleTypeName} example: {example}"
+                    title = f"{puzzleType.label} example: {example}"
                     self.assertEqual(self.launcher.tabs.tabText(index), title)
                     self.assertIn(title, window.windowTitle())
 
@@ -607,9 +606,9 @@ class LauncherSmokeTest(unittest.TestCase):
             assert isinstance(typeMenu, QtWidgets.QMenu)
             listed |= {(typeMenu.title(), action.text()) for action in typeMenu.actions()}
         expected = {
-            (label, example)
-            for label, windowClass in self.launcherModule.PUZZLES.values()
-            for example in windowClass.examples
+            (puzzleType.label, example)
+            for puzzleType in PUZZLE_TYPES.values()
+            for example in puzzleType.examples
         }
         self.assertEqual(listed, expected)
 

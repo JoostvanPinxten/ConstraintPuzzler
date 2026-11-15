@@ -13,8 +13,8 @@ from gui.puzzlerepresentation.cluehexagon import ClueHexagon
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 from gui.windows.basicmainwindow import BasicMainWindow
-from parsers import parseSumbreroFile
 from parsers.sumbrero import LINE_DIRECTIONS, lineKind, neighbour
+from utility.puzzletypes import SUMBRERO
 
 
 def clueLayout(puzzle):
@@ -47,11 +47,7 @@ def framePositions(puzzle):
 
 
 class MainWindow(BasicMainWindow):
-    puzzleTypeName = "Sumbrero"
-    puzzleParser = staticmethod(parseSumbreroFile)
-    fileFilter = "Sumbrero Files (*.txt)"
-    examples = {"Simple": "simpleSumbrero.txt"}
-    defaultExample = "Simple"
+    puzzleType = SUMBRERO
 
     def hexScenePosition(self, position):
         """Scene coordinates of the hexagon at position"""
