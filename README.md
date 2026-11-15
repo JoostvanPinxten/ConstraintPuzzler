@@ -44,13 +44,13 @@ Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
-| `uv run python constraintPuzzlerMain.py` | Launcher: choose any puzzle (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero`) |
+| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of puzzles via the start page, *File > New puzzle* or the **+** button, and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
 | `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
 | `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
 | `uv run python sumbreroMain.py` | Sumbrero (work in progress), loads `simpleSumbrero.txt` |
 
-Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck. If the puzzle turns out to be contradictory, a message explains why.
+Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck (in the launcher this setting applies to all open tabs). If the puzzle turns out to be contradictory, a message explains why.
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle.
 

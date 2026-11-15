@@ -23,6 +23,9 @@ def hexrow(position: Position, asc: bool = True):
 
 
 class MainWindow(BasicMainWindow):
+    puzzleTypeName = "Sumbrero"
+    fileFilter = "Sumbrero Files (*.txt)"
+
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
 
