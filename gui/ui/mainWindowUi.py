@@ -71,6 +71,11 @@ class Ui_MainWindow(object):
         self.solverGroupBox.setObjectName(u"solverGroupBox")
         self.verticalLayout_3 = QVBoxLayout(self.solverGroupBox)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.hintPushButton = QPushButton(self.solverGroupBox)
+        self.hintPushButton.setObjectName(u"hintPushButton")
+
+        self.verticalLayout_3.addWidget(self.hintPushButton)
+
         self.solveStepPushButton = QPushButton(self.solverGroupBox)
         self.solveStepPushButton.setObjectName(u"solveStepPushButton")
 
@@ -99,6 +104,10 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.puzzleStructureDockWidget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Puzzle structure", None))
         self.solverGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Solver steps", None))
+#if QT_CONFIG(tooltip)
+        self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show a cell whose value follows from the constraints, and why, without filling it in", None))
+#endif // QT_CONFIG(tooltip)
+        self.hintPushButton.setText(QCoreApplication.translate("MainWindow", u"Hint", None))
 #if QT_CONFIG(tooltip)
         self.solveStepPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Fill in one cell whose value follows from the constraints", None))
 #endif // QT_CONFIG(tooltip)

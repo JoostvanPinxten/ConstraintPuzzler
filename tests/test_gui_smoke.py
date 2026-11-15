@@ -89,6 +89,86 @@ class GuiSmokeTest(unittest.TestCase):
             window.deleteLater()
             self.app.processEvents()
 
+    def test_solve_runs_in_the_background(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        try:
+            window.settings.setAllowGuessing(True)
+            window.loadPuzzle("hardSudoku.txt")
+            assert window.puzzle is not None
+            before = window.puzzle.saveState()
+            window.ui.solvePushButton.click()
+            # the click returns at once; while the solver runs, Solve becomes Cancel
+            self.assertIsNotNone(window.solveJob)
+            self.assertEqual(window.ui.solvePushButton.text(), "Cancel")
+            self.assertFalse(window.ui.hintPushButton.isEnabled())
+            self.assertFalse(window.ui.solveStepPushButton.isEnabled())
+            self.assertTrue(window.waitForSolve())
+            self.assertTrue(window.puzzle.isSolved())
+            self.assertEqual(window.ui.solvePushButton.text(), "Solve")
+            self.assertTrue(window.ui.hintPushButton.isEnabled())
+            self.assertTrue(any(c.isGuessed() for c in window.puzzle.grid.getCells()))
+            # the background solve is one undo step
+            self.assertTrue(window.undo())
+            self.assertEqual(window.puzzle.saveState(), before)
+        finally:
+            window.close()
+            window.deleteLater()
+            self.app.processEvents()
+
+    def test_closing_during_a_solve_stops_it(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        window.settings.setAllowGuessing(True)
+        window.loadPuzzle("hardSudoku.txt")
+        window.ui.solvePushButton.click()
+        job = window.solveJob
+        assert job is not None
+        window.close()
+        self.assertIsNone(window.solveJob)
+        self.assertFalse(job.isRunning())
+        window.deleteLater()
+        self.app.processEvents()
+
+    def test_hint_button(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        try:
+            window.loadPuzzle("easySudoku.txt")
+            assert window.puzzle is not None
+            before = window.puzzle.saveState()
+            window.ui.hintPushButton.click()
+            # the hint does not fill in the cell, but selects it and explains its value
+            self.assertEqual(window.puzzle.saveState(), before)
+            cell = window.selectedCell()
+            assert cell is not None
+            self.assertFalse(cell.hasValue())
+            text = window.selectionInfoLabel.text()
+            self.assertIn("Hint: cell", text)
+            self.assertIn(cell.getName(), text)
+        finally:
+            window.close()
+            window.deleteLater()
+            self.app.processEvents()
+
+    def test_cancelled_worker_reports_it(self):
+        from gui.solverworker import SolveWorker
+        from utility.puzzletypes import SUDOKU
+
+        puzzle = SUDOKU.parser("hardSudoku.txt")
+        worker = SolveWorker(
+            lambda: SUDOKU.parser("hardSudoku.txt"), puzzle.saveState(), allowGuessing=True
+        )
+        results = []
+        worker.cancelled.connect(lambda: results.append("cancelled"))
+        worker.finished.connect(lambda *_: results.append("finished"))
+        worker.cancel()
+        worker.run()
+        self.assertEqual(results, ["cancelled"])
+
 
 class SumbreroWindowTest(unittest.TestCase):
     @classmethod
@@ -168,6 +248,7 @@ class SumbreroWindowTest(unittest.TestCase):
 
     def test_solve_button_fills_in_the_cells(self):
         self.window.solveButtonClicked()
+        self.window.waitForSolve()
         self.assertTrue(self.puzzle.isSolved())
         for cell in self.puzzle.getGrid().getCells():
             piece = self.window.puzzlePieces[cell]
@@ -283,6 +364,7 @@ class SelectionHighlightTest(unittest.TestCase):
 
         # solving refreshes the colours and the description of the selection
         self.window.solveButtonClicked()
+        self.window.waitForSolve()
         QtTest.QTest.qWait(400)
         self.assertIn("complete", label.text())
         for cell in group.getCells():
@@ -412,6 +494,7 @@ class CellInputTest(unittest.TestCase):
         assert self.window.puzzle is not None
         before = self.window.puzzle.saveState()
         self.window.ui.solvePushButton.click()
+        self.window.waitForSolve()
         self.assertTrue(self.window.puzzle.isSolved())
         self.window.undoAction.trigger()
         self.assertEqual(self.window.puzzle.saveState(), before)
@@ -546,6 +629,7 @@ class LauncherSmokeTest(unittest.TestCase):
         assert sudoku.puzzle is not None and other.puzzle is not None
         before = sudoku.puzzle.saveState()
         sudoku.ui.solvePushButton.click()
+        sudoku.waitForSolve()
         self.launcher.tabs.setCurrentWidget(other)
         self.assertFalse(self.launcher.undo())  # nothing happened in this tab
         self.launcher.tabs.setCurrentWidget(sudoku)
@@ -605,11 +689,13 @@ class LauncherSmokeTest(unittest.TestCase):
         self.assertTrue(sudoku.allowGuessingAction.isChecked())
         for window in (sudoku, futoshiki):
             window.solveButtonClicked()
+            window.waitForSolve()
             assert window.solver is not None
             self.assertTrue(window.solver.allowGuessing)
 
         self.launcher.allowGuessingAction.setChecked(False)
         sudoku.solveButtonClicked()
+        sudoku.waitForSolve()
         assert sudoku.solver is not None
         self.assertFalse(sudoku.solver.allowGuessing)
 

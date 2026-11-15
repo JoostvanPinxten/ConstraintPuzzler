@@ -3,7 +3,7 @@
 import unittest
 
 from parsers.sudoku import parseSudokuLines
-from solver.Solver import Solver
+from solver.Solver import SolveCancelled, Solver
 from structure.cell import ValueSource
 from structure.errors import ContradictionError
 from structure.tests.test_entries import EASY
@@ -145,6 +145,25 @@ class CountSolutionsTest(unittest.TestCase):
         except ContradictionError:
             return  # the parser already noticed
         self.assertEqual(Solver(puzzle).countSolutions(), 0)
+
+
+class CancelTest(unittest.TestCase):
+    def testStopRestoresThePuzzle(self):
+        puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))
+        state = puzzle.saveState()
+        calls = []
+
+        def stopAfterAFewChecks():
+            calls.append(None)
+            return len(calls) > 3
+
+        solver = Solver(puzzle, allowGuessing=True)
+        with self.assertRaises(SolveCancelled):
+            solver.solve(shouldStop=stopAfterAFewChecks)
+        self.assertEqual(puzzle.saveState(), state)
+        self.assertIsNone(solver.shouldStop)
+        # the solver can be used again afterwards
+        self.assertTrue(solver.solve())
 
 
 if __name__ == "__main__":

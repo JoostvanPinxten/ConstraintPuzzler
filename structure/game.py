@@ -90,6 +90,17 @@ class Game:
 
         return self.perform(action)
 
+    def applySolution(self, state):
+        """Set the puzzle to a state the solver found elsewhere (e.g. on a copy of the puzzle,
+        in another thread), as one undoable step. Mistakes in the cells it fills are dropped,
+        as with solve()."""
+
+        def action():
+            self.puzzle.restoreState(state)
+            self.entries.dropMistakes(c for c in self.puzzle.getGrid().getCells() if c.hasValue())
+
+        self.perform(action)
+
     def solveStep(self, solver):
         """Let the solver fill in a single cell. Returns whether the puzzle changed."""
         return self.perform(solver.solveStep)

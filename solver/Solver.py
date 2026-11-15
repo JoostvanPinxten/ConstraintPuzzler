@@ -11,6 +11,10 @@ from structure.deduction import DeductionLog
 from structure.errors import ContradictionError
 
 
+class SolveCancelled(Exception):
+    """solve() was stopped by its shouldStop callback; the puzzle is restored."""
+
+
 class Solver:
     """Solves a puzzle by applying its constraints until nothing changes, and, if allowed,
     by guessing (depth-first, with backtracking) when deduction gets stuck.
@@ -29,6 +33,12 @@ class Solver:
         self.log = DeductionLog()
         # the value filled in by the last solveStep() (a Deduction), if any
         self.lastStep = None
+        # set during solve(): returns True when the caller wants the solver to stop
+        self.shouldStop = None
+
+    def _checkStop(self):
+        if self.shouldStop is not None and self.shouldStop():
+            raise SolveCancelled("solving was cancelled")
 
     def step(self, groups=None, cells=None):
         """A single deduction pass over the given cells and constraint groups (default: all)."""
@@ -101,6 +111,7 @@ class Solver:
         with self._record():
             groups = cells = None  # everything
             while True:
+                self._checkStop()
                 start = len(self.log)
                 self.step(groups, cells)
                 cells = self.log.changedCells(start)
@@ -110,12 +121,17 @@ class Solver:
                 # keep the puzzle's order, so the passes are deterministic
                 groups = [g for g in self.puzzle.getConstraintGroups() if g in groups]
 
-    def solve(self):
+    def solve(self, shouldStop=None):
         """Deduce as much as possible; if allowed, guess when deduction gets stuck.
         Returns whether the puzzle is solved. Raises ContradictionError if the
         puzzle has no solution; the puzzle is then restored to the state it had
-        before solve() was called, instead of being left half-updated."""
+        before solve() was called, instead of being left half-updated.
+
+        shouldStop: an optional callable, checked between passes and guesses (e.g. from
+        another thread); when it returns True, the puzzle is restored and SolveCancelled
+        is raised."""
         initialState = self.puzzle.saveState()
+        self.shouldStop = shouldStop
         try:
             with self._record():
                 self.propagate()
@@ -123,9 +139,11 @@ class Solver:
                     raise ContradictionError(
                         "No solution found, all guesses lead to a contradiction"
                     )
-        except ContradictionError:
+        except (ContradictionError, SolveCancelled):
             self.puzzle.restoreState(initialState)
             raise
+        finally:
+            self.shouldStop = None
         return self.puzzle.isSolved()
 
     def countSolutions(self, limit=2):
@@ -171,6 +189,7 @@ class Solver:
         # guess on the most constrained cell first
         cell = min(openCells, key=lambda c: len(c.getPossibleValues()))
         for value in sorted(cell.getPossibleValues()):
+            self._checkStop()
             state = self.puzzle.saveState()
             mark = len(self.log)
             try:

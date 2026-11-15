@@ -23,6 +23,7 @@ from gui.puzzlemodel.puzzletreemodel import (
     buildPuzzleTree,
 )
 from gui.settings import PuzzleSettings, addShowHintsAction
+from gui.solverworker import SolveJob, SolveWorker
 from gui.ui import mainWindowUi
 from solver.Solver import Solver
 from structure.entries import EntryError
@@ -91,6 +92,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
         self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
+        self.ui.hintPushButton.clicked.connect(self.hintButtonClicked)
+        # the running background solve, if any (see solveButtonClicked)
+        self.solveJob: SolveJob | None = None
         # the running fade of the cell highlight, if any (kept so it is not garbage collected)
         self.highlightAnimation: QtCore.QParallelAnimationGroup | None = None
 
@@ -132,6 +136,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def loadPuzzle(self, filename, title: str | None = None):
         """Load a puzzle file. ``title`` describes it (default: puzzle type and file name)."""
+        self.stopSolving()
         self.puzzle, self.solver = self.parsePuzzle(filename)
         self.puzzleFile = filename
         if title is None:
@@ -223,19 +228,20 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def updateUndoActions(self):
         game = getattr(self, "game", None)
-        self.undoAction.setEnabled(game is not None and game.canUndo())
-        self.redoAction.setEnabled(game is not None and game.canRedo())
+        idle = getattr(self, "solveJob", None) is None
+        self.undoAction.setEnabled(idle and game is not None and game.canUndo())
+        self.redoAction.setEnabled(idle and game is not None and game.canRedo())
 
     def undo(self) -> bool:
         """Undo the last change to the puzzle (an entry or a solver action)."""
-        if self.game is None or not self.game.undo():
+        if self.game is None or self.solveJob is not None or not self.game.undo():
             return False
         self.inputMessage = None
         self.puzzleChanged()
         return True
 
     def redo(self) -> bool:
-        if self.game is None or not self.game.redo():
+        if self.game is None or self.solveJob is not None or not self.game.redo():
             return False
         self.inputMessage = None
         self.puzzleChanged()
@@ -502,6 +508,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             return False
         text = event.text()
         clearKeys = (QtCore.Qt.Key.Key_Delete, QtCore.Qt.Key.Key_Backspace)
+        if self.solveJob is not None and (event.key() in clearKeys or text.isdigit()):
+            self.inputMessage = "The solver is busy; wait for it or cancel it first."
+            self.updateSelectionInfo()
+            return True
         try:
             if event.key() in clearKeys or (text == "0" and 0 not in game.puzzle.getValues()):
                 game.clear(cell)
@@ -546,18 +556,110 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             self.refreshPiece(cell)
 
     def solveButtonClicked(self):
-        if self.solver is not None and self.game is not None:
-            self.solver.allowGuessing = self.settings.allowGuessing
-            try:
-                self.game.solve(self.solver)
-            except ContradictionError as e:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Puzzle cannot be solved",
-                    "The solver ran into a contradiction:\n\n" + str(e),
-                )
-            # cells may have been solved: refresh their colours and the description
-            self.puzzleChanged()
+        """Solve in a background thread; while it runs, the button cancels it."""
+        if self.solveJob is not None:
+            self.solveJob.cancel()
+            self.ui.solvePushButton.setEnabled(False)  # until the solver has stopped
+            return
+        if self.solver is None or self.game is None or self.puzzleFile is None:
+            return
+        self.solver.allowGuessing = self.settings.allowGuessing
+        parser, path = self.puzzleType.parser, self.puzzleFile
+        worker = SolveWorker(
+            lambda: parser(path), self.game.puzzle.saveState(), self.settings.allowGuessing
+        )
+        worker.finished.connect(self.solveFinished)
+        worker.failed.connect(self.solveFailed)
+        worker.cancelled.connect(self.solveCancelled)
+        job = SolveJob(worker, self)
+        job.done.connect(self.solveJobDone)
+        self.solveJob = job
+        self.setSolving(True)
+        job.start()
+
+    def setSolving(self, solving: bool):
+        self.ui.solvePushButton.setText("Cancel" if solving else "Solve")
+        self.ui.solvePushButton.setEnabled(True)
+        self.ui.solveStepPushButton.setEnabled(not solving)
+        self.ui.hintPushButton.setEnabled(not solving)
+        self.updateUndoActions()
+
+    def solveFinished(self, state, solved: bool):
+        if self.game is None:
+            return
+        self.game.applySolution(state)
+        self.inputMessage = None
+        self.stepMessage = None if solved else "The solver got stuck; try Allow guessing."
+        # cells may have been solved: refresh their colours and the description
+        self.puzzleChanged()
+
+    def solveFailed(self, message: str):
+        QtWidgets.QMessageBox.warning(
+            self,
+            "Puzzle cannot be solved",
+            "The solver ran into a contradiction:\n\n" + message,
+        )
+
+    def solveCancelled(self):
+        self.stepMessage = "Solving was cancelled."
+        self.updateSelectionInfo()
+
+    def solveJobDone(self):
+        job = self.solveJob
+        self.solveJob = None
+        if job is not None:
+            job.deleteLater()
+        self.setSolving(False)
+
+    def stopSolving(self):
+        """Cancel a running solve and wait until its thread has stopped."""
+        job = self.solveJob
+        if job is None:
+            return
+        job.cancel()
+        job.wait()
+        # deliver the worker's queued signals, which clears self.solveJob
+        self.waitForSolve()
+
+    def waitForSolve(self, timeout: int = 30000) -> bool:
+        """Process events until a running solve has finished (e.g. in tests). Returns whether
+        it finished within `timeout` milliseconds."""
+        timer = QtCore.QElapsedTimer()
+        timer.start()
+        while self.solveJob is not None:
+            if timer.elapsed() > timeout:
+                return False
+            QtCore.QCoreApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.AllEvents, 50)
+        return True
+
+    def closeEvent(self, event):
+        self.stopSolving()
+        super().closeEvent(event)
+
+    def hintButtonClicked(self):
+        """Show a cell whose value follows from the constraints, and why, without filling it."""
+        if self.solver is None or self.game is None or self.solveJob is not None:
+            return
+        try:
+            hint = self.solver.hint()
+        except ContradictionError as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Puzzle cannot be solved",
+                "The solver ran into a contradiction:\n\n" + str(e),
+            )
+            return
+        if hint is None:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No hint",
+                "No value follows from a single round of the rules. Use Solve single step to"
+                " narrow down the candidates, or Solve.",
+            )
+            return
+        self.selectCell(hint.cell)
+        self.stepMessage = "Hint: " + hint.describe()
+        self.updateSelectionInfo()
 
     def solveStepButtonClicked(self):
         """Fill in one deducible cell, so the solver can be followed step by step."""
