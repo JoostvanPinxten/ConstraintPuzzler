@@ -9,9 +9,10 @@ import platform
 from collections.abc import Callable
 
 import PySide6
-from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
+from gui.highlighting import HighlightRole, combinedHighlightRoles, legendHtml, roleColor
 from gui.puzzlemodel.puzzletreemodel import (
     CellProxyItem,
     ConstraintGroupProxyItem,
@@ -54,8 +55,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     examples: dict[str, str] = {}
     defaultExample: str | None = None
 
-    showNextSelectionState = QtCore.Signal()
-
     # Set by subclasses in initializePuzzleRepresentation()
     scene: QtWidgets.QGraphicsScene
     puzzlePieces: dict
@@ -88,29 +87,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         #        self.setCentralWidget(self.view)
         #
 
-        self.selectionState = QtStateMachine.QState()
-        self.currentSelectionState = QtStateMachine.QState(self.selectionState)
-        self.previousSelectionState = QtStateMachine.QState(self.selectionState)
-
-        self.selectionStatemachine = QtStateMachine.QStateMachine()
-        self.selectionStatemachine.addState(self.selectionState)
-        self.selectionStatemachine.setInitialState(self.selectionState)
-        self.selectionState.setInitialState(self.currentSelectionState)
-
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
+        # the running fade of the cell highlight, if any (kept so it is not garbage collected)
+        self.highlightAnimation: QtCore.QParallelAnimationGroup | None = None
 
-        self.selectionStatemachine.addTransition(
-            self.showNextSelectionState, self.currentSelectionState
-        )
-        self.showNextSelectionState.emit()
-        self.trans1 = self.currentSelectionState.addTransition(
-            self.showNextSelectionState, self.previousSelectionState
-        )
-        self.trans2 = self.previousSelectionState.addTransition(
-            self.showNextSelectionState, self.currentSelectionState
-        )
-
-        self.selectionStatemachine.start()
         self.puzzle = None
         self.solver = None
 
@@ -119,6 +99,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.createSolverMenu()
         self.createHelpMenu()
         self.createStatusBar()
+        self.createSelectionInfo()
 
         if embedded:
             self.setWindowFlags(QtCore.Qt.WindowType.Widget)
@@ -161,8 +142,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         m.selectionChanged.connect(self.showSelectionInPuzzleView)
 
         # one animation proxy per cell of the current puzzle
+        self.stopHighlightAnimation()
         self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
+        self.highlightRoles = {}
+        self.updateSelectionInfo()
         # The puzzle is drawn in black on a transparent background, so with a dark palette it
         # would be black on black. Give the puzzle a fixed white background regardless of theme.
         self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
@@ -286,50 +270,66 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                     break
 
         if selectionChanged:
-            # first copy the reference to the current state to the previous state
+            self.updateHighlight()
+        self.updateSelectionInfo()
 
-            self.trans1, self.trans2 = self.trans2, self.trans1
+    def updateHighlight(self):
+        """Colour the cells of the selected tree items by the role they play in them."""
+        roles = combinedHighlightRoles(self.selectedItems)
+        self.highlightRoles = roles
 
-            self.previousSelectionState, self.currentSelectionState = (
-                self.currentSelectionState,
-                self.previousSelectionState,
+        # continue from wherever the previous fade got to
+        self.stopHighlightAnimation()
+        group = QtCore.QParallelAnimationGroup(self)
+        for cell, proxy in self.puzzlePieceProxies.items():
+            animation = QtCore.QPropertyAnimation(proxy, QtCore.QByteArray(b"backgroundColor"))
+            animation.setDuration(200)
+            animation.setEasingCurve(QtCore.QEasingCurve.Type.InOutQuad)
+            animation.setStartValue(proxy.backgroundColor)
+            animation.setEndValue(roleColor(roles.get(cell, HighlightRole.NONE)))
+            group.addAnimation(animation)
+        self.highlightAnimation = group
+        group.start(QtCore.QAbstractAnimation.DeletionPolicy.KeepWhenStopped)
+
+    def stopHighlightAnimation(self):
+        if self.highlightAnimation is not None:
+            self.highlightAnimation.stop()
+            self.highlightAnimation.deleteLater()
+            self.highlightAnimation = None
+
+    def createSelectionInfo(self):
+        """A label below the puzzle tree that explains the selected item."""
+        self.highlightRoles = {}
+        self.selectionInfoLabel = QtWidgets.QLabel(self.ui.dockWidgetContents)
+        self.selectionInfoLabel.setObjectName("selectionInfoLabel")
+        self.selectionInfoLabel.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        self.selectionInfoLabel.setWordWrap(True)
+        self.selectionInfoLabel.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop
+        )
+        self.selectionInfoLabel.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.selectionInfoLabel.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
+        self.selectionInfoLabel.setMargin(4)
+        # directly below the tree, above the solver controls
+        self.ui.verticalLayout_2.insertWidget(1, self.selectionInfoLabel)
+        self.updateSelectionInfo()
+
+    def updateSelectionInfo(self):
+        """Describe the item selected in the tree, with a legend of the highlight colours."""
+        selectionModel = self.ui.puzzleTreeView.selectionModel()
+        rows = selectionModel.selectedRows(0) if selectionModel is not None else []
+        if not rows:
+            self.selectionInfoLabel.setText(
+                "Select a cell, group or constraint in the tree to see its cells and rules."
             )
-
-            selectedCells = set()
-
-            for item in self.selectedItems:
-                selectedCells |= item.getCells()
-
-            group = QtCore.QParallelAnimationGroup()
-
-            for cell in self.puzzlePieceProxies:
-                # it = self.puzzlePieces[cell]
-                it = self.puzzlePieceProxies[cell]
-
-                animation = QtCore.QPropertyAnimation(
-                    it, QtCore.QByteArray(b"backgroundColor"), self
-                )
-
-                animation.setDuration(200)
-                animation.setEasingCurve(QtCore.QEasingCurve.Type.InOutQuad)
-
-                group.addAnimation(animation)
-
-                if cell in selectedCells:
-                    self.currentSelectionState.assignProperty(
-                        it, "backgroundColor", QtGui.QColor(255, 255, 0, 100)
-                    )
-                else:
-                    self.currentSelectionState.assignProperty(
-                        it, "backgroundColor", QtGui.QColor(255, 255, 0, 0)
-                    )
-
-            for anim in self.trans1.animations():
-                self.trans1.removeAnimation(anim)
-
-            self.trans1.addAnimation(group)
-
-            self.showNextSelectionState.emit()
+            return
+        parts = [self.constraintModel.getItem(index).describe() for index in rows]
+        legend = legendHtml(self.highlightRoles.values())
+        if legend:
+            parts.append(legend)
+        self.selectionInfoLabel.setText("<br>".join(parts))
 
     def solveButtonClicked(self):
         if self.solver is not None:
@@ -342,6 +342,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                     "Puzzle cannot be solved",
                     "The solver ran into a contradiction:\n\n" + str(e),
                 )
+            # cells may have been solved: refresh their colours and the description
+            self.updateHighlight()
+            self.updateSelectionInfo()
 
     def undo(self):
         pass

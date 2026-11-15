@@ -4,6 +4,7 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
+from .constraint import formatValues, placedValues
 from .uniquevalueconstraint import UniqueValueConstraint
 
 
@@ -72,6 +73,15 @@ class ExactCoverConstraint(UniqueValueConstraint):
 
     def getType(self):
         return "Exact cover constraint"
+
+    def summary(self):
+        return "each value once"
+
+    def describe(self):
+        missing = set(self.group.grid.getValues()) - set(placedValues(self.group.getCells()))
+        if not missing:
+            return "Every value appears exactly once; complete."
+        return f"Every value appears exactly once; still missing: {formatValues(missing)}."
 
     #    def getAllowedValuesForValueList(self, allowedValues, usedValues):
     #        return allowedValues
