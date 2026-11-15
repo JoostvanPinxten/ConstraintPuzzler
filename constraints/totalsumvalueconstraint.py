@@ -4,6 +4,7 @@ Created on 28 dec. 2012
 @author: Juice
 '''
 from constraints import Constraint
+from structure.errors import ContradictionError
 
 class TotalSumValueConstraint(Constraint):
     def __init__(self, group, initialValues):
@@ -32,13 +33,16 @@ class TotalSumValueConstraint(Constraint):
                 
                 valuesUsed.append(c.getValue())
         
+        if not openCells:
+            if total != 0:
+                raise ContradictionError("All cells are filled, but they do not add up to " + str(self.totalValue))
+            return
+
         allowedSet = self.applyConstraintRecursively(total, len(openCells), valuesUsed)
         
-        for value in self.values:
-            #print "totalvalue", self.totalValue
+        # iterate over a copy: values are removed from self.values inside the loop
+        for value in list(self.values):
             if(not value in allowedSet):
-                #self.values.remove(value)
-                #print value
                 self.values.remove(value)
                 self.group.removeValueExceptForList(filledCells, value)    
 

@@ -4,17 +4,13 @@ Created on 24 dec. 2012
 @author: Juice
 '''
 from math import *
-import constraints
 from structure.cell import Cell, PositionedCell
-from gui.puzzlemodel.puzzletreemodel import GridProxyItem, PuzzleProxyItem
-from structure.item import Item
 
-class Grid(Item):
+class Grid(object):
     def __init__(self, values, parent):
         self.values = list(values)
         self.cells = []
         self.constraintGroups = []
-        self.item = GridProxyItem(self, parent.getItem())
         self.parent = parent
     
     def addCell(self, position = None):
@@ -62,15 +58,5 @@ class Grid(Item):
                     print(str(val),end='')
             print()
         
-    def getItem(self):
-        return self.item
-    
     def getPuzzle(self):
-        return self.getParentItem()
-    
-    def getParentItem(self):
         return self.parent
-    
-    def setParentItem(self, parent):
-        self.parent = parent
-        self.item.setParent(parent)

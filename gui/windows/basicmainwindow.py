@@ -7,7 +7,9 @@ Created on 26 jan. 2013
 from PySide6 import QtGui, QtCore, QtWidgets, QtStateMachine
 
 from gui.ui import mainWindowUi
+import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
 from gui.puzzlemodel.puzzletreemodel import *
+from structure.errors import ContradictionError
 
 class BasicMainWindow(QtWidgets.QMainWindow):
 #    MaxRecentFiles = 5
@@ -16,7 +18,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
     
     showNextSelectionState =  QtCore.Signal()
-    puzzlePieceProxies = {} # dict[PuzzlePieceProxy]
 
     def __init__(self):
         super(BasicMainWindow, self).__init__()
@@ -50,8 +51,12 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.trans2 = self.previousSelectionState.addTransition(self.showNextSelectionState, self.currentSelectionState)
         
         self.selectionStatemachine.start()        
+        self.puzzle = None
+        self.solver = None
+
         self.createActions()
         self.createMenus()
+        self.createSolverMenu()
         self.createStatusBar()
 #
 #        self.setWindowTitle("Constraints solver")
@@ -60,16 +65,16 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def loadPuzzle(self, filename):
         self.puzzle, self.solver = self.parsePuzzle(filename)
         
-        # create a new PuzzleModel
+        # create a new PuzzleModel, presenting the puzzle in the tree view
         self.constraintModel = ConstraintPuzzleModel()
+        buildPuzzleTree(self.puzzle, self.constraintModel.getItem(QtCore.QModelIndex()))
         self.ui.puzzleTreeView.setModel(self.constraintModel)
 
         m = self.ui.puzzleTreeView.selectionModel()
         m.selectionChanged.connect(self.showSelectionInPuzzleView)
 
-        
-        # set the root as the parent for the puzzle
-        self.puzzle.setParentItem(self.constraintModel.getItem(QtCore.QModelIndex()))
+        # one animation proxy per cell of the current puzzle
+        self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
         self.ui.puzzleGraphicsView.setScene(self.scene)
     
@@ -82,6 +87,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def createMenus(self):
         pass
     
+    def createSolverMenu(self):
+        solverMenu = self.menuBar().addMenu("Solver")
+        self.allowGuessingAction = solverMenu.addAction("Allow guessing (backtracking)")
+        self.allowGuessingAction.setCheckable(True)
+
     def createStatusBar(self):
         pass
 
@@ -171,7 +181,12 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             
     def solveButtonClicked(self):
         if self.solver is not None:
-            self.solver.solve()
+            self.solver.allowGuessing = self.allowGuessingAction.isChecked()
+            try:
+                self.solver.solve()
+            except ContradictionError as e:
+                QtWidgets.QMessageBox.warning(self, "Puzzle cannot be solved",
+                                              "The solver ran into a contradiction:\n\n" + str(e))
 
     def undo(self):
         pass

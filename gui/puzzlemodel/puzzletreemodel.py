@@ -281,3 +281,23 @@ class ConstraintProxyItem(ProxyItem):
 
     def getItem(self):
         return self.constraint
+
+
+def buildPuzzleTree(puzzle, root):
+    """ Build the tree of proxy items that presents the puzzle model in a view:
+    the puzzle holds the grid (with its cells) and the constraint groups, each
+    group holds its constraints and references to its cells. """
+    puzzleItem = PuzzleProxyItem(puzzle, root)
+
+    gridItem = GridProxyItem(puzzle.getGrid(), puzzleItem)
+    for cell in puzzle.getGrid().getCells():
+        CellProxyItem(cell, gridItem)
+
+    for cg in puzzle.getConstraintGroups():
+        groupItem = ConstraintGroupProxyItem(cg, puzzleItem)
+        for constraint in cg.getConstraints():
+            ConstraintProxyItem(constraint, groupItem)
+        for cell in cg.getCells():
+            ReferencedCellProxyItem(cell, groupItem)
+
+    return puzzleItem

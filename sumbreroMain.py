@@ -17,13 +17,14 @@ from gui.ui import mainWindowUi
 from structure.puzzle import Puzzle
 from solver.Solver import Solver
 from structure.cell import PositionedCell
+from structure.position import Position
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 
 from utility.puzzlefactory import PuzzleFactory
 
-def hexrow(position : QtCore.QPoint, asc:bool =True):
+def hexrow(position : Position, asc:bool =True):
     return position.y() + position.x() - position.x() % 2
 
 class MainWindow(BasicMainWindow):
@@ -101,11 +102,10 @@ class MainWindow(BasicMainWindow):
     def parsePuzzle(filename):
 
         # Set the initial data to work with
-        myFile = open("./simpleSumbrero.txt")
-
+        with open(filename) as myFile:
+            stringArray = myFile.readlines()
 
         values = range(1,10)
-        stringArray = myFile.readlines()
         y = 0
         puzzle = None
         for line in stringArray:
@@ -116,8 +116,8 @@ class MainWindow(BasicMainWindow):
                 puzzle = Puzzle("Test-sumbrero", range(minimum, maximum+1))
                 
             if line.startswith("cell"):
-                x,y = [float(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
-                puzzle.getGrid().addCell(QtCore.QPoint(x,y))
+                x,y = [int(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
+                puzzle.getGrid().addCell(Position(x,y))
             
             if line.startswith("column"):
                 column, value = line.split('=')
@@ -170,9 +170,9 @@ class MainWindow(BasicMainWindow):
         return puzzle, solver
         
 if __name__ == '__main__':
-    import sys
+    import os, sys
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle("simpleSumbrero.txt")
+    mainWin.loadPuzzle(os.path.join(os.path.dirname(os.path.abspath(__file__)), "simpleSumbrero.txt"))
     mainWin.show()
     sys.exit(app.exec())
