@@ -18,9 +18,11 @@ class Solver():
         for cg in self.puzzle.getConstraintGroups():
             cg.applyConstraints()
 
-    def propagate(self):
-        """ Repeat deduction passes until a pass no longer changes anything """
-        state = self.puzzle.saveState()
+    def propagate(self, state=None):
+        """ Repeat deduction passes until a pass no longer changes anything.
+        state: the current puzzle state, if the caller already has a snapshot of it """
+        if state is None:
+            state = self.puzzle.saveState()
         while True:
             self.step()
             newState = self.puzzle.saveState()
@@ -31,11 +33,17 @@ class Solver():
     def solve(self):
         """ Deduce as much as possible; if allowed, guess when deduction gets stuck.
         Returns whether the puzzle is solved. Raises ContradictionError if the
-        puzzle has no solution. """
-        self.propagate()
-        if self.allowGuessing and not self.puzzle.isSolved():
-            if not self._search():
-                raise ContradictionError("No solution found, all guesses lead to a contradiction")
+        puzzle has no solution; the puzzle is then restored to the state it had
+        before solve() was called, instead of being left half-updated. """
+        initialState = self.puzzle.saveState()
+        try:
+            self.propagate(initialState)
+            if self.allowGuessing and not self.puzzle.isSolved():
+                if not self._search():
+                    raise ContradictionError("No solution found, all guesses lead to a contradiction")
+        except ContradictionError:
+            self.puzzle.restoreState(initialState)
+            raise
         return self.puzzle.isSolved()
 
     def _search(self):

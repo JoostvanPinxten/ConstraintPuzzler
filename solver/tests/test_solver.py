@@ -9,6 +9,8 @@ import unittest
 from utility.puzzlefactory import PuzzleFactory
 from solver.Solver import Solver
 from structure.errors import ContradictionError
+from constraints.uniquevalueconstraint import UniqueValueConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -97,6 +99,18 @@ class Test(unittest.TestCase):
         withDashes = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
 
         self.assertEqual(withZeros.saveState(), withDashes.saveState())
+
+    def testFailedSolveRestoresPuzzle(self):
+        # two different values from {1,2,3} can add up to at most 5, so 6 is impossible
+        puzzle = PuzzleFactory.createSingleConstraintPuzzle({1, 2, 3}, 2, UniqueValueConstraint)
+        tsvc = puzzle.getConstraintGroups()[0].addConstraint(TotalSumValueConstraint)
+        tsvc.setTotalValue(6)
+        before = puzzle.saveState()
+
+        with self.assertRaises(ContradictionError):
+            Solver(puzzle).solve()
+
+        self.assertEqual(puzzle.saveState(), before, "A failed solve must not leave a half-updated puzzle")
 
     def testSaveAndRestoreState(self):
         sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
