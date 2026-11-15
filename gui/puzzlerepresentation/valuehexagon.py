@@ -77,19 +77,33 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
         val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
         self.valueTextItem = QtWidgets.QGraphicsTextItem("")
         self.valueTextItem.setParentItem(self)
-        self.valueTextItem.setPos(self.position.x(), self.position.y() + self.cellSize / 6)
-        f = QtGui.QFont("Sans serif", self.cellSize / 3, 200)
         if isinstance(self.cell, Cell):
+            f = QtGui.QFont("Sans serif", self.cellSize / 3, 200)
             if self.cell.isInferred():
                 f.setWeight(QtGui.QFont.Weight.Thin)
             else:
                 self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
+        else:
+            # a clue has up to two digits, and the hexagons of neighbouring columns interlock,
+            # so it needs a smaller font than a cell value to stay inside its own hexagon
+            f = QtGui.QFont("Sans serif")
+            f.setPixelSize(round(self.cellSize * 0.28))
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
 
         # align to center of cell
         centerTextItem(self.valueTextItem)
+        self.placeValueText()
         self.valueTextItem.setOpacity(0)
+
+    def placeValueText(self):
+        """Centers the value text vertically in the hexagon (horizontally, it is centered by
+        its alignment within a text width of cellSize)."""
+        hexagonHeight = self.cellSize * sqrt(3) / 2
+        textHeight = self.valueTextItem.boundingRect().height()
+        self.valueTextItem.setPos(
+            self.position.x(), self.position.y() + (hexagonHeight - textHeight) / 2
+        )
 
     def updateRepresentation(self):
         val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
@@ -102,6 +116,7 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
             self.valueTextItem.setPlainText(str(val))
             # re-align to middle of cell
             centerTextItem(self.valueTextItem)
+            self.placeValueText()
 
             f = self.valueTextItem.font()
             if isinstance(self.cell, Constraint) or self.cell.isInferred():

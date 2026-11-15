@@ -53,6 +53,61 @@ class GuiSmokeTest(unittest.TestCase):
         self._smoke("futoshikiMain", "futoshiki.txt")
 
 
+class SumbreroWindowTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def setUp(self):
+        import sumbreroMain
+
+        self.window = sumbreroMain.MainWindow()
+        self.window.loadPuzzle(str(REPO_ROOT / "simpleSumbrero.txt"))
+        self.addCleanup(self.window.deleteLater)
+        self.addCleanup(self.window.close)
+        assert self.window.puzzle is not None
+        self.puzzle = self.window.puzzle
+
+    @staticmethod
+    def textArea(piece):
+        """Scene rectangle covered by the text of a hexagon (centered in its text item)."""
+        from PySide6 import QtCore, QtGui
+
+        text = piece.valueTextItem
+        metrics = QtGui.QFontMetricsF(text.font())
+        width = metrics.horizontalAdvance(text.toPlainText())
+        center = text.sceneBoundingRect().center()
+        return QtCore.QRectF(
+            center.x() - width / 2, center.y() - metrics.height() / 2, width, metrics.height()
+        )
+
+    def test_clue_labels_do_not_overlap(self):
+        from PySide6 import QtGui
+
+        clues = [
+            piece
+            for item, piece in self.window.puzzlePieces.items()
+            if item not in self.puzzle.getGrid().getCells()
+        ]
+        self.assertEqual(len(clues), len(self.puzzle.getConstraintGroups()))
+        areas = [self.textArea(piece) for piece in clues]
+        for i, area in enumerate(areas):
+            for other in areas[i + 1 :]:
+                self.assertFalse(area.intersects(other))
+            for cell in self.puzzle.getGrid().getCells():
+                hexagon = self.window.puzzlePieces[cell]
+                outline = hexagon.mapToScene(hexagon.polygon())
+                self.assertFalse(QtGui.QPolygonF(area).intersects(outline))
+
+    def test_solve_button_fills_in_the_cells(self):
+        self.window.solveButtonClicked()
+        self.assertTrue(self.puzzle.isSolved())
+        for cell in self.puzzle.getGrid().getCells():
+            piece = self.window.puzzlePieces[cell]
+            self.assertEqual(piece.valueTextItem.toPlainText(), str(cell.getValue()))
+            self.assertEqual(piece.valueTextItem.opacity(), 1)
+
+
 class LauncherSmokeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
