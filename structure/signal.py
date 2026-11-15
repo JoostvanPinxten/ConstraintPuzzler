@@ -1,9 +1,10 @@
 class Signal(object):
-    """ Minimal observer, replacing Qt signals in the puzzle model.
+    """Minimal observer, replacing Qt signals in the puzzle model.
 
     Unlike Qt signals, exceptions raised by a connected callback propagate to
     the code that emitted the signal. The solver relies on this to notice
-    contradictions found while constraints react to a changed cell. """
+    contradictions found while constraints react to a changed cell."""
+
     def __init__(self):
         self._callbacks = []
 

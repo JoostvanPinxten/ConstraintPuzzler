@@ -2,6 +2,7 @@
 
 Runs with QT_QPA_PLATFORM=offscreen (set below as a default), so no display is needed.
 """
+
 import importlib
 import os
 import unittest

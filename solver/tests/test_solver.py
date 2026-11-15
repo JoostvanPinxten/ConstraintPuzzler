@@ -1,8 +1,9 @@
-'''
+"""
 Created on 6 jan. 2013
 
 @author: Juice
-'''
+"""
+
 import os
 import tempfile
 import unittest
@@ -17,46 +18,48 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 
 class Test(unittest.TestCase):
-
-
     def setUp(self):
         pass
-
 
     def tearDown(self):
         pass
 
     def testNakedPair(self):
         sudoku = PuzzleFactory.createEmptySudoku()
-        
-        #initialize a grid that contains a naked pair 
-        sudoku.grid.setConstraintGridValue(3,1,7)
-        sudoku.grid.setConstraintGridValue(4,1,4)
-        
-        sudoku.grid.setConstraintGridValue(6,2,7)
-        sudoku.grid.setConstraintGridValue(7,2,4)
 
-        sudoku.grid.setConstraintGridValue(0,3,7)
-        sudoku.grid.setConstraintGridValue(0,4,4)
-    
-        # now the second and third cell must contain the possibleValues ([4,7]) as these are the only 
-        # two cells that can contain these values, they are also the only possibleValues 
-        
-        c1_0 = sudoku.grid.getCellFromSquareGrid(1,0)
-        c2_0 = sudoku.grid.getCellFromSquareGrid(2,0)
-        
+        # initialize a grid that contains a naked pair
+        sudoku.grid.setConstraintGridValue(3, 1, 7)
+        sudoku.grid.setConstraintGridValue(4, 1, 4)
+
+        sudoku.grid.setConstraintGridValue(6, 2, 7)
+        sudoku.grid.setConstraintGridValue(7, 2, 4)
+
+        sudoku.grid.setConstraintGridValue(0, 3, 7)
+        sudoku.grid.setConstraintGridValue(0, 4, 4)
+
+        # now the second and third cell must contain the possibleValues ([4,7]) as these are the only
+        # two cells that can contain these values, they are also the only possibleValues
+
+        c1_0 = sudoku.grid.getCellFromSquareGrid(1, 0)
+        c2_0 = sudoku.grid.getCellFromSquareGrid(2, 0)
+
         solver = Solver(sudoku)
         solver.solve()
-        
-        self.assertEqual(c1_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
-        self.assertEqual(c2_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
 
+        self.assertEqual(
+            c1_0.getPossibleValues(), set([4, 7]), "Did not correctly identify naked pair"
+        )
+        self.assertEqual(
+            c2_0.getPossibleValues(), set([4, 7]), "Did not correctly identify naked pair"
+        )
 
     def assertValidSudoku(self, sudoku):
         self.assertTrue(sudoku.isSolved(), "Not all cells are filled")
         for cg in sudoku.getConstraintGroups():
             values = sorted(c.getValue() for c in cg.getCells())
-            self.assertEqual(values, list(range(1, 10)), cg.getName() + " is not a permutation of 1..9")
+            self.assertEqual(
+                values, list(range(1, 10)), cg.getName() + " is not a permutation of 1..9"
+            )
 
     def testDeductionRepeatsUntilFixpoint(self):
         sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
@@ -111,7 +114,9 @@ class Test(unittest.TestCase):
         with self.assertRaises(ContradictionError):
             Solver(puzzle).solve()
 
-        self.assertEqual(puzzle.saveState(), before, "A failed solve must not leave a half-updated puzzle")
+        self.assertEqual(
+            puzzle.saveState(), before, "A failed solve must not leave a half-updated puzzle"
+        )
 
     def testFutoshikiFile(self):
         puzzle = PuzzleFactory.fromFutoshikiFile(os.path.join(ROOT, "futoshiki.txt"))
@@ -119,7 +124,9 @@ class Test(unittest.TestCase):
         self.assertEqual(puzzle.grid.getCellFromSquareGrid(0, 0).getValue(), 5)
         self.assertEqual(puzzle.grid.getCellFromSquareGrid(6, 0).getValue(), 6)
 
-        relations = [c for c in puzzle.getConstraints() if isinstance(c, CellGreaterThanCellConstraint)]
+        relations = [
+            c for c in puzzle.getConstraints() if isinstance(c, CellGreaterThanCellConstraint)
+        ]
         self.assertEqual(len(relations), 24)
         # first relation in the file: 2,1>3,1
         self.assertIs(relations[0].greaterCell, puzzle.grid.getCellFromSquareGrid(1, 0))
@@ -140,5 +147,5 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
+    # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
