@@ -17,7 +17,6 @@ it deduces, and how to use it. For the grid types and the puzzle file formats, s
 - [ExactCoverConstraint](#exactcoverconstraint)
 - [TotalSumValueConstraint](#totalsumvalueconstraint)
 - [CellGreaterThanCellConstraint](#cellgreaterthancellconstraint)
-- [NonogramConstraint (experimental)](#nonogramconstraint-experimental)
 - [How the puzzles combine constraints](#how-the-puzzles-combine-constraints)
 - [Writing your own constraint](#writing-your-own-constraint)
 
@@ -90,7 +89,6 @@ that could still be correct.
 | `ExactCoverConstraint` | Every value appears exactly once in the group | Sudoku rows/columns/blocks, Futoshiki rows/columns | none |
 | `TotalSumValueConstraint` | The values in the group add up to a total | Kakuro clues, Sumbrero sums | `setTotalValue(n)` |
 | `CellGreaterThanCellConstraint` | One cell is smaller than another | Futoshiki `<` / `>` signs | `setLesserCell`, `setGreaterCell` |
-| `NonogramConstraint` | Runs of filled cells (experimental) | not used by a puzzle yet | `setAdjacencies([...])` |
 
 ## UniqueValueConstraint
 
@@ -210,22 +208,6 @@ constraint.setLesserCell(lesserCell)
 
 In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line `relativity`;
 `parsers.parseFutoshikiFile` creates these groups.
-
-## NonogramConstraint (experimental)
-
-`constraints/nonogramconstraint.py`
-
-**Rule:** for a nonogram row or column, the cells contain runs ("adjacencies") of filled cells
-of the given lengths, in order, separated by at least one empty cell. Cells use 1 for filled
-and 0 for empty.
-
-**Current deduction:** only the trivial case. When the runs plus one gap between each pair of
-runs exactly fill the line (e.g. runs `[3, 1]` in a line of 5 cells: `■■■□■`), every cell is
-set. Any other line is left alone.
-
-**Setup:** `constraint.setAdjacencies([3, 1])`. No puzzle type uses this constraint yet, and it
-does not implement `getAllowedValuesForValueList`, so it cannot be combined with a
-`TotalSumValueConstraint` in the same group.
 
 ## How the puzzles combine constraints
 

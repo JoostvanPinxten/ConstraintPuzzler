@@ -4,7 +4,7 @@ A PySide6 (Python 3.13) application that solves number puzzles (Sudoku, Kakuro, 
 
 ## Layout
 - `structure/`: the puzzle model. `Puzzle` holds a `Grid` of `Cell`s, and every `Cell` tracks its possible values. Positions are `structure.position.Position`, not `QPoint`. Cells notify observers via the minimal `structure.signal.Signal` (`valueChanged`, `possibleValuesChanged`). **The model, constraints and solver must not import PySide6.** Unlike Qt signals, exceptions raised in callbacks propagate, which the solver relies on.
-- `constraints/`: the `Constraint` base class plus implementations (unique value, exact cover, total sum, greater-than, nonogram). `ConstraintGroup` groups constraints over sets of cells. A constraint that detects an unsolvable state raises `structure.errors.ContradictionError`.
+- `constraints/`: the `Constraint` base class plus implementations (unique value, exact cover, total sum, greater-than). `ConstraintGroup` groups constraints over sets of cells. A constraint that detects an unsolvable state raises `structure.errors.ContradictionError`.
 - `solver/Solver.py`: repeats deduction until nothing changes. With `allowGuessing` it backtracks, and on a contradiction it restores the puzzle via `Puzzle.saveState()`/`restoreState()`.
 - `utility/version.py` / `utility/resources.py`: `getVersion()` reads the version from `pyproject.toml`, and `resourcePath()` locates bundled data files (repo root from source, `sys._MEIPASS` in a PyInstaller build). Use `resourcePath` for files shipped with the app.
 - `utility/puzzlefactory.py`: builds puzzles (empty Sudoku, empty Futoshiki, example Kakuro, single-constraint test puzzles).

@@ -14,11 +14,12 @@ class Cell:
         self.valueChanged = Signal()
         self.possibleValuesChanged = Signal()
         self.initialValues = set(initialValues)
+        # the constraint groups this cell is in (filled by ConstraintGroup.addCell)
+        self.constraintGroups = []
         self.reset()
         self.grid = grid
 
     def reset(self):
-        self.constraintGroups = []
         self.values = set(self.initialValues)
         self.value = None
         self.inferred = False
@@ -47,18 +48,9 @@ class Cell:
         self.values = {value}
 
         self.valueChanged.emit(self)
-        # for cg in self.constraintGroups:
-        #    cg.notify(self, value)
 
     def getPossibleValues(self):
-        # if(self.value):
-        #    return [self.value]
-
-        # start with all the possible values
-        values = self.values
-
-        # let each constraint group say what values are still allowed?
-        return set(values)
+        return set(self.values)
 
     def remove(self, value):
         # make sure the set value is not the value that needs to be removed
@@ -77,8 +69,11 @@ class Cell:
         self.possibleValuesChanged.emit(self)
 
     def addConstraintGroup(self, group):
-        self.constraintGroups.append(group)
         group.addCell(self)
+
+    def getConstraintGroups(self):
+        """The constraint groups this cell is in."""
+        return list(self.constraintGroups)
 
     def __str__(self):
         val = self.getValue()
@@ -110,10 +105,7 @@ class Cell:
 
     def checkForSinglePossibility(self):
         if self.value is None and len(self.values) == 1:
-            # print self.values
-            val = next(iter(self.values))
-            #            #print "single value left: ", val
-            self.inferValue(val)
+            self.inferValue(next(iter(self.values)))
 
 
 class PositionedCell(Cell):

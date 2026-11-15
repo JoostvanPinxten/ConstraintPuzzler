@@ -45,8 +45,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #    MaxRecentFiles = 5
     #    windowList = []
 
-    acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
-
     # Set by subclasses: shown in the File menu and the open-file dialog
     puzzleTypeName = "Puzzle"
     fileFilter = "Puzzle Files (*.txt)"
@@ -104,12 +102,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.puzzle = None
         self.solver = None
 
-        self.createActions()
         self.createMenus()
         self.createViewMenu()
         self.createSolverMenu()
         self.createHelpMenu()
-        self.createStatusBar()
         self.createSelectionInfo()
         self.createCellInput()
         self.settings.showHintsChanged.connect(self.applyShowHints)
@@ -202,9 +198,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         puzzle = parser(filename)
         return puzzle, Solver(puzzle)
 
-    def createActions(self):
-        pass
-
     def createMenus(self):
         fileMenu = self.menuBar().addMenu("File")
         openAction = fileMenu.addAction(f"Open {self.puzzleTypeName}...")
@@ -268,9 +261,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def showAbout(self):
         QtWidgets.QMessageBox.about(self, f"About {APP_NAME}", self.aboutText())
-
-    def createStatusBar(self):
-        pass
 
     def showSelectionInPuzzleView(self, selectedItems, deselectedItems):
         selectionChanged = False
@@ -498,9 +488,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             return None
         value = self.userEntries.valueOf(cell)
         clashes = set()
-        for group in self.puzzle.getConstraintGroups():
-            if cell in group.getCells():
-                clashes |= self.violations & set(group.getCells())
+        for group in cell.getConstraintGroups():
+            clashes |= self.violations & set(group.getCells())
         clashes.discard(cell)
         if clashes:
             names = ", ".join(sorted(c.getName() for c in clashes))
@@ -571,23 +560,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 ),
             )
 
-    def undo(self):
-        pass
-
-    def redo(self):
-        pass
-
     def cellPossibleValuesChanged(self, cell):
         self.refreshPiece(cell)
 
     def initializePuzzleRepresentation(self):
         raise NotImplementedError
-
-    def updatePuzzleRepresentation(self):
-        pass
-
-    def cellHintValuesChanged(self, cell, value):
-        pass
 
     def cellValueChanged(self, cell):
         self.refreshPiece(cell)

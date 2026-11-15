@@ -12,6 +12,7 @@ from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from parsers import parseKakuroFile
+from structure.cell import PositionedCell
 
 
 class MainWindow(BasicMainWindow):
@@ -33,7 +34,7 @@ class MainWindow(BasicMainWindow):
         self.selectedItems = set()
 
         for c in self.puzzle.getGrid().getCells():
-            if c.getPosition:
+            if isinstance(c, PositionedCell):
                 rect = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellSize)
                 self.scene.addItem(rect)
                 c.valueChanged.connect(self.cellValueChanged)

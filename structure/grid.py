@@ -13,7 +13,6 @@ class Grid:
     def __init__(self, values, parent):
         self.values = list(values)
         self.cells = []
-        self.constraintGroups = []
         self.parent = parent
 
     def addCell(self, position=None):
@@ -41,9 +40,6 @@ class Grid:
     def getCellFromSquareGrid(self, x, y):
         """Get the cell at (x, y), assuming all cells are laid out in a square grid."""
         index = x + int(ceil(sqrt(len(self.cells)) * y))
-
-        # alternatively, search for the PositionedCell whose position is (x, y)?
-
         return self.cells[index]
 
     def searchCellWithPosition(self, pos):
@@ -56,16 +52,6 @@ class Grid:
     def setConstraintGridValue(self, x, y, value):
         cell = self.getCellFromSquareGrid(x, y)
         cell.setValue(value)
-
-    def printAsSudoku(self):
-        for y in range(0, 9):
-            for x in range(0, 9):
-                val = self.getCellFromSquareGrid(x, y).getValue()
-                if val is None:
-                    print("-", end="")
-                else:
-                    print(str(val), end="")
-            print()
 
     def getPuzzle(self):
         return self.parent

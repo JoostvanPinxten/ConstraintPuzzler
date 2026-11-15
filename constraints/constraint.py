@@ -32,6 +32,12 @@ class Constraint:
     def notify(self, cell):
         raise NotImplementedError
 
+    def getAllowedValuesForValueList(self, allowedValues, usedValues):
+        """Narrow allowedValues, given that usedValues are already used in the group.
+
+        Used by ConstraintGroup.valuesAllowedByGroup; by default a rule allows everything."""
+        return allowedValues
+
     def getType(self):
         return type(self).__name__
 
