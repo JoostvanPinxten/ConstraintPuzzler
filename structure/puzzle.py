@@ -44,15 +44,21 @@ class Puzzle(object):
 
     def restoreState(self, state):
         """ Restore a snapshot made by saveState(). Only possibleValuesChanged is
-        emitted, so the constraints are not triggered by the restore. """
+        emitted, so the constraints are not triggered by the restore; it is only
+        emitted for cells whose state actually changed. """
         cellStates, constraintStates = state
-        for cell, (values, value, inferred) in zip(self.grid.cells, cellStates):
+        changedCells = []
+        for cell, cellState in zip(self.grid.cells, cellStates):
+            if (frozenset(cell.values), cell.value, cell.inferred) == cellState:
+                continue
+            values, value, inferred = cellState
             cell.values = set(values)
             cell.value = value
             cell.inferred = inferred
+            changedCells.append(cell)
         for constraint, values in zip(self.getConstraints(), constraintStates):
             constraint.values = list(values)
-        for cell in self.grid.cells:
+        for cell in changedCells:
             cell.possibleValuesChanged.emit(cell)
 
     def isSolved(self):
