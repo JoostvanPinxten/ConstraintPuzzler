@@ -5,6 +5,7 @@ Created on 28 dec. 2012
 """
 
 from constraints import Constraint
+from constraints.constraint import formatValues, placedValues
 
 
 class UniqueValueConstraint(Constraint):
@@ -23,6 +24,15 @@ class UniqueValueConstraint(Constraint):
 
     def getType(self):
         return "Unique Value Constraint"
+
+    def summary(self):
+        return "all different"
+
+    def describe(self):
+        placed = placedValues(self.group.getCells())
+        if not placed:
+            return "The values must all differ; nothing is placed yet."
+        return f"The values must all differ; placed so far: {formatValues(placed)}."
 
     def getAllowedValuesForValueList(self, allowedValues, usedValues):
         # return allowedValues

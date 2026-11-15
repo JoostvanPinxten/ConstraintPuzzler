@@ -4,10 +4,35 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+import html
+
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
 ParentRole = QtCore.Qt.ItemDataRole.UserRole + 1
+
+
+def _cellCounts(cells):
+    """E.g. "9 cells: 4 filled, 5 open"."""
+    cells = list(cells)
+    filled = sum(1 for c in cells if c.hasValue())
+    return f"{len(cells)} cells: {filled} filled, {len(cells) - filled} open"
+
+
+def describeCell(cell):
+    """Rich text describing the value or the candidates of a cell and its groups."""
+    if cell.hasValue():
+        how = "deduced" if cell.isInferred() else "given"
+        state = f"Value: {cell.getValue()} ({how})"
+    else:
+        candidates = ", ".join(str(v) for v in sorted(cell.getPossibleValues()))
+        state = f"Candidates: {candidates}"
+    puzzle = cell.getGrid().getPuzzle()
+    groups = [g.getName() for g in puzzle.getConstraintGroups() if cell in g.getCells()]
+    text = f"<b>Cell {html.escape(cell.getName())}</b><br>{state}"
+    if groups:
+        text += "<br>In groups: " + html.escape(", ".join(groups))
+    return text
 
 
 class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
@@ -74,6 +99,8 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
                 return None
             else:
                 return item.getIcon()
+        elif role == Qt.ItemDataRole.ToolTipRole:
+            return self.getItem(index).describe()
         else:
             return None
 
@@ -134,6 +161,10 @@ class ProxyItem(QtCore.QObject):
     def getIcon(self):
         return QtGui.QColor(255, 255, 255)
 
+    def describe(self):
+        """Rich text that explains the item (shown as tooltip and below the tree)."""
+        return f"<b>{html.escape(str(self.getName()))}</b> ({html.escape(str(self.getType()))})"
+
     def setParent(self, parent):
         parent.addChild(self)
         self.parentItem = parent
@@ -167,6 +198,14 @@ class PuzzleProxyItem(ProxyItem):
     def getType(self):
         return self.tr("Puzzle")
 
+    def describe(self):
+        cells = self.puzzle.getGrid().getCells()
+        groups = len(self.puzzle.getConstraintGroups())
+        return (
+            f"<b>{html.escape(str(self.getName()))}</b><br>{_cellCounts(cells)}<br>"
+            f"{groups} constraint groups"
+        )
+
 
 class GridProxyItem(ProxyItem):
     def __init__(self, grid, parent):
@@ -190,6 +229,9 @@ class GridProxyItem(ProxyItem):
 
     def getPuzzle(self):
         return self.parent()
+
+    def describe(self):
+        return f"<b>Grid</b><br>{_cellCounts(self.grid.getCells())}"
 
     def getItem(self):
         return self.grid
@@ -217,6 +259,9 @@ class CellProxyItem(ProxyItem):
         s.add(self.cell)
         return s
 
+    def describe(self):
+        return describeCell(self.cell)
+
     def getItem(self):
         return self.cell
 
@@ -243,6 +288,9 @@ class ReferencedCellProxyItem(ProxyItem):
         s.add(self.cell)
         return s
 
+    def describe(self):
+        return describeCell(self.cell)
+
     def getItem(self):
         return self.cell
 
@@ -261,6 +309,14 @@ class ConstraintGroupProxyItem(ProxyItem):
     def getType(self):
         return self.tr("Constraint Group")
 
+    def describe(self):
+        group = self.constraintGroup
+        rules = "".join(f"<li>{html.escape(c.describe())}</li>" for c in group.getConstraints())
+        return (
+            f"<b>{html.escape(group.getName())}</b> (constraint group)<br>"
+            f"{_cellCounts(group.getCells())}<ul>{rules}</ul>"
+        )
+
     def getCells(self):
         s = set()
         [s.add(c) for c in self.constraintGroup.getCells()]
@@ -276,7 +332,7 @@ class ConstraintProxyItem(ProxyItem):
         self.constraint = constraint
 
     def getName(self):
-        return "Untitled"
+        return self.constraint.summary()
 
     def getType(self):
         return self.tr(self.constraint.getType())
@@ -286,6 +342,15 @@ class ConstraintProxyItem(ProxyItem):
 
     def getCells(self):
         return self.parent().getCells()
+
+    def describe(self):
+        group = self.constraint.group
+        return (
+            f"<b>{html.escape(self.constraint.summary())}</b> "
+            f"({html.escape(self.constraint.getType())})<br>"
+            f"{html.escape(self.constraint.describe())}<br>"
+            f"Group {html.escape(group.getName())}: {_cellCounts(group.getCells())}"
+        )
 
     def getItem(self):
         return self.constraint
