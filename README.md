@@ -54,7 +54,7 @@ Press **Solve** to let the solver deduce as much as it can; it keeps applying th
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the panel below the tree explains the selection.
 
-Click a cell to select it, then type a number to enter it (given cells cannot be changed). Typed values are shown in green; Delete or Backspace clears them. A value that is not possible, or that contradicts the puzzle, is refused with an explanation.
+Click a cell to select it, then type a number to enter it (given cells cannot be changed). Typed values are shown in green; Delete or Backspace clears them. You can also make mistakes: a value that breaks a rule is drawn in red, together with the cells it clashes with (e.g. the other 6 in the row), and the panel below the tree explains the clash. Mistakes are kept out of the puzzle model, so **Solve** only uses the values that fit.
 
 Each puzzle type has its own file format (see [doc/puzzle-files.md](doc/puzzle-files.md)), read by a parser in `parsers/` such as `parsers.parseKakuroFile`. Each `*Main.py` file contains a subclass of `BasicMainWindow` that names its parser and determines the layout and shapes of the puzzle.
 

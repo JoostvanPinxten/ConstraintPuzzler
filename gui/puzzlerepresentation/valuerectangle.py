@@ -10,6 +10,8 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 # colour of a value the user typed in (given values are blue, deduced values black)
 ENTERED_VALUE_COLOR = QtGui.QColor(0, 120, 60)
+# colour of a value that breaks a rule of the puzzle (e.g. a number twice in a row)
+VIOLATION_COLOR = QtGui.QColor(220, 0, 0)
 
 
 def centerTextItem(text):
@@ -112,3 +114,15 @@ class ValueRectangle(QtWidgets.QGraphicsRectItem):
     def hideHints(self):
         for val in self.values:
             self.hintValueItemMap[val].setOpacity(0)
+
+    def showMistake(self, value):
+        """Show a value typed in by the user that does not fit (it is not in the model)."""
+        self.hideHints()
+        self.valueTextItem.setOpacity(1)
+        self.valueTextItem.setPlainText(str(value))
+        centerTextItem(self.valueTextItem)
+        self.markViolation()
+
+    def markViolation(self):
+        """Draw the value in red: it breaks a rule of the puzzle."""
+        self.valueTextItem.setDefaultTextColor(VIOLATION_COLOR)

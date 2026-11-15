@@ -44,13 +44,38 @@ class UserEntriesTest(unittest.TestCase):
             self.entries.clear(given)
         self.assertEqual(given.getValue(), 6)
 
-    def testValueThatIsNotACandidateIsRefused(self):
+    def testValueThatIsNotACandidateIsAMistake(self):
         state = self.puzzle.saveState()
-        with self.assertRaisesRegex(EntryError, "not possible"):
-            self.entries.enter(self.topLeft, 6)
+        self.assertEqual(self.entries.violations(), set())
+        self.entries.enter(self.topLeft, 6)
+        # shown, but kept out of the model
+        self.assertEqual(self.puzzle.saveState(), state)
+        self.assertTrue(self.entries.isMistake(self.topLeft))
+        self.assertEqual(self.entries.valueOf(self.topLeft), 6)
+        self.assertIsNone(self.topLeft.getValue())
+        # the given 6 in the same row clashes with it
+        self.assertEqual(self.entries.violations(), {self.topLeft, self.cell(1, 0)})
+
+        # fixing the mistake
+        self.entries.enter(self.topLeft, 4)
+        self.assertFalse(self.entries.isMistake(self.topLeft))
+        self.assertEqual(self.topLeft.getValue(), 4)
+        self.assertEqual(self.entries.violations(), set())
+
+    def testClearingAMistake(self):
+        state = self.puzzle.saveState()
+        self.entries.enter(self.topLeft, 6)
+        self.entries.clear(self.topLeft)
+        self.assertEqual(self.entries.mistakes, {})
+        self.assertEqual(self.entries.violations(), set())
+        self.assertEqual(self.puzzle.saveState(), state)
+
+    def testValuesThePuzzleDoesNotUseAreRefused(self):
+        state = self.puzzle.saveState()
         with self.assertRaisesRegex(EntryError, "not a value"):
             self.entries.enter(self.topLeft, 0)
         self.assertEqual(self.puzzle.saveState(), state)
+        self.assertEqual(self.entries.entries, {})
 
     def testChangingAValueReplaysTheEntries(self):
         self.entries.enter(self.topLeft, 4)
@@ -68,15 +93,21 @@ class UserEntriesTest(unittest.TestCase):
         self.assertEqual(self.puzzle.saveState(), state)
         self.assertEqual(self.entries.entries, {})
 
-    def testChangeThatContradictsAnotherEntryIsRolledBack(self):
+    def testChangeThatClashesWithAnotherEntryBecomesAMistake(self):
         self.entries.enter(self.topLeft, 4)
         other = self.cell(3, 0)  # same row, candidates 7 and 8
         self.entries.enter(other, 7)
-        state = self.puzzle.saveState()
-        with self.assertRaisesRegex(EntryError, "contradicts"):
-            self.entries.enter(self.topLeft, 7)
-        self.assertEqual(self.puzzle.saveState(), state)
-        self.assertEqual(self.entries.entries, {self.topLeft: 4, other: 7})
+        self.entries.enter(self.topLeft, 7)
+        self.assertEqual(self.entries.mistakes, {self.topLeft: 7})
+        self.assertIsNone(self.topLeft.getValue())
+        self.assertEqual(other.getValue(), 7)
+        self.assertEqual(self.entries.violations(), {self.topLeft, other})
+
+        # clearing the other entry makes the 7 fit: it is entered in the model after all
+        self.entries.clear(other)
+        self.assertEqual(self.entries.mistakes, {})
+        self.assertEqual(self.topLeft.getValue(), 7)
+        self.assertEqual(self.entries.violations(), set())
 
     def testEnteredFlagSurvivesSaveAndRestore(self):
         state = self.puzzle.saveState()

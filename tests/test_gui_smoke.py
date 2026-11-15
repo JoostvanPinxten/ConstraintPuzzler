@@ -295,19 +295,52 @@ class CellInputTest(unittest.TestCase):
         self.assertEqual(cell.getPossibleValues(), {4, 7})
         self.assertEqual(piece.valueTextItem.opacity(), 0)
 
-    def test_given_cells_and_impossible_values_are_refused(self):
+    def test_given_cells_cannot_be_changed(self):
         given = self.grid.getCellFromSquareGrid(1, 0)
         self.click(given)
         self.type(QtCore.Qt.Key.Key_4)
         self.assertEqual(given.getValue(), 6)
         self.assertIn("is given", self.window.selectionInfoLabel.text())
 
-        cell = self.grid.getCellFromSquareGrid(0, 0)
-        self.click(cell)
+        self.click(self.grid.getCellFromSquareGrid(0, 0))
         self.assertNotIn("is given", self.window.selectionInfoLabel.text())
+
+    def test_a_mistake_is_shown_in_red_with_the_cells_it_clashes_with(self):
+        from gui.puzzlerepresentation.valuerectangle import (
+            ENTERED_VALUE_COLOR,
+            VIOLATION_COLOR,
+        )
+
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        given = self.grid.getCellFromSquareGrid(1, 0)  # the 6 in the same row
+        piece, givenPiece = self.window.puzzlePieces[cell], self.window.puzzlePieces[given]
+        givenColor = givenPiece.valueTextItem.defaultTextColor()
+
+        self.click(cell)
         self.type(QtCore.Qt.Key.Key_6)
+        # the mistake is shown, but not set in the puzzle
         self.assertIsNone(cell.getValue())
-        self.assertIn("6 is not possible", self.window.selectionInfoLabel.text())
+        self.assertEqual(piece.valueTextItem.toPlainText(), "6")
+        self.assertEqual(piece.valueTextItem.opacity(), 1)
+        self.assertEqual(piece.valueTextItem.defaultTextColor(), VIOLATION_COLOR)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), VIOLATION_COLOR)
+        self.assertIn(
+            f"6 breaks a rule together with cell(s) {given.getName()}",
+            self.window.selectionInfoLabel.text(),
+        )
+
+        # fixing it turns both back to their normal colours
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(piece.valueTextItem.defaultTextColor(), ENTERED_VALUE_COLOR)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
+        self.assertNotIn("breaks a rule", self.window.selectionInfoLabel.text())
+
+        # a mistake can be cleared too
+        self.type(QtCore.Qt.Key.Key_6)
+        self.type(QtCore.Qt.Key.Key_Delete)
+        self.assertEqual(piece.valueTextItem.opacity(), 0)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
 
     def test_typing_in_the_tree_enters_a_value_too(self):
         cell = self.grid.getCellFromSquareGrid(0, 0)

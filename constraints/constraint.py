@@ -42,3 +42,11 @@ class Constraint:
     def describe(self):
         """A one-line description of the rule and of how far it is satisfied."""
         return self.summary()
+
+    def violations(self, valueOf):
+        """The cells that break this rule, given the value shown in each cell.
+
+        valueOf(cell) returns the value of a cell, or None for an empty cell. It may differ
+        from cell.getValue(), e.g. for a mistake the user typed in that the model rejected.
+        """
+        return set()

@@ -28,6 +28,15 @@ class UniqueValueConstraint(Constraint):
     def summary(self):
         return "all different"
 
+    def violations(self, valueOf):
+        """The cells that share their value with another cell of the group."""
+        cellsByValue = {}
+        for cell in self.group.getCells():
+            value = valueOf(cell)
+            if value is not None:
+                cellsByValue.setdefault(value, []).append(cell)
+        return {c for cells in cellsByValue.values() if len(cells) > 1 for c in cells}
+
     def describe(self):
         placed = placedValues(self.group.getCells())
         if not placed:
