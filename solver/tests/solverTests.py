@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
         solver = Solver(sudoku)
         solver.solve()
         
-        print sudoku.grid
+        print(sudoku.grid)
         self.assertEqual(c1_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
         self.assertEqual(c2_0.getPossibleValues(), set([4,7]), "Did not correctly identify naked pair")
 

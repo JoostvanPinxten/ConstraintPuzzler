@@ -7,6 +7,7 @@ Created on 26 jan. 2013
 from PySide6 import QtGui, QtCore, QtWidgets, QtStateMachine
 
 from gui.ui import mainWindowUi
+import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
 from gui.puzzlemodel.puzzletreemodel import *
 
 class BasicMainWindow(QtWidgets.QMainWindow):

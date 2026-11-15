@@ -20,7 +20,6 @@ class NonogramConstraint(Constraint):
         # for now, assume only one color
         cells = self.group.getCells()
         if len(cells) == sum(self.adjacencies) + len(self.adjacencies)-1:
-            print "test", self
             index = 0
             for adjacency in self.adjacencies:
                 for i in range(adjacency):

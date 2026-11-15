@@ -5,7 +5,9 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
-from PySide import QtGui, QtCore
+import sys
+
+from PySide6 import QtGui, QtCore, QtWidgets
 
 from constraints import *
 from structure import *
@@ -36,13 +38,13 @@ class MainWindow(BasicMainWindow):
         openFutoshiki.triggered.connect(self.openFutoshiki)
     
     def openFutoshiki(self):
-        fileName = QtGui.QFileDialog.getOpenFileName(self,
+        fileName = QtWidgets.QFileDialog.getOpenFileName(self,
     "Open Futoshiki", "", "Futoshiki Files (*.txt *.fut)")
         if fileName[0]:
             self.loadPuzzle(fileName[0])
             
     def initializePuzzleRepresentation(self):
-        self.scene = QtGui.QGraphicsScene(self)
+        self.scene = QtWidgets.QGraphicsScene(self)
         
 #        self.view.setScene(self.scene)
         self.puzzlePieces = {}
@@ -121,8 +123,8 @@ class MainWindow(BasicMainWindow):
     
 if __name__ == '__main__':
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.loadPuzzle("futoshiki.txt")
     mainWin.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
