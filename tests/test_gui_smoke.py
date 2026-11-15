@@ -56,5 +56,43 @@ class GuiSmokeTest(unittest.TestCase):
         self._smoke("futoshikiMain", "futoshiki.txt")
 
 
+class LauncherSmokeTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def test_every_puzzle_window_shows_version(self):
+        import constraintPuzzlerMain
+        from utility.version import getVersion
+
+        for name in constraintPuzzlerMain.PUZZLES:
+            with self.subTest(puzzle=name):
+                window = constraintPuzzlerMain.createWindow(name)
+                try:
+                    window.show()
+                    self.app.processEvents()
+                    self.assertIn(getVersion(), window.windowTitle())
+                    self.assertIn(getVersion(), window.aboutText())
+                finally:
+                    window.close()
+                    window.deleteLater()
+                    self.app.processEvents()
+
+    def test_smoke_test_flag(self):
+        import constraintPuzzlerMain
+
+        self.assertEqual(constraintPuzzlerMain.main(["--smoke-test"]), 0)
+
+    def test_chooser_lists_all_puzzles(self):
+        import constraintPuzzlerMain
+
+        dialog = constraintPuzzlerMain.PuzzleChooserDialog()
+        buttons = dialog.findChildren(QtWidgets.QPushButton)
+        self.assertEqual(len(buttons), len(constraintPuzzlerMain.PUZZLES))
+        buttons[1].click()
+        self.assertEqual(dialog.choice, "kakuro")
+        dialog.deleteLater()
+
+
 if __name__ == "__main__":
     unittest.main()

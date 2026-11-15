@@ -16,6 +16,14 @@ In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles
 Usage instructions
 =================
 
+## Download
+Standalone builds for Windows, Linux and macOS are attached to every [GitHub Release](https://github.com/JoostvanPinxten/ConstraintPuzzler/releases); no Python installation is needed. Download the archive for your platform, unpack it and start `ConstraintPuzzler` (`ConstraintPuzzler.exe` on Windows, `ConstraintPuzzler.app` on macOS). A dialog asks which puzzle to open; *Help > About* shows the version.
+
+- **macOS**: the app is not signed, so the first time right-click it and choose *Open*.
+- **Linux**: Qt needs the usual X11/Wayland libraries; on Debian/Ubuntu you may have to `sudo apt install libxcb-cursor0`.
+
+## Running from source
+
 ConstraintPuzzler is a Python GUI application. In the root of the project, there are a few `*Main.py` files that start the corresponding GUIs for the puzzles. The supported puzzles are Sudoku, Kakuro and Futoshiki; Sumbrero is a work in progress.
 
 You can also roll your own puzzle, by combining the `UniqueValueConstraint`, `ExactCoverConstraint`, `TotalSumValueConstraint`, `CellGreaterThanCellConstraint`, etc.
@@ -36,6 +44,7 @@ Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
+| `uv run python constraintPuzzlerMain.py` | Launcher: choose any puzzle (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero`) |
 | `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
 | `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
@@ -69,6 +78,19 @@ QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s . -p "test_*.py"
 The unit tests only exercise the model, constraints and solver, so they do not need PySide6. The GUI smoke tests in `tests/` start each puzzle window headless (`QT_QPA_PLATFORM=offscreen`).
 
 CI (GitHub Actions) runs pre-commit, pyright, and the unit and GUI smoke tests on Linux and Windows for every push to `master` and every pull request. Dependabot keeps GitHub Actions and Python dependencies up to date.
+
+## Versioning and releases
+The version lives in one place: `[project].version` in `pyproject.toml`. The app reads it at runtime (`utility/version.py`) and shows it in the window title and *Help > About*.
+
+To cut a release:
+```
+uv version --bump minor              # or patch / major; also updates uv.lock
+git commit -am "Release vX.Y.Z"      # via a pull request
+git tag vX.Y.Z && git push origin vX.Y.Z   # after merging, on master
+```
+Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `pyproject.toml`, builds a PyInstaller bundle on Windows, Linux and macOS, smoke-tests each executable (`--smoke-test`) and publishes the archives as a GitHub Release. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts.
+
+To build locally: `uv run python -m PyInstaller constraintpuzzler.spec --noconfirm`. The result ends up in `dist/`.
 
 To skip the bulk-formatting commit in `git blame`, run `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 

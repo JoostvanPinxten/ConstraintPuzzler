@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 .claude/worktrees/
 failed*.log
+build/
+dist/

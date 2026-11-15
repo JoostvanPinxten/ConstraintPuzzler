@@ -4,7 +4,6 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
-import os
 import sys
 
 from PySide6 import QtWidgets
@@ -15,6 +14,7 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
 from structure.cell import PositionedCell
 from utility.puzzlefactory import PuzzleFactory
+from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
@@ -60,6 +60,6 @@ class MainWindow(BasicMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(os.path.join(os.path.dirname(os.path.abspath(__file__)), "futoshiki.txt"))
+    mainWin.loadPuzzle(resourcePath("futoshiki.txt"))
     mainWin.show()
     sys.exit(app.exec())

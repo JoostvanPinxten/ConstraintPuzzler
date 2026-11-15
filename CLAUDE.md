@@ -6,9 +6,10 @@ A PySide6 (Python 3.13) application that solves number puzzles (Sudoku, Kakuro, 
 - `structure/`: the puzzle model. `Puzzle` holds a `Grid` of `Cell`s, and every `Cell` tracks its possible values. Positions are `structure.position.Position`, not `QPoint`. Cells notify observers via the minimal `structure.signal.Signal` (`valueChanged`, `possibleValuesChanged`). **The model, constraints and solver must not import PySide6.** Unlike Qt signals, exceptions raised in callbacks propagate, which the solver relies on.
 - `constraints/`: the `Constraint` base class plus implementations (unique value, exact cover, total sum, greater-than, nonogram). `ConstraintGroup` groups constraints over sets of cells. A constraint that detects an unsolvable state raises `structure.errors.ContradictionError`.
 - `solver/Solver.py`: repeats deduction until nothing changes. With `allowGuessing` it backtracks, and on a contradiction it restores the puzzle via `Puzzle.saveState()`/`restoreState()`.
+- `utility/version.py` / `utility/resources.py`: `getVersion()` reads the version from `pyproject.toml`, and `resourcePath()` locates bundled data files (repo root from source, `sys._MEIPASS` in a PyInstaller build). Use `resourcePath` for files shipped with the app.
 - `utility/puzzlefactory.py`: builds puzzles (empty Sudoku, example Kakuro, single-constraint test puzzles) and holds the shared file parsers (`fromSudokuFile`, `fromFutoshikiFile`).
 - `gui/`: the PySide6 GUI. `gui/windows/basicmainwindow.py` is the base window. `gui/puzzlerepresentation/` holds the cell shapes (rectangle, triangle, hexagon). `gui/puzzlemodel/puzzletreemodel.py` builds the tree view from a finished puzzle (`buildPuzzleTree`).
-- `*Main.py` (repo root): one entry point per puzzle type. Each defines `MainWindow(BasicMainWindow)` with a `parsePuzzle`/`loadPuzzle(path)` text parser and the layout. Example puzzles are the root `*.txt` files.
+- `*Main.py` (repo root): one entry point per puzzle type. Each defines `MainWindow(BasicMainWindow)` with a `parsePuzzle`/`loadPuzzle(path)` text parser and the layout. Example puzzles are the root `*.txt` files. `constraintPuzzlerMain.py` is the launcher used for the standalone executable (puzzle chooser, `--puzzle`, `--version`, `--smoke-test`). Register new puzzle types in its `PUZZLES` dict.
 
 ## Tooling
 The environment is managed by **uv** (`pyproject.toml` + `uv.lock`). Don't use pip or requirements files.
@@ -16,7 +17,11 @@ The environment is managed by **uv** (`pyproject.toml` + `uv.lock`). Don't use p
 uv sync                                   # create/update .venv (runtime + dev group)
 uv run python sudokuMain.py               # or kakuroMain.py, sumbreroMain.py
 uv add <pkg> / uv add --dev <pkg>         # change dependencies (updates uv.lock)
+uv version --bump patch|minor|major       # bump the version (pyproject.toml + uv.lock)
+uv run python -m PyInstaller constraintpuzzler.spec --noconfirm   # standalone build in dist/
 ```
+- The version is only defined in `pyproject.toml`. Never hard-code version strings; use `utility.version.getVersion()`.
+- Releases: pushing a tag `vX.Y.Z` (must equal the pyproject version) runs `.github/workflows/release.yml`, which builds and smoke-tests PyInstaller bundles on Windows/Linux/macOS and publishes a GitHub Release. New data files the app needs at runtime must be added to `datas` in `constraintpuzzler.spec`.
 
 ## Checks (what CI runs)
 ```

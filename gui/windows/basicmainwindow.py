@@ -4,6 +4,9 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
+import platform
+
+import PySide6
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
 import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
@@ -18,6 +21,7 @@ from gui.puzzlemodel.puzzletreemodel import (
 )
 from gui.ui import mainWindowUi
 from structure.errors import ContradictionError
+from utility.version import APP_NAME, getVersion
 
 
 def appIcon() -> QtGui.QIcon:
@@ -46,7 +50,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui = mainWindowUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.setWindowTitle("ConstraintPuzzler beta v0.1")
+        self.setWindowTitle(f"{APP_NAME} {getVersion()}")
         self.setWindowIcon(appIcon())
 
         #        self.recentFileActs = []
@@ -86,6 +90,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.createActions()
         self.createMenus()
         self.createSolverMenu()
+        self.createHelpMenu()
         self.createStatusBar()
 
     #
@@ -123,6 +128,25 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         solverMenu = self.menuBar().addMenu("Solver")
         self.allowGuessingAction = solverMenu.addAction("Allow guessing (backtracking)")
         self.allowGuessingAction.setCheckable(True)
+
+    def createHelpMenu(self):
+        helpMenu = self.menuBar().addMenu("Help")
+        aboutAction = helpMenu.addAction(f"About {APP_NAME}")
+        aboutAction.setMenuRole(QtGui.QAction.MenuRole.AboutRole)
+        aboutAction.triggered.connect(self.showAbout)
+
+    @staticmethod
+    def aboutText():
+        return (
+            f"<h3>{APP_NAME} {getVersion()}</h3>"
+            "<p>Solves number puzzles by constraint propagation.</p>"
+            f"<p>Python {platform.python_version()}<br>"
+            f"PySide6 {PySide6.__version__}<br>"
+            f"Qt {QtCore.qVersion()}</p>"
+        )
+
+    def showAbout(self):
+        QtWidgets.QMessageBox.about(self, f"About {APP_NAME}", self.aboutText())
 
     def createStatusBar(self):
         pass
