@@ -8,9 +8,9 @@ from structure.errors import ContradictionError
 from structure.signal import Signal
 
 
-class Cell(object):
+class Cell:
     def __init__(self, initialValues, grid):
-        super(Cell, self).__init__()
+        super().__init__()
         self.valueChanged = Signal()
         self.possibleValuesChanged = Signal()
         self.initialValues = set(initialValues)
@@ -95,7 +95,7 @@ class Cell(object):
         return self.grid
 
     def checkForSinglePossibility(self):
-        if self.value == None and len(self.values) == 1:
+        if self.value is None and len(self.values) == 1:
             # print self.values
             val = next(iter(self.values))
             #            #print "single value left: ", val
@@ -104,7 +104,7 @@ class Cell(object):
 
 class PositionedCell(Cell):
     def __init__(self, initialValues, grid, position):
-        super(PositionedCell, self).__init__(initialValues, grid)
+        super().__init__(initialValues, grid)
 
         self.position = position
 

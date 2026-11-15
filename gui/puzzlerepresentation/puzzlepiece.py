@@ -4,12 +4,12 @@ Created on 3 jan. 2013
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 class PuzzlePiece(QtWidgets.QGraphicsRectItem):
     def __init__(self, parent=None):
-        super(PuzzlePiece, self).__init__(parent)
+        super().__init__(parent)
 
         pass
 
@@ -21,7 +21,7 @@ class PuzzlePiece(QtWidgets.QGraphicsRectItem):
 # as multiple inheritance does not work properly for QObject and QGraphicsItem
 class PuzzlePieceProxy(QtCore.QObject):
     def __init__(self, puzzlePiece, parent=None):
-        super(PuzzlePieceProxy, self).__init__(parent)
+        super().__init__(parent)
         self.puzzlePiece = puzzlePiece
 
     def set_pos(self, pos):

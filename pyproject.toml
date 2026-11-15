@@ -23,5 +23,16 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# Start with syntax errors and undefined names only; tighten over time.
-select = ["E9", "F63", "F7", "F82"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# Qt's idiomatic `parent=QModelIndex()` default arguments are immutable value types.
+extend-immutable-calls = ["PySide6.QtCore.QModelIndex"]

@@ -4,11 +4,12 @@ Created on 24 dec. 2012
 @author: Juice
 """
 
-from math import *
+from math import ceil, sqrt
+
 from structure.cell import Cell, PositionedCell
 
 
-class Grid(object):
+class Grid:
     def __init__(self, values, parent):
         self.values = list(values)
         self.cells = []
@@ -38,10 +39,10 @@ class Grid(object):
         return s
 
     def getCellFromSquareGrid(self, x, y):
-        """If all cells are laid out in a rectangular fashion, then this method can be used to get the cell at (x,y)"""
+        """Get the cell at (x, y), assuming all cells are laid out in a square grid."""
         index = x + int(ceil(sqrt(len(self.cells)) * y))
 
-        # alternatively, search for all the PositionedCells that have the specified x and y values as its position?
+        # alternatively, search for the PositionedCell whose position is (x, y)?
 
         return self.cells[index]
 

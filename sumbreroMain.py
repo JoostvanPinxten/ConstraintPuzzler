@@ -1,28 +1,20 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Dec 22 22:25:33 2012
 
 @author: Juice
 """
 
-from math import *
+from math import cos, pi, sin
 
-from constraints import *
+from PySide6 import QtCore, QtWidgets
 
-from PySide6 import QtCore, QtGui, QtWidgets
-
-from gui.puzzlemodel.puzzletreemodel import *
-
-from gui.ui import mainWindowUi
-from structure.puzzle import Puzzle
-from solver.Solver import Solver
-from structure.cell import PositionedCell
-from structure.position import Position
-from gui.windows.basicmainwindow import BasicMainWindow
+from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
-
-from utility.puzzlefactory import PuzzleFactory
+from gui.windows.basicmainwindow import BasicMainWindow
+from solver.Solver import Solver
+from structure.position import Position
+from structure.puzzle import Puzzle
 
 
 def hexrow(position: Position, asc: bool = True):
@@ -102,7 +94,6 @@ class MainWindow(BasicMainWindow):
         with open(filename) as myFile:
             stringArray = myFile.readlines()
 
-        values = range(1, 10)
         y = 0
         puzzle = None
         for line in stringArray:
@@ -123,7 +114,7 @@ class MainWindow(BasicMainWindow):
                 # create a sum constraint
                 cg = puzzle.addConstraintGroup("Column sum " + str(column))
                 tsvc = cg.addConstraint(TotalSumValueConstraint)
-                uvc = cg.addConstraint(UniqueValueConstraint)
+                cg.addConstraint(UniqueValueConstraint)
 
                 for cell in puzzle.grid.cells:
                     if cell.position.x() == column:
@@ -140,7 +131,7 @@ class MainWindow(BasicMainWindow):
                 tsvc = cg.addConstraint(TotalSumValueConstraint)
                 tsvc.setTotalValue(int(value))
 
-                uvc = cg.addConstraint(UniqueValueConstraint)
+                cg.addConstraint(UniqueValueConstraint)
 
                 for cell in puzzle.grid.cells:
                     print(
@@ -159,9 +150,9 @@ class MainWindow(BasicMainWindow):
                 cg = puzzle.addConstraintGroup("Row descending sum " + str(row))
                 tsvc = cg.addConstraint(TotalSumValueConstraint)
                 tsvc.setTotalValue(int(value))
-                uvc = cg.addConstraint(UniqueValueConstraint)
+                cg.addConstraint(UniqueValueConstraint)
 
-                for cell in puzzle.grid.cells:  # type: ValueHexagon
+                for cell in puzzle.grid.cells:
                     if hexrow(cell.position, asc=False) == row:
                         cg.addCell(cell)
 
@@ -171,7 +162,8 @@ class MainWindow(BasicMainWindow):
 
 
 if __name__ == "__main__":
-    import os, sys
+    import os
+    import sys
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()

@@ -5,7 +5,7 @@ Created on 28 dec. 2012
 """
 
 
-class ConstraintGroup(object):
+class ConstraintGroup:
     def __init__(self, grid, name="Untitled"):
         self.constraints = []
         self.cells = []
@@ -46,7 +46,8 @@ class ConstraintGroup(object):
             # check if it is the only cell that contains this value
             # TODO: refactor to different kind of constraint (or make UVC configurable)
 
-        # self.searchForNakedSet() # might actually need to refactor this to a new type of constraint (exactCover) i.s.o. using it here...
+        # self.searchForNakedSet() # might actually need to refactor this to a new type of
+        # constraint (exactCover) i.s.o. using it here...
 
     def getName(self):
         return self.name

@@ -4,8 +4,9 @@ Created on 30 dec. 2012
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets
-from math import *
+from math import floor
+
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def centerTextItem(text):
@@ -19,7 +20,7 @@ def centerTextItem(text):
 
 class ValueRectangle(QtWidgets.QGraphicsRectItem):
     def __init__(self, cell, cellSize, position, parent=None):
-        super(ValueRectangle, self).__init__(position.x(), position.y(), cellSize, cellSize, parent)
+        super().__init__(position.x(), position.y(), cellSize, cellSize, parent)
         self.cell = cell
         self.position = position
         self.cellSize = cellSize
@@ -90,11 +91,9 @@ class ValueRectangle(QtWidgets.QGraphicsRectItem):
 
             # show all the possible values
             vals = self.cell.getPossibleValues()
-            numValProcessed = 0
-            for val in self.values:
+            for numValProcessed, val in enumerate(self.values):
                 if numValProcessed >= 9:
                     break
-                numValProcessed += 1
                 if self.hintsEnabled and val in vals:
                     self.hintValueItemMap[val].setOpacity(1)
                 else:

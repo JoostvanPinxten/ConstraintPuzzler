@@ -9,7 +9,7 @@ from constraints import Constraint
 
 class UniqueValueConstraint(Constraint):
     def __init__(self, group, initialValues):
-        super(UniqueValueConstraint, self).__init__(group, initialValues)
+        super().__init__(group, initialValues)
 
     def notify(self, cell):
         """Notifies the constraint that a value has been set for the given cell"""
@@ -44,7 +44,7 @@ class UniqueValueConstraint(Constraint):
                     continue
 
                 if value in c.getPossibleValues():
-                    if firstCell == None:
+                    if firstCell is None:
                         firstCell = c
                     else:
                         continueSearching = False
@@ -52,7 +52,7 @@ class UniqueValueConstraint(Constraint):
                 else:
                     continue
 
-            if continueSearching == True and firstCell is not None:
+            if continueSearching and firstCell is not None:
                 newValuesMap[firstCell] = value
         return newValuesMap
 

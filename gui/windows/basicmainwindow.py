@@ -4,11 +4,19 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets, QtStateMachine
+from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
-from gui.ui import mainWindowUi
 import gui.icons.icons_rc  # noqa: F401 -- registers the :/icons/* resources
-from gui.puzzlemodel.puzzletreemodel import *
+from gui.puzzlemodel.puzzletreemodel import (
+    CellProxyItem,
+    ConstraintGroupProxyItem,
+    ConstraintProxyItem,
+    ConstraintPuzzleModel,
+    GridProxyItem,
+    ReferencedCellProxyItem,
+    buildPuzzleTree,
+)
+from gui.ui import mainWindowUi
 from structure.errors import ContradictionError
 
 
@@ -21,7 +29,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     showNextSelectionState = QtCore.Signal()
 
     def __init__(self):
-        super(BasicMainWindow, self).__init__()
+        super().__init__()
         self.ui = mainWindowUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -183,7 +191,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 it = self.puzzlePieceProxies[cell]
 
                 animation = QtCore.QPropertyAnimation(
-                    it, QtCore.QByteArray("backgroundColor".encode()), self
+                    it, QtCore.QByteArray(b"backgroundColor"), self
                 )
 
                 animation.setDuration(200)

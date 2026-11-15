@@ -4,18 +4,17 @@ Created on 5 jan. 2013
 @author: Juice
 """
 
-from constraints import Constraint
-from structure.puzzle import Puzzle
-from constraints.uniquevalueconstraint import UniqueValueConstraint
+from math import floor
 
-from math import *
-from structure.position import Position
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
-from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.exactcoverconstraint import ExactCoverConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.uniquevalueconstraint import UniqueValueConstraint
+from structure.position import Position
+from structure.puzzle import Puzzle
 
 
-class PuzzleFactory(object):
+class PuzzleFactory:
     def __init__(self):
         pass
 
@@ -207,9 +206,9 @@ class PuzzleFactory(object):
             str(numberOfCells) + "Cell test puzzle with single constraint type", set(possibleValues)
         )
         cg = puzzle.addConstraintGroup("Group")
-        constraint = cg.addConstraint(constraintType)
+        cg.addConstraint(constraintType)
 
-        for i in range(0, numberOfCells):
+        for _ in range(numberOfCells):
             cell = puzzle.grid.addCell()
             cg.addCell(cell)
 

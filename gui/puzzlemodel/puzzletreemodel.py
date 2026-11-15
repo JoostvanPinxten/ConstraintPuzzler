@@ -4,7 +4,7 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore
+from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
 ParentRole = QtCore.Qt.UserRole + 1
@@ -12,7 +12,7 @@ ParentRole = QtCore.Qt.UserRole + 1
 
 class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
     def __init__(self, parent=None):
-        super(ConstraintPuzzleModel, self).__init__(parent)
+        super().__init__(parent)
         self.root = ConstraintPuzzleRootItem()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
@@ -88,7 +88,7 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
 
 class ProxyItem(QtCore.QObject):
     def __init__(self, parent=None):
-        super(ProxyItem, self).__init__()
+        super().__init__()
         self.parentItem = parent
         self.childItems = []
 
@@ -112,7 +112,7 @@ class ProxyItem(QtCore.QObject):
             pass
 
     def childNumber(self):
-        if self.parentItem != None:
+        if self.parentItem is not None:
             return self.parentItem.childItems.index(self)
         return 0
 
@@ -144,7 +144,7 @@ class ProxyItem(QtCore.QObject):
 
 class ConstraintPuzzleRootItem(ProxyItem):
     def __init__(self):
-        super(ConstraintPuzzleRootItem, self).__init__()
+        super().__init__()
 
     def getName(self):
         return self.tr("Root")
@@ -155,7 +155,7 @@ class ConstraintPuzzleRootItem(ProxyItem):
 
 class PuzzleProxyItem(ProxyItem):
     def __init__(self, puzzle, parent=None):
-        super(PuzzleProxyItem, self).__init__(parent)
+        super().__init__(parent)
         self.puzzle = puzzle
 
     def getName(self):
@@ -170,7 +170,7 @@ class PuzzleProxyItem(ProxyItem):
 
 class GridProxyItem(ProxyItem):
     def __init__(self, grid, parent):
-        super(GridProxyItem, self).__init__(parent)
+        super().__init__(parent)
 
         self.grid = grid
 
@@ -197,7 +197,7 @@ class GridProxyItem(ProxyItem):
 
 class CellProxyItem(ProxyItem):
     def __init__(self, cell, parent):
-        super(CellProxyItem, self).__init__(parent)
+        super().__init__(parent)
 
         self.cell = cell
 
@@ -223,7 +223,7 @@ class CellProxyItem(ProxyItem):
 
 class ReferencedCellProxyItem(ProxyItem):
     def __init__(self, cell, parent):
-        super(ReferencedCellProxyItem, self).__init__(parent)
+        super().__init__(parent)
 
         self.cell = cell
 
@@ -249,7 +249,7 @@ class ReferencedCellProxyItem(ProxyItem):
 
 class ConstraintGroupProxyItem(ProxyItem):
     def __init__(self, cg, parent):
-        super(ConstraintGroupProxyItem, self).__init__(parent)
+        super().__init__(parent)
 
         self.constraintGroup = cg
 
@@ -272,7 +272,7 @@ class ConstraintGroupProxyItem(ProxyItem):
 
 class ConstraintProxyItem(ProxyItem):
     def __init__(self, constraint, parent):
-        super(ConstraintProxyItem, self).__init__(parent)
+        super().__init__(parent)
         self.constraint = constraint
 
     def getName(self):

@@ -4,13 +4,11 @@ Created on 6 jan. 2013
 @author: Juice
 """
 
-from math import *
 import constraints
-from structure.cell import Cell, PositionedCell
 from structure.grid import Grid
 
 
-class Puzzle(object):
+class Puzzle:
     """Puzzle is the top-level item which holds the constraint groups and grid"""
 
     def __init__(self, name, values):
@@ -51,7 +49,7 @@ class Puzzle(object):
         emitted for cells whose state actually changed."""
         cellStates, constraintStates = state
         changedCells = []
-        for cell, cellState in zip(self.grid.cells, cellStates):
+        for cell, cellState in zip(self.grid.cells, cellStates, strict=True):
             if (frozenset(cell.values), cell.value, cell.inferred) == cellState:
                 continue
             values, value, inferred = cellState
@@ -59,7 +57,7 @@ class Puzzle(object):
             cell.value = value
             cell.inferred = inferred
             changedCells.append(cell)
-        for constraint, values in zip(self.getConstraints(), constraintStates):
+        for constraint, values in zip(self.getConstraints(), constraintStates, strict=True):
             constraint.values = list(values)
         for cell in changedCells:
             cell.possibleValuesChanged.emit(cell)

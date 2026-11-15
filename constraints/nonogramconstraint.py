@@ -9,7 +9,7 @@ from constraints.constraint import Constraint
 
 class NonogramConstraint(Constraint):
     def __init__(self, group, initialValues):
-        super(NonogramConstraint, self).__init__(group, initialValues)
+        super().__init__(group, initialValues)
 
     #    def notify(self, cell):
     #        pass

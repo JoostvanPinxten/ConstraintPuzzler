@@ -1,34 +1,19 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Dec 22 22:25:33 2012
 
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
-from constraints import *
-from structure import *
-
-from time import *
-from math import *
-
-from constraints import *
-
-from gui.puzzlemodel.puzzletreemodel import *
-
-from gui.ui import mainWindowUi
-from structure.puzzle import Puzzle
+from constraints import TotalSumValueConstraint, UniqueValueConstraint
+from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
-from solver.Solver import Solver
-from structure.cell import PositionedCell
-from structure.position import Position
 from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
-from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
-
-
-from utility.puzzlefactory import PuzzleFactory
+from solver.Solver import Solver
+from structure.position import Position
+from structure.puzzle import Puzzle
 
 
 class MainWindow(BasicMainWindow):
@@ -58,8 +43,6 @@ class MainWindow(BasicMainWindow):
                 if isinstance(constraint, TotalSumValueConstraint):
                     # TODO: refactor to utililty class, make much more general
                     # find the position and direction that is most likely:
-                    for cell in cg.getCells():
-                        break
                     cell1 = cg.getCells()[0]
                     cell2 = cg.getCells()[1]
 
@@ -84,14 +67,12 @@ class MainWindow(BasicMainWindow):
     @staticmethod
     def parsePuzzle(filename):
 
-        start = time()
         # puzzle = PuzzleFactory.createExampleKakuro()
 
         # Set the initial data to work with
         with open(filename) as myFile:
             stringArray = myFile.readlines()
 
-        values = range(1, 10)
         y = 0
         for line in stringArray:
             if line.startswith("range"):
@@ -119,7 +100,7 @@ class MainWindow(BasicMainWindow):
                         print(line)
                     cg.addCell(c)
 
-                uvc = cg.addConstraint(UniqueValueConstraint)
+                cg.addConstraint(UniqueValueConstraint)
                 tsvc = cg.addConstraint(TotalSumValueConstraint)
 
                 tsvc.setTotalValue(value)
@@ -130,7 +111,8 @@ class MainWindow(BasicMainWindow):
 
 
 if __name__ == "__main__":
-    import os, sys
+    import os
+    import sys
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()

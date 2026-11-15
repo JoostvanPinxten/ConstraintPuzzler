@@ -1,4 +1,4 @@
-class Signal(object):
+class Signal:
     """Minimal observer, replacing Qt signals in the puzzle model.
 
     Unlike Qt signals, exceptions raised by a connected callback propagate to

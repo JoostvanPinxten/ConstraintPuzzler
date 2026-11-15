@@ -6,12 +6,11 @@ Created on 5 jan. 2013
 
 import unittest
 
-from constraints.totalsumvalueconstraint import TotalSumValueConstraint
-
-from utility.puzzlefactory import PuzzleFactory
-from constraints.uniquevalueconstraint import UniqueValueConstraint
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.uniquevalueconstraint import UniqueValueConstraint
 from structure.errors import ContradictionError
+from utility.puzzlefactory import PuzzleFactory
 
 
 class Test(unittest.TestCase):
@@ -109,7 +108,7 @@ class Test(unittest.TestCase):
             cell.remove(2)
 
     def testTSVCWithKakuro(self):
-        kakuro = PuzzleFactory.createExampleKakuro()
+        PuzzleFactory.createExampleKakuro()
 
 
 if __name__ == "__main__":

@@ -4,10 +4,12 @@ Created on 30 dec. 2012
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets
-from math import *
-from structure.cell import Cell
+from math import cos, floor, pi, sin, sqrt
+
+from PySide6 import QtCore, QtGui, QtWidgets
+
 from constraints import Constraint
+from structure.cell import Cell
 
 
 def centerTextItem(text):
@@ -33,7 +35,7 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
         )
 
         polygon.translate(position)
-        super(ValueHexagon, self).__init__(polygon, parent)
+        super().__init__(polygon, parent)
         self.cell = cell
         self.position = position
         self.cellSize = cellSize
@@ -73,7 +75,7 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
 
         # add a big text item to show the set value, hidden by default
         val = self.cell.getValue() if isinstance(self.cell, Cell) else self.cell.getTotalValue()
-        self.valueTextItem = QtWidgets.QGraphicsTextItem(str())
+        self.valueTextItem = QtWidgets.QGraphicsTextItem("")
         self.valueTextItem.setParentItem(self)
         self.valueTextItem.setPos(self.position.x(), self.position.y() + self.cellSize / 6)
         f = QtGui.QFont("Sans serif", self.cellSize / 3, 200)
@@ -114,11 +116,9 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
 
             # show all the possible values
             vals = self.cell.getPossibleValues()
-            numValProcessed = 0
-            for val in self.values:
+            for numValProcessed, val in enumerate(self.values):
                 if numValProcessed >= 9:
                     break
-                numValProcessed += 1
                 if self.hintsEnabled and val in vals:
                     self.hintValueItemMap[val].setOpacity(1)
                 else:

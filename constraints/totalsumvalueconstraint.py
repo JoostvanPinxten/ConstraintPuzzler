@@ -10,7 +10,7 @@ from structure.errors import ContradictionError
 
 class TotalSumValueConstraint(Constraint):
     def __init__(self, group, initialValues):
-        super(TotalSumValueConstraint, self).__init__(group, initialValues)
+        super().__init__(group, initialValues)
         self.totalValue = None
 
     def notify(self, cell):
@@ -18,7 +18,7 @@ class TotalSumValueConstraint(Constraint):
 
     def applyConstraint(self):
         # look at what cells
-        if self.totalValue == None:
+        if self.totalValue is None:
             raise Exception("Total value of sum constraint has not been initialized!")
 
         openCells = list(self.group.getCells())
@@ -46,12 +46,14 @@ class TotalSumValueConstraint(Constraint):
 
         # iterate over a copy: values are removed from self.values inside the loop
         for value in list(self.values):
-            if not value in allowedSet:
+            if value not in allowedSet:
                 self.values.remove(value)
                 self.group.removeValueExceptForList(filledCells, value)
 
-    def applyConstraintRecursively(self, leftOverSum, leftOverCellCount, valuesUsed=[]):
+    def applyConstraintRecursively(self, leftOverSum, leftOverCellCount, valuesUsed=None):
         """Compute the set of allowed values recursively"""
+        if valuesUsed is None:
+            valuesUsed = []
 
         # if there is no leftOver from the sum, but we arrived here anyway, then return nothing
         if leftOverCellCount == 0 or leftOverSum <= 0:

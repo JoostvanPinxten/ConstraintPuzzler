@@ -5,7 +5,7 @@ Created on 24 dec. 2012
 """
 
 
-class Constraint(object):
+class Constraint:
     def __init__(self, group, initialValues):
         self.initialValues = list(initialValues)
         self.group = group

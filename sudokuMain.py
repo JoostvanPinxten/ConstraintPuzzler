@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Dec 22 22:25:33 2012
 
@@ -6,18 +5,14 @@ Created on Sat Dec 22 22:25:33 2012
 """
 
 import sys
+from math import floor
 
-from PySide6 import QtGui, QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
-from time import *
-from math import *
-
-from gui.puzzlemodel.puzzletreemodel import *
-from gui.puzzlerepresentation.valuerectangle import ValueRectangle
-from solver.Solver import Solver
-from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
-
+from gui.puzzlerepresentation.valuerectangle import ValueRectangle
+from gui.windows.basicmainwindow import BasicMainWindow
+from solver.Solver import Solver
 from utility.puzzlefactory import PuzzleFactory
 
 

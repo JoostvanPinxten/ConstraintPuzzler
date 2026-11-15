@@ -9,7 +9,7 @@ from .uniquevalueconstraint import UniqueValueConstraint
 
 class ExactCoverConstraint(UniqueValueConstraint):
     def __init__(self, group, initialValues):
-        super(ExactCoverConstraint, self).__init__(group, initialValues)
+        super().__init__(group, initialValues)
 
     #    def notify(self, cell):
     #        pass
@@ -20,19 +20,20 @@ class ExactCoverConstraint(UniqueValueConstraint):
             values |= set(c.getPossibleValues())
         newValues = self.checkForSinglePosition(values)
 
-        for cell in newValues.keys():
-            value = newValues[cell]
+        for cell, value in newValues.items():
             if value is not None:
                 cell.inferValue(value)
 
         self.searchForNakedSet()
 
     # TODO: make this more generic, iso just for a single pair, use multiple levels
-    # TODO: this only applies for combination of constraint groups that have the exactlyOnce/UVC constraint
-    # TODO: can be refactored into a new type of constraint (and extract the old exactlyonce contraint)
+    # TODO: this only applies for combination of constraint groups that have the
+    #       exactlyOnce/UVC constraint
+    # TODO: can be refactored into a new type of constraint (and extract the old
+    #       exactlyonce contraint)
     def searchForNakedSet(self):
-
-        # iterate over all the cells and check if any one of the initial value can still be entered
+        # iterate over all the cells and check if any one of the initial value can still be
+        # entered
         cells = {}
         for value in self.group.grid.getValues():
             cells[value] = set()
@@ -43,7 +44,7 @@ class ExactCoverConstraint(UniqueValueConstraint):
                 cells[val].add(c)
 
         for value in self.group.grid.getValues():
-            # at least values for two cells must be eliminated to be able to qualify for a naked set:
+            # at least values for two cells must be eliminated to qualify for a naked set:
             if len(cells[value]) > len(self.group.getCells()) - 2:
                 continue
 

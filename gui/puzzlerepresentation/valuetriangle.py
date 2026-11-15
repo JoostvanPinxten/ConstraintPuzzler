@@ -4,8 +4,7 @@ Created on 6 jan. 2013
 @author: Juice
 """
 
-from PySide6 import QtGui, QtCore, QtWidgets
-from math import *
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def centerTextItem(text):
@@ -24,17 +23,18 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
     BOTTOMLEFT = 3
 
     def __init__(self, constraint, cellSize, position, alignment=None, parent=None):
-        super(ValueTriangle, self).__init__(QtGui.QPolygon(), parent)
+        super().__init__(QtGui.QPolygon(), parent)
         self.setPos(position * cellSize)
         self.constraint = constraint
         self.position = position
         self.cellSize = cellSize
 
-        if alignment == None:
+        if alignment is None:
             self.alignment = ValueTriangle.TOPRIGHT
         else:
             self.alignment = alignment
-        # combine a horizontal flag with a vertical flag: e.g. AlignLeft with AlignTop to create a layout thingy
+        # combine a horizontal flag with a vertical flag: e.g. AlignLeft with AlignTop
+        # to create a layout thingy
 
         self.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.DeviceCoordinateCache)
 

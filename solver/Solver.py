@@ -40,11 +40,8 @@ class Solver:
         initialState = self.puzzle.saveState()
         try:
             self.propagate(initialState)
-            if self.allowGuessing and not self.puzzle.isSolved():
-                if not self._search():
-                    raise ContradictionError(
-                        "No solution found, all guesses lead to a contradiction"
-                    )
+            if self.allowGuessing and not self.puzzle.isSolved() and not self._search():
+                raise ContradictionError("No solution found, all guesses lead to a contradiction")
         except ContradictionError:
             self.puzzle.restoreState(initialState)
             raise

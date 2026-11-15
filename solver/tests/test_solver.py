@@ -7,12 +7,13 @@ Created on 6 jan. 2013
 import os
 import tempfile
 import unittest
-from utility.puzzlefactory import PuzzleFactory
+
+from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.uniquevalueconstraint import UniqueValueConstraint
 from solver.Solver import Solver
 from structure.errors import ContradictionError
-from constraints.uniquevalueconstraint import UniqueValueConstraint
-from constraints.totalsumvalueconstraint import TotalSumValueConstraint
-from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+from utility.puzzlefactory import PuzzleFactory
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -37,8 +38,8 @@ class Test(unittest.TestCase):
         sudoku.grid.setConstraintGridValue(0, 3, 7)
         sudoku.grid.setConstraintGridValue(0, 4, 4)
 
-        # now the second and third cell must contain the possibleValues ([4,7]) as these are the only
-        # two cells that can contain these values, they are also the only possibleValues
+        # now the second and third cell must contain the possibleValues ([4,7]), as these are
+        # the only two cells that can contain these values; they are also the only possibleValues
 
         c1_0 = sudoku.grid.getCellFromSquareGrid(1, 0)
         c2_0 = sudoku.grid.getCellFromSquareGrid(2, 0)
