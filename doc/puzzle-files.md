@@ -12,7 +12,7 @@ define a puzzle that has no file format yet, directly in Python.
 - [Sudoku](#sudoku)
 - [Futoshiki](#futoshiki)
 - [Kakuro](#kakuro)
-- [Sumbrero (work in progress)](#sumbrero-work-in-progress)
+- [Sumbrero](#sumbrero)
 - [Opening your own puzzle file](#opening-your-own-puzzle-file)
 - [Defining a puzzle in Python](#defining-a-puzzle-in-python)
 - [Adding a new puzzle type](#adding-a-new-puzzle-type)
@@ -168,7 +168,7 @@ This happens for:
 - a cell that is declared twice, or that appears twice in one total;
 - a total that uses a cell that was not declared (yet).
 
-## Sumbrero (work in progress)
+## Sumbrero
 
 Parser: `MainWindow.parsePuzzle` in `sumbreroMain.py`. Example: `simpleSumbrero.txt`.
 

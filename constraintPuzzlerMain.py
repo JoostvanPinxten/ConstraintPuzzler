@@ -29,7 +29,7 @@ PUZZLES: dict[str, tuple[str, type[BasicMainWindow], str]] = {
     "sudoku": ("Sudoku", sudokuMain.MainWindow, "easySudoku.txt"),
     "kakuro": ("Kakuro", kakuroMain.MainWindow, "mediumKakuro.txt"),
     "futoshiki": ("Futoshiki", futoshikiMain.MainWindow, "futoshiki.txt"),
-    "sumbrero": ("Sumbrero (work in progress)", sumbreroMain.MainWindow, "simpleSumbrero.txt"),
+    "sumbrero": ("Sumbrero", sumbreroMain.MainWindow, "simpleSumbrero.txt"),
 }
 
 
