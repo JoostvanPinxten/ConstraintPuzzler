@@ -31,7 +31,8 @@ class ConstraintGroup:
 
     def notify(self, cell):
         for constraint in self.constraints:
-            constraint.notify(cell)
+            with self.puzzle.causedBy(constraint):
+                constraint.notify(cell)
 
     def removeValue(self, cell, value):
         self.removeValueExceptForList([cell], value)
@@ -44,7 +45,8 @@ class ConstraintGroup:
 
     def applyConstraints(self):
         for constraint in self.constraints:
-            constraint.applyConstraint()
+            with self.puzzle.causedBy(constraint):
+                constraint.applyConstraint()
 
     def getName(self):
         return self.name

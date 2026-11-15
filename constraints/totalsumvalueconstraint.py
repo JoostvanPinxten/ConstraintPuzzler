@@ -62,7 +62,6 @@ class TotalSumValueConstraint(Constraint):
 
         allowedSet = set()
         for value in self.group.valuesAllowedByGroup(valuesUsed):
-            # print valuesUsed, value
             valuesUsedNow = list(valuesUsed)
             valuesUsedNow.append(value)
 
@@ -82,6 +81,13 @@ class TotalSumValueConstraint(Constraint):
 
     def summary(self):
         return f"sum = {self.totalValue}"
+
+    def explain(self, deduction):
+        group = self.group.getName()
+        if deduction.setsValue():
+            return f"{group} must add up to {self.totalValue}"
+        removed = formatValues(deduction.removed)
+        return f"{group} must add up to {self.totalValue}, and no combination with {removed} does"
 
     def violations(self, valueOf):
         """All filled cells, when they already add up to more than the total, or when the

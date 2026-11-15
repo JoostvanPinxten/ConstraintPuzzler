@@ -235,7 +235,8 @@ The `/new-constraint` Claude Code skill scaffolds a new constraint with tests. B
 |---|---|---|
 | `__init__(self, group, initialValues)` | `group.addConstraint(YourConstraint)` | Call `super().__init__`, initialise your own settings. |
 | `notify(self, cell)` | A cell in the group gets a value | React to the new value, or `pass`. |
-| `applyConstraint(self)` | Every solver pass | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. |
+| `applyConstraint(self)` | A solver pass in which a cell of the group changed (the first pass: always) | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. Only look at the cells of the group: the solver re-applies a constraint only when one of those cells changed. |
+| `explain(self, deduction)` | A step or hint is explained | Optional: say in words why your rule removed `deduction.removed` or set `deduction.value`. The default names the group and `summary()`. |
 | `getAllowedValuesForValueList(self, allowedValues, usedValues)` | `TotalSumValueConstraint` builds its combinations | Return the values still allowed given `usedValues`; return `allowedValues` unchanged if your rule does not limit combinations. |
 | `getType(self)` | Tree view | Return a readable name. |
 

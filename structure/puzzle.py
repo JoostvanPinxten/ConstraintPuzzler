@@ -4,6 +4,8 @@ Created on 6 jan. 2013
 @author: Juice
 """
 
+from contextlib import contextmanager, nullcontext
+
 import constraints
 from structure.grid import Grid
 
@@ -18,6 +20,24 @@ class Puzzle:
         self.name = name
 
         self.grid = Grid(self.values, self)
+        # while set (see recording), changes to the cells are recorded in this DeductionLog
+        self.deductionLog = None
+
+    @contextmanager
+    def recording(self, log):
+        """Record the changes to the cells made inside the block in a DeductionLog."""
+        previous = self.deductionLog
+        self.deductionLog = log
+        try:
+            yield log
+        finally:
+            self.deductionLog = previous
+
+    def causedBy(self, constraint):
+        """Attribute the changes made inside the block to a constraint (while recording)."""
+        if self.deductionLog is None:
+            return nullcontext()
+        return self.deductionLog.cause(constraint)
 
     def getGrid(self):
         return self.grid

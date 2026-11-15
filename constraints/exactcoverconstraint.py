@@ -67,6 +67,16 @@ class ExactCoverConstraint(UniqueValueConstraint):
     def summary(self):
         return "each value once"
 
+    def explain(self, deduction):
+        placed = set(placedValues(self.group.getCells()))
+        if deduction.setsValue() or deduction.removed <= placed:
+            return super().explain(deduction)
+        removed = formatValues(deduction.removed)
+        return (
+            f"{self.group.getName()} has values that can only go in this cell and one other,"
+            f" so there is no room for {removed} ({self.summary()})"
+        )
+
     def describe(self, showHints=True):
         missing = set(self.group.getValues()) - set(placedValues(self.group.getCells()))
         if not missing:

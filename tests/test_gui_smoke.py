@@ -74,6 +74,10 @@ class GuiSmokeTest(unittest.TestCase):
             window.ui.solveStepPushButton.click()
             self.assertNotEqual(window.puzzle.saveState(), before)
             self.assertEqual(window.puzzle.getNumberOfOpenCells(), openBefore - 1)
+            # the filled cell is selected, with the reason for its value
+            assert window.solver is not None and window.solver.lastStep is not None
+            self.assertIs(window.selectedCell(), window.solver.lastStep.cell)
+            self.assertIn("Solver step: cell", window.selectionInfoLabel.text())
             # the easy sudoku is solved by deduction alone, so stepping reaches the solution
             for _ in range(200):
                 if window.puzzle.isSolved():

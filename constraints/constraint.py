@@ -41,6 +41,10 @@ class Constraint:
     def getType(self):
         return type(self).__name__
 
+    def explain(self, deduction):
+        """Why this constraint made a change (a structure.deduction.Deduction), in words."""
+        return f"{self.group.getName()} ({self.summary()})"
+
     def summary(self):
         """A short description of the rule, e.g. "sum = 17", used as its name in the GUI."""
         return self.getType()

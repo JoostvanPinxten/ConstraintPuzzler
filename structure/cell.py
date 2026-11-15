@@ -60,6 +60,9 @@ class Cell:
 
         self.value = value
         self.values = {value}
+        log = self._deductionLog()
+        if log is not None:
+            log.recordValue(self, value, source)
 
         self.valueChanged.emit(self)
 
@@ -75,6 +78,9 @@ class Cell:
             return  # redundant remove
 
         self.values.remove(value)
+        log = self._deductionLog()
+        if log is not None:
+            log.recordRemoval(self, value)
         if len(self.values) == 0:
             # the puzzle state is contradictory: no value is left for this cell
             raise ContradictionError(
@@ -122,6 +128,11 @@ class Cell:
 
     def getGrid(self):
         return self.grid
+
+    def _deductionLog(self):
+        """The log that records changes to this cell, if the puzzle is recording."""
+        puzzle = self.grid.getPuzzle() if self.grid is not None else None
+        return getattr(puzzle, "deductionLog", None)
 
     def getName(self):
         return "cell " + str(self.grid.cells.index(self) + 1)

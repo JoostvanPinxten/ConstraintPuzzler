@@ -298,6 +298,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         selectionChanged = False
         # a message about entering a value belongs to the previous selection
         self.inputMessage = None
+        self.stepMessage = None
 
         # update the selected cells:
         for itemRange in selectedItems:
@@ -419,6 +420,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             parts.append(f'<span style="color:#c00000">{html.escape(note)}</span>')
         if self.inputMessage:
             parts.append(f'<span style="color:#c00000">{html.escape(self.inputMessage)}</span>')
+        if self.stepMessage:
+            parts.append(f"<i>{html.escape(self.stepMessage)}</i>")
         legend = legendHtml(self.highlightRoles.values())
         if legend:
             parts.append(legend)
@@ -428,6 +431,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         """Clicking a cell selects it; typing a number enters it in the selected cell."""
         self.game: Game | None = None
         self.inputMessage: str | None = None
+        # explains the value the last solver step filled in (shown until the selection changes)
+        self.stepMessage: str | None = None
         # the cells whose shown value breaks a rule (drawn in red)
         self.violations = set()
         self.pieceCells = {}
@@ -569,6 +574,12 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             return
         # a cell may have been solved: refresh its colour and the description
         self.puzzleChanged()
+        step = self.solver.lastStep
+        if step is not None:
+            # select the filled cell and explain why it has this value
+            self.selectCell(step.cell)
+            self.stepMessage = "Solver step: " + step.describe()
+            self.updateSelectionInfo()
         if not changed:
             QtWidgets.QMessageBox.information(
                 self,
