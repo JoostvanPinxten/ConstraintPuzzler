@@ -94,6 +94,9 @@ class Cell:
     def getGrid(self):
         return self.grid
 
+    def getName(self):
+        return "cell " + str(self.grid.cells.index(self) + 1)
+
     def checkForSinglePossibility(self):
         if self.value is None and len(self.values) == 1:
             # print self.values

@@ -1,31 +1,35 @@
 """Tests for the Kakuro and Sumbrero file parsers and the Sumbrero hexagon geometry.
 
-The parsers live in the *Main.py modules, which import PySide6, but parsing does not
-create any widgets."""
+The parsers do not depend on PySide6, so these tests need no GUI."""
 
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-from constraints import TotalSumValueConstraint  # noqa: E402
-from kakuroMain import MainWindow as KakuroWindow  # noqa: E402
-from structure.position import Position  # noqa: E402
-from sumbreroMain import (  # noqa: E402
+from parsers import (
+    PuzzleFileError,
+    parseFutoshikiFile,
+    parseKakuroFile,
+    parseKakuroLines,
+    parseSudokuFile,
+    parseSumbreroFile,
+    parseSumbreroLines,
+)
+from parsers.sumbrero import (
     ASCENDING_ROW,
     COLUMN,
     DESCENDING_ROW,
     ascendingRow,
-    clueLayout,
     descendingRow,
     neighbour,
 )
-from sumbreroMain import MainWindow as SumbreroWindow  # noqa: E402
-from utility.puzzlefactory import PuzzleFileError  # noqa: E402
+from solver.Solver import Solver
+from structure.position import Position
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 TINY_KAKURO = """\
 # solves to 1 2 / 3 1
@@ -59,7 +63,8 @@ class PuzzleFileTestCase(unittest.TestCase):
 
 class KakuroParserTest(PuzzleFileTestCase):
     def parse(self, text):
-        return KakuroWindow.parsePuzzle(self.writeFile(text))
+        puzzle = parseKakuroFile(self.writeFile(text))
+        return puzzle, Solver(puzzle)
 
     def testTinyKakuroSolves(self):
         puzzle, solver = self.parse(TINY_KAKURO)
@@ -111,7 +116,7 @@ class KakuroParserTest(PuzzleFileTestCase):
     def testExampleFilesParse(self):
         for name, totals in (("simpleKakuro.txt", 4), ("mediumKakuro.txt", 44)):
             with self.subTest(name=name):
-                puzzle, _solver = KakuroWindow.parsePuzzle(str(REPO_ROOT / name))
+                puzzle = parseKakuroFile(str(REPO_ROOT / name))
                 self.assertEqual(len(puzzle.getConstraintGroups()), totals)
                 for group in puzzle.getConstraintGroups():
                     cells = group.getCells()
@@ -148,7 +153,8 @@ class HexagonGeometryTest(unittest.TestCase):
 class SumbreroParserTest(PuzzleFileTestCase):
     def setUp(self):
         super().setUp()
-        self.puzzle, self.solver = SumbreroWindow.parsePuzzle(str(REPO_ROOT / "simpleSumbrero.txt"))
+        self.puzzle = parseSumbreroFile(str(REPO_ROOT / "simpleSumbrero.txt"))
+        self.solver = Solver(self.puzzle)
         self.groups = {g.getName(): g for g in self.puzzle.getConstraintGroups()}
 
     def testRowsSelectStraightLines(self):
@@ -173,32 +179,33 @@ class SumbreroParserTest(PuzzleFileTestCase):
             values = [c.getValue() for c in group.getCells()]
             self.assertEqual(len(values), len(set(values)), group.getName())
 
-    def testCluesSitJustBeforeTheirLine(self):
-        layout = clueLayout(self.puzzle)
-        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
-        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
-        for group in self.puzzle.getConstraintGroups():
-            constraint = next(
-                c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
-            )
-            position, direction = layout[constraint]
-            self.assertNotIn(position, cellPositions)
-            # one step in the wedge's direction leads to the first cell of the line
-            first = neighbour(position, direction)
-            self.assertIn(first, [c.getPosition() for c in group.getCells()])
-            expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
-            self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
-        # no two lines share a wedge
-        self.assertEqual(len(set(layout.values())), len(layout))
-        # some hexagons hold more than one sum, like in a Kakuro
-        positions = [position for position, _direction in layout.values()]
-        self.assertLess(len(set(positions)), len(positions))
-
     def testEmptyLineIsAnError(self):
         path = self.writeFile("range = 1,9\ncell(0,0)\nrow_ascending(7) = 3\n")
         with self.assertRaises(PuzzleFileError) as context:
-            SumbreroWindow.parsePuzzle(path)
+            parseSumbreroFile(path)
         self.assertIn("line 3:", str(context.exception))
+
+
+class ParseLinesTest(unittest.TestCase):
+    def testParsersDoNotImportPySide6(self):
+        code = "import sys, parsers; sys.exit(any(m.startswith('PySide6') for m in sys.modules))"
+        result = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT)
+        self.assertEqual(result.returncode, 0, "the parsers must not import PySide6")
+
+    def testLinesWithoutFile(self):
+        puzzle = parseKakuroLines(TINY_KAKURO.splitlines())
+        self.assertTrue(Solver(puzzle).solve())
+
+    def testErrorsNameTheSource(self):
+        with self.assertRaises(PuzzleFileError) as context:
+            parseSumbreroLines(["cell(0,0)"], "inline")
+        self.assertIn("inline, line 1:", str(context.exception))
+
+    def testSudokuAndFutoshikiExamples(self):
+        sudoku = parseSudokuFile(str(REPO_ROOT / "easySudoku.txt"))
+        self.assertEqual(len(sudoku.getGrid().getCells()), 81)
+        futoshiki = parseFutoshikiFile(str(REPO_ROOT / "futoshiki.txt"))
+        self.assertTrue(Solver(futoshiki).solve())
 
 
 if __name__ == "__main__":

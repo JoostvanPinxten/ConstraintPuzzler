@@ -5,6 +5,7 @@ Created on 28 dec. 2012
 """
 
 from constraints import Constraint
+from constraints.constraint import formatValues, placedValues
 from structure.errors import ContradictionError
 
 
@@ -78,6 +79,28 @@ class TotalSumValueConstraint(Constraint):
 
     def getType(self):
         return "Total Sum Value Constraint"
+
+    def summary(self):
+        return f"sum = {self.totalValue}"
+
+    def describe(self):
+        if self.totalValue is None:
+            return "The total of this sum has not been set."
+        cells = self.group.getCells()
+        placed = placedValues(cells)
+        openCount = len(cells) - len(placed)
+        text = f"The values add up to {self.totalValue}"
+        if openCount == 0:
+            return f"{text}; complete ({' + '.join(str(v) for v in placed)})."
+        left = self.totalValue - sum(placed)
+        cellWord = "cell" if openCount == 1 else "cells"
+        if placed:
+            text += f"; {sum(placed)} is placed, so {left} is left for {openCount} open {cellWord}"
+        else:
+            text += f" over {openCount} open {cellWord}"
+        # the values that can still complete the sum (without changing any state)
+        candidates = set(self.values) & self.applyConstraintRecursively(left, openCount, placed)
+        return f"{text}; candidates: {formatValues(candidates)}."
 
     def setTotalValue(self, value):
         from constraints import UniqueValueConstraint

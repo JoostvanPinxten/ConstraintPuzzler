@@ -5,6 +5,7 @@ Created on 7 jan. 2013
 """
 
 from constraints import Constraint
+from constraints.constraint import formatValues
 
 
 class CellGreaterThanCellConstraint(Constraint):
@@ -40,6 +41,23 @@ class CellGreaterThanCellConstraint(Constraint):
 
     def getType(self):
         return "Cell Greater Than Cell Constraint"
+
+    def summary(self):
+        if self.lesserCell is None or self.greaterCell is None:
+            return "smaller than (cells not set)"
+        return f"({self.lesserCell.getName()}) < ({self.greaterCell.getName()})"
+
+    def describe(self):
+        if self.lesserCell is None or self.greaterCell is None:
+            return "The cells of this constraint have not been set."
+        lesser, greater = self.lesserCell, self.greaterCell
+        text = f"Cell ({lesser.getName()}) is smaller than cell ({greater.getName()})"
+        if lesser.hasValue() and greater.hasValue():
+            return f"{text}; satisfied: {lesser.getValue()} < {greater.getValue()}."
+        return (
+            f"{text}; candidates {formatValues(lesser.getPossibleValues())}"
+            f" < {formatValues(greater.getPossibleValues())}."
+        )
 
     def getAllowedValuesForValueList(self, allowedValues, usedValues):
         return allowedValues

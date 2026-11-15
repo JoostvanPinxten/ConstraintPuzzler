@@ -11,7 +11,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import shiboken6  # noqa: E402
-from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtGui, QtTest, QtWidgets  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -99,15 +99,40 @@ class SumbreroWindowTest(unittest.TestCase):
             # the text fits in the circle inscribed in the wedge (a triangle with side size / 2)
             self.assertLess(text.font().pixelSize(), hexagon.size / 2 / sqrt(3))
 
+    def test_clues_sit_just_before_their_line(self):
+        from constraints import TotalSumValueConstraint
+        from parsers.sumbrero import ASCENDING_ROW, COLUMN, DESCENDING_ROW, neighbour
+        from sumbreroMain import clueLayout
+
+        layout = clueLayout(self.puzzle)
+        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
+        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
+        for group in self.puzzle.getConstraintGroups():
+            constraint = next(
+                c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
+            )
+            position, direction = layout[constraint]
+            self.assertNotIn(position, cellPositions)
+            # one step in the wedge's direction leads to the first cell of the line
+            first = neighbour(position, direction)
+            self.assertIn(first, [c.getPosition() for c in group.getCells()])
+            expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
+            self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
+        # no two lines share a wedge
+        self.assertEqual(len(set(layout.values())), len(layout))
+        # some hexagons hold more than one sum, like in a Kakuro
+        positions = [position for position, _direction in layout.values()]
+        self.assertLess(len(set(positions)), len(positions))
+
     def test_black_hexagons_frame_the_cells(self):
         cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
         frame = set(self.window.clueHexagons)
         self.assertFalse(cells & frame)
-        import sumbreroMain
+        from parsers.sumbrero import neighbour as hexNeighbour
 
         for position in cells:
             for direction in ("N", "S", "NE", "SE", "NW", "SW"):
-                neighbour = sumbreroMain.neighbour(position, direction)
+                neighbour = hexNeighbour(position, direction)
                 self.assertTrue(neighbour in cells or neighbour in frame)
 
     def test_solve_button_fills_in_the_cells(self):
@@ -173,6 +198,85 @@ class FutoshikiWindowTest(unittest.TestCase):
         self.assertGreater(sign.tip.x(), greaterRect.right())
         self.assertLess(sign.tip.x(), lesserRect.left())
         self.assertAlmostEqual(sign.tip.y(), greaterRect.center().y())
+
+
+class SelectionHighlightTest(unittest.TestCase):
+    """Selecting an item in the puzzle tree colours its cells and explains it below the tree."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def setUp(self):
+        import sudokuMain
+
+        self.window = sudokuMain.MainWindow()
+        self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
+        self.window.show()
+        self.addCleanup(self.window.deleteLater)
+        self.addCleanup(self.window.close)
+        assert self.window.puzzle is not None
+        self.puzzle = self.window.puzzle
+        self.model = self.window.constraintModel
+        self.puzzleIndex = self.model.index(0, 0, QtCore.QModelIndex())
+
+    def select(self, index):
+        self.window.ui.puzzleTreeView.setCurrentIndex(index)
+        # let the highlight animation (200 ms) finish
+        QtTest.QTest.qWait(400)
+
+    def brushColor(self, cell):
+        return self.window.puzzlePieces[cell].brush().color()
+
+    def test_group_colours_open_and_solved_cells(self):
+        from gui.highlighting import HighlightRole, roleColor
+        from gui.puzzlemodel.puzzletreemodel import ConstraintGroupProxyItem
+
+        label = self.window.selectionInfoLabel
+        self.assertIn("Select a cell", label.text())
+
+        blockIndex = self.model.index(1, 0, self.puzzleIndex)  # Block 1
+        self.select(blockIndex)
+        blockItem = self.model.getItem(blockIndex)
+        self.assertIsInstance(blockItem, ConstraintGroupProxyItem)
+        assert isinstance(blockItem, ConstraintGroupProxyItem)
+        group = blockItem.constraintGroup
+        self.assertIn("Block 1", label.text())
+        self.assertIn("still missing", label.text())
+        self.assertIn("open cell", label.text())
+        for cell in group.getCells():
+            role = HighlightRole.SOLVED if cell.hasValue() else HighlightRole.OPEN
+            self.assertEqual(self.brushColor(cell), roleColor(role), cell.getName())
+        outside = next(c for c in self.puzzle.grid.getCells() if c not in group.getCells())
+        self.assertEqual(self.brushColor(outside).alpha(), 0)
+
+        # solving refreshes the colours and the description of the selection
+        self.window.solveButtonClicked()
+        QtTest.QTest.qWait(400)
+        self.assertIn("complete", label.text())
+        for cell in group.getCells():
+            self.assertEqual(self.brushColor(cell), roleColor(HighlightRole.SOLVED))
+
+    def test_cell_highlights_the_cells_it_shares_a_group_with(self):
+        from gui.highlighting import HighlightRole, roleColor
+        from gui.puzzlemodel.puzzletreemodel import CellProxyItem
+
+        gridIndex = self.model.index(0, 0, self.puzzleIndex)
+        cellIndex = self.model.index(0, 0, gridIndex)
+        self.select(cellIndex)
+        cellItem = self.model.getItem(cellIndex)
+        assert isinstance(cellItem, CellProxyItem)
+        cell = cellItem.cell
+        self.assertEqual(self.brushColor(cell), roleColor(HighlightRole.SELECTED))
+        peers = [c for c, r in self.window.highlightRoles.items() if r == HighlightRole.PEER]
+        self.assertEqual(len(peers), 20)  # row, column and block of a Sudoku cell
+        self.assertIn("In groups: Block 1, Row 1, Column 1", self.window.selectionInfoLabel.text())
+
+        # deselecting removes the highlight and the description
+        self.window.ui.puzzleTreeView.selectionModel().clearSelection()
+        QtTest.QTest.qWait(400)
+        self.assertEqual(self.brushColor(cell).alpha(), 0)
+        self.assertIn("Select a cell", self.window.selectionInfoLabel.text())
 
 
 class LauncherSmokeTest(unittest.TestCase):

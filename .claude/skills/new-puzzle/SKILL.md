@@ -13,11 +13,13 @@ Add a new puzzle type: $ARGUMENTS
    - square grid with given digits → `sudokuMain.py`
    - cells and sum clues → `kakuroMain.py`
    - non-rectangular geometry → `sumbreroMain.py` (uses `ValueHexagon`)
-3. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that implements
-   `initializePuzzleRepresentation()`, a `parsePuzzle(filename)` static method that opens files with `with open(...)`,
-   and `createMenus()`. Add a small example puzzle file `<name>.txt` in the repo root, and document its format
-   in the parser's docstring.
-4. If useful, add a factory method in `utility/puzzlefactory.py`.
-5. Tests: add a solver/constraint test that loads the example and checks the deductions, and add a case to
+3. Write the parser in `parsers/<name>.py`: `parse<Name>Lines(lines) -> Puzzle` plus a `parse<Name>File(filename)`
+   wrapper that opens the file with `with open(...)`; export both from `parsers/__init__.py`. No PySide6 imports.
+   Raise `parsers.PuzzleFileError` (see `parsers/kakuro.py`) for malformed lines. Add a small example puzzle file
+   `<name>.txt` in the repo root and document its format in `doc/puzzle-files.md`.
+4. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleTypeName`, `fileFilter` and
+   `puzzleParser = staticmethod(parse<Name>File)`, and implements `initializePuzzleRepresentation()`.
+5. If useful, add a factory method in `utility/puzzlefactory.py`.
+6. Tests: add parser tests in `parsers/tests/test_parsers.py`, a solver test that loads the example and checks the deductions, and a case to
    `tests/test_gui_smoke.py` (`self._smoke("<name>Main", "<name>.txt")`).
-6. Add the puzzle to the README list. Run the `/test` checks and fix anything that fails.
+7. Add the puzzle to the README list. Run the `/test` checks and fix anything that fails.

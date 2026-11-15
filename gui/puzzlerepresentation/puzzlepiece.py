@@ -36,7 +36,11 @@ class PuzzlePieceProxy(QtCore.QObject):
         self.puzzlePiece.setBrush(QtGui.QBrush(color))
 
     def get_color(self):
-        return self.puzzlePiece.brush().color()
+        brush = self.puzzlePiece.brush()
+        if brush.style() == QtCore.Qt.BrushStyle.NoBrush:
+            # not highlighted yet: the colour of an empty brush is black, fade from transparent
+            return QtGui.QColor(QtCore.Qt.GlobalColor.transparent)
+        return brush.color()
 
     backgroundColor = QtCore.Property(QtGui.QColor, get_color, set_color)
 
