@@ -17,7 +17,6 @@ from solver.Solver import Solver
 from structure.position import Position
 from structure.puzzle import Puzzle
 from utility.puzzlefactory import PuzzleFactory, PuzzleFileError
-from utility.resources import resourcePath
 
 # Sumbrero cells are flat-topped hexagons, laid out in columns: Position(x, y) is column x,
 # row y, and every odd column is shifted down by half a hexagon. A line of cells runs in one
@@ -100,6 +99,8 @@ def framePositions(puzzle):
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Sumbrero"
     fileFilter = "Sumbrero Files (*.txt)"
+    examples = {"Simple": "simpleSumbrero.txt"}
+    defaultExample = "Simple"
 
     def hexScenePosition(self, position):
         """Scene coordinates of the hexagon at position"""
@@ -215,6 +216,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(resourcePath("simpleSumbrero.txt"))
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())

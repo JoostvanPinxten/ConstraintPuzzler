@@ -4,6 +4,7 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
+import os
 import platform
 
 import PySide6
@@ -22,6 +23,7 @@ from gui.puzzlemodel.puzzletreemodel import (
 from gui.settings import PuzzleSettings
 from gui.ui import mainWindowUi
 from structure.errors import ContradictionError
+from utility.resources import resourcePath
 from utility.version import APP_NAME, getVersion
 
 
@@ -42,6 +44,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     # Set by subclasses: shown in the File menu and the open-file dialog
     puzzleTypeName = "Puzzle"
     fileFilter = "Puzzle Files (*.txt)"
+    # Set by subclasses: the bundled example puzzles (label -> file name, in menu order) and
+    # the label of the example that is opened when no file is given.
+    examples: dict[str, str] = {}
+    defaultExample: str | None = None
 
     showNextSelectionState = QtCore.Signal()
 
@@ -61,6 +67,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.settings = settings if settings is not None else PuzzleSettings(self)
         self.embedded = embedded
         self.puzzleFile: str | None = None
+        # what is loaded, e.g. "Sudoku example: Easy" or "Sudoku - myPuzzle.txt"
+        self.puzzleTitle: str | None = None
         self.ui = mainWindowUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -120,9 +128,24 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #        self.setWindowTitle("Constraints solver")
     #        self.resize(800, 600)
 
-    def loadPuzzle(self, filename):
+    def loadExample(self, label: str | None = None):
+        """Load a bundled example puzzle (``defaultExample`` when no label is given)."""
+        if label is None:
+            label = self.defaultExample
+        if label is None or label not in self.examples:
+            raise ValueError(f"{self.puzzleTypeName} has no example {label!r}")
+        self.loadPuzzle(
+            resourcePath(self.examples[label]), title=f"{self.puzzleTypeName} example: {label}"
+        )
+
+    def loadPuzzle(self, filename, title: str | None = None):
+        """Load a puzzle file. ``title`` describes it (default: puzzle type and file name)."""
         self.puzzle, self.solver = self.parsePuzzle(filename)
         self.puzzleFile = filename
+        if title is None:
+            title = f"{self.puzzleTypeName} - {os.path.basename(filename)}"
+        self.puzzleTitle = title
+        self.setWindowTitle(f"{APP_NAME} {getVersion()} - {title}")
 
         # create a new PuzzleModel, presenting the puzzle in the tree view
         self.constraintModel = ConstraintPuzzleModel()
@@ -151,7 +174,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def createMenus(self):
         fileMenu = self.menuBar().addMenu("File")
         openAction = fileMenu.addAction(f"Open {self.puzzleTypeName}...")
+        openAction.setShortcut(QtGui.QKeySequence.StandardKey.Open)
         openAction.triggered.connect(self.openPuzzleDialog)
+        if self.examples:
+            examplesMenu = fileMenu.addMenu("Examples")
+            for label in self.examples:
+                action = examplesMenu.addAction(label)
+                action.triggered.connect(lambda _checked=False, lbl=label: self.loadExample(lbl))
 
     def openPuzzleDialog(self):
         fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(

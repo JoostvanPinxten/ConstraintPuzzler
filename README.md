@@ -44,7 +44,7 @@ Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
-| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of puzzles via the start page, *File > New puzzle* or the **+** button, and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
+| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of example puzzles via the start page, *File > Examples* or the **+** button (or your own via *File > Open file*), and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
 | `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
 | `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
