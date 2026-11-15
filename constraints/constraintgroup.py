@@ -3,7 +3,6 @@ Created on 28 dec. 2012
 
 @author: Juice
 '''
-from structure.errors import ContradictionError
 
 class ConstraintGroup(object):
     def __init__(self, grid, name="Untitled"):
@@ -33,13 +32,10 @@ class ConstraintGroup(object):
         #cell.remove(value)
         
     def removeValueExceptForList(self, cells, value):
+        # Cell.remove raises a ContradictionError when the value is already set in that cell
         for c in self.cells:
             if c not in cells:
-                if c.hasValue():
-                    if(c.getValue() == value):
-                        raise ContradictionError("Trying to remove a value from a cell, but that value was already set")
-                else:
-                    c.remove(value)
+                c.remove(value)
 
     def applyConstraints(self):
 

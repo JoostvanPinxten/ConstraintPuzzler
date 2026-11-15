@@ -47,7 +47,7 @@ class Solver():
         return self.puzzle.isSolved()
 
     def _search(self):
-        openCells = [c for c in self.puzzle.getGrid().getCells() if not c.hasValue()]
+        openCells = self.puzzle.getOpenCells()
         if not openCells:
             return True
 

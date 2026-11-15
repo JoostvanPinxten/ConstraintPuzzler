@@ -61,12 +61,12 @@ class Puzzle(object):
         for cell in changedCells:
             cell.possibleValuesChanged.emit(cell)
 
-    def isSolved(self):
-        return all(c.hasValue() for c in self.grid.cells)
+    def getOpenCells(self):
+        """ The cells that do not have a value yet """
+        return [c for c in self.grid.cells if not c.hasValue()]
 
     def getNumberOfOpenCells(self):
-        nr = 0
-        for c in self.grid.cells:
-            if(c.hasValue()):
-                nr += 1
-        return nr
+        return len(self.getOpenCells())
+
+    def isSolved(self):
+        return not self.getOpenCells()
