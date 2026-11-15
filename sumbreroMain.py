@@ -17,13 +17,14 @@ from gui.ui import mainWindowUi
 from structure.puzzle import Puzzle
 from solver.Solver import Solver
 from structure.cell import PositionedCell
+from structure.position import Position
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 
 from utility.puzzlefactory import PuzzleFactory
 
-def hexrow(position : QtCore.QPoint, asc:bool =True):
+def hexrow(position : Position, asc:bool =True):
     return position.y() + position.x() - position.x() % 2
 
 class MainWindow(BasicMainWindow):
@@ -116,8 +117,8 @@ class MainWindow(BasicMainWindow):
                 puzzle = Puzzle("Test-sumbrero", range(minimum, maximum+1))
                 
             if line.startswith("cell"):
-                x,y = [float(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
-                puzzle.getGrid().addCell(QtCore.QPoint(x,y))
+                x,y = [int(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
+                puzzle.getGrid().addCell(Position(x,y))
             
             if line.startswith("column"):
                 column, value = line.split('=')

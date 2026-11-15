@@ -8,7 +8,7 @@ from structure.puzzle import Puzzle
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 
 from math import *
-from PySide6 import QtCore
+from structure.position import Position
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.exactcoverconstraint import ExactCoverConstraint
@@ -50,7 +50,7 @@ class PuzzleFactory(object):
             block = int(floor(x/3) + 3*floor(y/3))
             #print x,y, block
             
-            cell = grid.addCell(QtCore.QPoint(x+1,y+1))
+            cell = grid.addCell(Position(x+1,y+1))
             # add to relevant block
             cell.addConstraintGroup(blocks[block])
             # add to relevant row
@@ -76,10 +76,10 @@ class PuzzleFactory(object):
         possibleValues = range(1,10)
         puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))
         
-        c1_1 = puzzle.grid.addCell(QtCore.QPoint(1,1))
-        c1_2 = puzzle.grid.addCell(QtCore.QPoint(1,2))
-        c2_1 = puzzle.grid.addCell(QtCore.QPoint(2,1))
-        c2_2 = puzzle.grid.addCell(QtCore.QPoint(2,2))
+        c1_1 = puzzle.grid.addCell(Position(1,1))
+        c1_2 = puzzle.grid.addCell(Position(1,2))
+        c2_1 = puzzle.grid.addCell(Position(2,1))
+        c2_2 = puzzle.grid.addCell(Position(2,2))
          
         cg = puzzle.addConstraintGroup("Group 1")
         cg.addConstraint(UniqueValueConstraint)
@@ -120,10 +120,10 @@ class PuzzleFactory(object):
         possibleValues = range(1,11)
         puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))
         
-        c1_1 = puzzle.grid.addCell(QtCore.QPoint(1,1))
-        c1_2 = puzzle.grid.addCell(QtCore.QPoint(1,2))
-        c2_1 = puzzle.grid.addCell(QtCore.QPoint(2,1))
-        c2_2 = puzzle.grid.addCell(QtCore.QPoint(2,2))
+        c1_1 = puzzle.grid.addCell(Position(1,1))
+        c1_2 = puzzle.grid.addCell(Position(1,2))
+        c2_1 = puzzle.grid.addCell(Position(2,1))
+        c2_2 = puzzle.grid.addCell(Position(2,2))
          
         cg = puzzle.addConstraintGroup("Group 1")
         cg.addConstraint(UniqueValueConstraint)
@@ -179,7 +179,7 @@ class PuzzleFactory(object):
         # create the grid
         for y in range(1, size + 1):
             for x in range(1, size + 1):
-                puzzle.grid.addCell(QtCore.QPoint(x,y))
+                puzzle.grid.addCell(Position(x,y))
          
         # create the basic constraints
         for x in range(0, size):

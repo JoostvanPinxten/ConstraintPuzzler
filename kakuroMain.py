@@ -22,6 +22,7 @@ from structure.puzzle import Puzzle
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from solver.Solver import Solver
 from structure.cell import PositionedCell
+from structure.position import Position
 from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
@@ -98,7 +99,7 @@ class MainWindow(BasicMainWindow):
                 
             if(line.startswith("cell")):
                 x,y = [int(x) for x in line[line.find("(")+1:line.find(')')].split(",")]
-                puzzle.getGrid().addCell(QtCore.QPoint(x,y))
+                puzzle.getGrid().addCell(Position(x,y))
                 
             if(line.startswith("total")):
                 value = int(line.split("=")[-1])
@@ -107,7 +108,7 @@ class MainWindow(BasicMainWindow):
                 cg = puzzle.addConstraintGroup("Line")
                 for cell in cells:
                     try:
-                        c = puzzle.getGrid().searchCellWithPosition(QtCore.QPoint(int(cell[0]), int(cell[1])))
+                        c = puzzle.getGrid().searchCellWithPosition(Position(int(cell[0]), int(cell[1])))
                     except ValueError:
                         print(line)
                     cg.addCell(c)

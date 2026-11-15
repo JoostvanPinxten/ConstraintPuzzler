@@ -58,6 +58,7 @@ The model, constraints and solver do not depend on the GUI; the tree view is bui
 ```
 python -m unittest discover -v
 ```
+The tests only exercise the model, constraints and solver, so they do not need PySide6.
 
 ## Contributing
 Due to the nature of the ConstraintPuzzler, there are several ways to do some development:
