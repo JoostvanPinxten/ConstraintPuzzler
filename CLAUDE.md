@@ -1,0 +1,44 @@
+# ConstraintPuzzler
+
+A PySide6 (Python 3.13) application that solves number puzzles (Sudoku, Kakuro, Futoshiki and Sumbrero) by describing them as constraints over a grid of cells and then propagating those constraints.
+
+## Layout
+- `structure/`: the puzzle model. `Puzzle` holds a `Grid` of `Cell`s, and every `Cell` tracks its possible values. Positions are `structure.position.Position`, not `QPoint`. Cells notify observers via the minimal `structure.signal.Signal` (`valueChanged`, `possibleValuesChanged`). **The model, constraints and solver must not import PySide6.** Unlike Qt signals, exceptions raised in callbacks propagate, which the solver relies on.
+- `constraints/`: the `Constraint` base class plus implementations (unique value, exact cover, total sum, greater-than, nonogram). `ConstraintGroup` groups constraints over sets of cells. A constraint that detects an unsolvable state raises `structure.errors.ContradictionError`.
+- `solver/Solver.py`: repeats deduction until nothing changes. With `allowGuessing` it backtracks, and on a contradiction it restores the puzzle via `Puzzle.saveState()`/`restoreState()`.
+- `utility/puzzlefactory.py`: builds puzzles (empty Sudoku, example Kakuro, single-constraint test puzzles) and holds the shared file parsers (`fromSudokuFile`, `fromFutoshikiFile`).
+- `gui/`: the PySide6 GUI. `gui/windows/basicmainwindow.py` is the base window. `gui/puzzlerepresentation/` holds the cell shapes (rectangle, triangle, hexagon). `gui/puzzlemodel/puzzletreemodel.py` builds the tree view from a finished puzzle (`buildPuzzleTree`).
+- `*Main.py` (repo root): one entry point per puzzle type. Each defines `MainWindow(BasicMainWindow)` with a `parsePuzzle`/`loadPuzzle(path)` text parser and the layout. Example puzzles are the root `*.txt` files.
+
+## Tooling
+The environment is managed by **uv** (`pyproject.toml` + `uv.lock`). Don't use pip or requirements files.
+```
+uv sync                                   # create/update .venv (runtime + dev group)
+uv run python sudokuMain.py               # or kakuroMain.py, sumbreroMain.py
+uv add <pkg> / uv add --dev <pkg>         # change dependencies (updates uv.lock)
+```
+
+## Checks (what CI runs)
+```
+uv run pre-commit run --all-files                                   # ruff check + ruff format + file hygiene
+uv run pyright                                                      # type check (basic mode)
+QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s . -p "test_*.py" -t .
+```
+- Tests: unit tests in `<package>/tests/test_*.py`, headless GUI smoke tests in `tests/test_gui_smoke.py`.
+- Ruff rules: E, W, F, I, UP, B and SIM, with line length 100. Fix findings rather than adding `noqa`.
+- Pyright: errors fail CI. `reportOptionalMemberAccess` is a warning for now. Don't add new warnings.
+- In Claude Code, a PostToolUse hook (`.claude/hooks/ruff_on_edit.py`) runs ruff fix + format on every edited `.py` file.
+
+## Skills (slash commands)
+- `/test`: run all checks like CI and summarise.
+- `/new-constraint <Name> <rule>`: scaffold a `Constraint` subclass with tests.
+- `/new-puzzle <name>`: scaffold a new puzzle type (entry point, parser, example file, tests).
+
+## Conventions
+- Target Python 3.13 and PySide6. Widgets live in `QtWidgets` (not `QtGui`). Call `exec()`, not `exec_()`. Use fully scoped enums (`Qt.ItemDataRole.DisplayRole`, not `Qt.DisplayRole`).
+- Never hand-edit the generated files `gui/ui/mainWindowUi.py` and `gui/icons/icons_rc.py`. Edit `mainwindow.ui` / `icons.qrc` and regenerate them with `gui/ui/compile_ui.bat` / `gui/icons/compile_icons.bat`.
+- Existing code uses camelCase method names (Qt style). Keep that style for consistency.
+- Open files with `with open(...)`.
+
+## Review focus
+When reviewing changes, prioritise: correctness of constraint propagation and possible-value bookkeeping, solver termination, grid coordinate off-by-ones, PySide6 API misuse (leftover Qt4/Qt5 APIs, signal signatures, object lifetimes), and missing tests.

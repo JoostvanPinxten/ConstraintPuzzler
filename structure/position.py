@@ -1,8 +1,9 @@
-class Position(object):
-    """ Immutable (x, y) location of a cell in a puzzle.
+class Position:
+    """Immutable (x, y) location of a cell in a puzzle.
 
     Offers the x()/y() accessors of QPoint, so the GUI can use it directly,
-    without the puzzle model depending on Qt. """
+    without the puzzle model depending on Qt."""
+
     __slots__ = ("_x", "_y")
 
     def __init__(self, x, y):
@@ -29,4 +30,4 @@ class Position(object):
         return hash((self._x, self._y))
 
     def __repr__(self):
-        return "Position(%r, %r)" % (self._x, self._y)
+        return f"Position({self._x!r}, {self._y!r})"

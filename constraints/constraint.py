@@ -1,10 +1,11 @@
-'''
+"""
 Created on 24 dec. 2012
 
 @author: Juice
-'''
+"""
 
-class Constraint(object):
+
+class Constraint:
     def __init__(self, group, initialValues):
         self.initialValues = list(initialValues)
         self.group = group
@@ -13,10 +14,9 @@ class Constraint(object):
 
     def reset(self):
         self.values = list(self.initialValues)
-    
+
     def applyConstraint(self):
-        raise NotImplementedError        
+        raise NotImplementedError
 
     def notify(self, cell):
         raise NotImplementedError
-    

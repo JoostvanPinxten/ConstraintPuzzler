@@ -1,15 +1,17 @@
-'''
+"""
 Created on 7 jan. 2013
 
 @author: Juice
-'''
+"""
 
 from constraints import Constraint
 
+
 class CellGreaterThanCellConstraint(Constraint):
-    """ Enforces lesserCell < greaterCell """
+    """Enforces lesserCell < greaterCell"""
+
     def __init__(self, group, initialValues):
-        super(CellGreaterThanCellConstraint, self).__init__(group, initialValues)
+        super().__init__(group, initialValues)
 
         self.lesserCell = None
         self.greaterCell = None

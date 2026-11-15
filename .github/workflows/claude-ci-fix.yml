@@ -1,0 +1,73 @@
+name: Claude CI auto-fix
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  fix:
+    # Only for failed PR runs from this repository (not forks), and never for Claude's own fix branches (no loops).
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      !startsWith(github.event.workflow_run.head_branch, 'claude/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+      issues: write
+      id-token: write
+    env:
+      QT_QPA_PLATFORM: offscreen
+      GH_TOKEN: ${{ github.token }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install Qt runtime libraries and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxkbcommon0 libgl1 libfontconfig1 libdbus-1-3
+          uv sync --locked
+      - name: Collect failure context
+        id: ctx
+        run: |
+          gh run view "$RUN_ID" --log-failed > failed.log || true
+          tail -c 60000 failed.log > failed-tail.log
+          PR=$(gh pr list --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number')
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+      - name: Create fix branch
+        run: |
+          git config user.name "claude[bot]"
+          git config user.email "claude[bot]@users.noreply.github.com"
+          git checkout -b "claude/fix-ci-$RUN_ID"
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            The CI workflow failed on branch `${{ env.HEAD_BRANCH }}` (run ${{ env.RUN_ID }},
+            PR #${{ steps.ctx.outputs.pr }}). The failed job logs are in `failed-tail.log`.
+            Read CLAUDE.md for how this project is structured and tested.
+
+            1. Diagnose the root cause from the logs and the code. Do not weaken, skip or delete tests to
+               make them pass, unless a test is itself clearly wrong (explain why in that case).
+            2. Make the minimal fix. Verify it locally with:
+               `uv run pre-commit run --all-files`
+               `uv run pyright`
+               `uv run python -m unittest discover -s . -p "test_*.py" -t .`
+            3. Commit on the current branch (`claude/fix-ci-${{ env.RUN_ID }}`), excluding failed*.log,
+               push it, and open a PR with base `${{ env.HEAD_BRANCH }}` using `gh pr create`, describing the
+               root cause and fix.
+            4. If PR #${{ steps.ctx.outputs.pr }} exists, comment on it with a link to your fix PR via `gh pr comment`.
+            If you cannot find a safe fix, do not push anything; instead comment your diagnosis on the PR.
+          claude_args: >-
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(uv run:*),Bash(uv sync:*),Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(gh pr create:*),Bash(gh pr comment:*),Bash(gh pr view:*)"

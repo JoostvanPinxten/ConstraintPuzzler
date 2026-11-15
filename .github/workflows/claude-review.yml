@@ -1,0 +1,51 @@
+name: Claude PR review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Skip drafts and PRs from forks (repository secrets are not available to fork PRs).
+    if: |
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request to ConstraintPuzzler, a PySide6 (Python 3.13) application that solves
+            number puzzles (Sudoku, Kakuro, Futoshiki, Sumbrero) by propagating constraints over a grid of cells.
+            Read CLAUDE.md first for the architecture and conventions.
+
+            Focus on, in order of importance:
+            1. Correctness bugs, especially in constraint propagation (constraints/*), the solver (solver/Solver.py),
+               and cell possible-value bookkeeping (structure/cell.py): values wrongly removed or kept,
+               infinite propagation loops, off-by-one grid coordinates.
+            2. PySide6 API misuse: leftover PySide/PyQt4/Qt5 APIs (QtGui.QApplication, exec_(), QtGui widgets that
+               moved to QtWidgets), signal/slot signature mismatches, objects garbage-collected while still in use.
+            3. Missing or inadequate tests for changed behaviour (unit tests live in */tests/, GUI smoke tests in tests/).
+            4. Hand edits to generated files (gui/ui/mainWindowUi.py, gui/icons/icons_rc.py).
+
+            Do not comment on style nits that ruff would catch, and do not repeat yourself. Use
+            `mcp__github_inline_comment__create_inline_comment` for specific line-level issues, then post one
+            concise summary comment with `gh pr comment`. If the PR looks good, say so briefly.
+          claude_args: >-
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
