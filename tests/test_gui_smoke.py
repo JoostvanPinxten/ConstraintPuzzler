@@ -99,15 +99,40 @@ class SumbreroWindowTest(unittest.TestCase):
             # the text fits in the circle inscribed in the wedge (a triangle with side size / 2)
             self.assertLess(text.font().pixelSize(), hexagon.size / 2 / sqrt(3))
 
+    def test_clues_sit_just_before_their_line(self):
+        from constraints import TotalSumValueConstraint
+        from parsers.sumbrero import ASCENDING_ROW, COLUMN, DESCENDING_ROW, neighbour
+        from sumbreroMain import clueLayout
+
+        layout = clueLayout(self.puzzle)
+        self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
+        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
+        for group in self.puzzle.getConstraintGroups():
+            constraint = next(
+                c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
+            )
+            position, direction = layout[constraint]
+            self.assertNotIn(position, cellPositions)
+            # one step in the wedge's direction leads to the first cell of the line
+            first = neighbour(position, direction)
+            self.assertIn(first, [c.getPosition() for c in group.getCells()])
+            expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
+            self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
+        # no two lines share a wedge
+        self.assertEqual(len(set(layout.values())), len(layout))
+        # some hexagons hold more than one sum, like in a Kakuro
+        positions = [position for position, _direction in layout.values()]
+        self.assertLess(len(set(positions)), len(positions))
+
     def test_black_hexagons_frame_the_cells(self):
         cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
         frame = set(self.window.clueHexagons)
         self.assertFalse(cells & frame)
-        import sumbreroMain
+        from parsers.sumbrero import neighbour as hexNeighbour
 
         for position in cells:
             for direction in ("N", "S", "NE", "SE", "NW", "SW"):
-                neighbour = sumbreroMain.neighbour(position, direction)
+                neighbour = hexNeighbour(position, direction)
                 self.assertTrue(neighbour in cells or neighbour in frame)
 
     def test_solve_button_fills_in_the_cells(self):
