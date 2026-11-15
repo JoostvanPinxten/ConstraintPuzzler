@@ -12,13 +12,14 @@ from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.puzzlerepresentation.valuetriangle import ValueTriangle
 from gui.windows.basicmainwindow import BasicMainWindow
 from parsers import parseKakuroFile
-from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Kakuro"
     puzzleParser = staticmethod(parseKakuroFile)
     fileFilter = "Kakuro Files (*.txt)"
+    examples = {"Simple": "simpleKakuro.txt", "Medium": "mediumKakuro.txt"}
+    defaultExample = "Medium"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
@@ -73,6 +74,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(resourcePath("mediumKakuro.txt"))
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())

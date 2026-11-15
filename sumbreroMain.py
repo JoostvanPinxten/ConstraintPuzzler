@@ -15,7 +15,6 @@ from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 from gui.windows.basicmainwindow import BasicMainWindow
 from parsers import parseSumbreroFile
 from parsers.sumbrero import LINE_DIRECTIONS, lineKind, neighbour
-from utility.resources import resourcePath
 
 
 def clueLayout(puzzle):
@@ -51,6 +50,8 @@ class MainWindow(BasicMainWindow):
     puzzleTypeName = "Sumbrero"
     puzzleParser = staticmethod(parseSumbreroFile)
     fileFilter = "Sumbrero Files (*.txt)"
+    examples = {"Simple": "simpleSumbrero.txt"}
+    defaultExample = "Simple"
 
     def hexScenePosition(self, position):
         """Scene coordinates of the hexagon at position"""
@@ -101,6 +102,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(resourcePath("simpleSumbrero.txt"))
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())

@@ -230,6 +230,36 @@ class LauncherSmokeTest(unittest.TestCase):
         assert sudoku.solver is not None
         self.assertFalse(sudoku.solver.allowGuessing)
 
+    def test_examples_are_marked_as_examples(self):
+        for name, (_label, windowClass) in self.launcherModule.PUZZLES.items():
+            self.assertIn(windowClass.defaultExample, windowClass.examples)
+            for example in windowClass.examples:
+                with self.subTest(puzzle=name, example=example):
+                    window = self.launcher.openPuzzle(name, example=example)
+                    index = self.launcher.tabs.indexOf(window)
+                    title = f"{windowClass.puzzleTypeName} example: {example}"
+                    self.assertEqual(self.launcher.tabs.tabText(index), title)
+                    self.assertIn(title, window.windowTitle())
+
+        # every example is listed under File > Examples > <puzzle type>
+        listed = set()
+        for typeAction in self.launcher.examplesMenu.actions():
+            typeMenu = typeAction.menu()
+            assert isinstance(typeMenu, QtWidgets.QMenu)
+            listed |= {(typeMenu.title(), action.text()) for action in typeMenu.actions()}
+        expected = {
+            (label, example)
+            for label, windowClass in self.launcherModule.PUZZLES.values()
+            for example in windowClass.examples
+        }
+        self.assertEqual(listed, expected)
+
+    def test_user_file_is_not_marked_as_example(self):
+        window = self.launcher.openPuzzle("sudoku", str(REPO_ROOT / "hardSudoku.txt"))
+        index = self.launcher.tabs.indexOf(window)
+        self.assertEqual(self.launcher.tabs.tabText(index), "Sudoku - hardSudoku.txt")
+        self.assertNotIn("example", window.windowTitle())
+
     def test_unloadable_file_adds_no_tab(self):
         with self.assertRaises(OSError):
             self.launcher.openPuzzle("sudoku", str(REPO_ROOT / "does-not-exist.txt"))
