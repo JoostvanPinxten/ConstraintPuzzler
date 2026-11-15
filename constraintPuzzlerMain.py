@@ -138,6 +138,14 @@ class LauncherWindow(QtWidgets.QMainWindow):
         quitAction.setMenuRole(QtGui.QAction.MenuRole.QuitRole)
         quitAction.triggered.connect(self.close)
 
+        editMenu = self.menuBar().addMenu("Edit")
+        self.undoAction = editMenu.addAction("Undo")
+        self.undoAction.setShortcut(QtGui.QKeySequence.StandardKey.Undo)
+        self.undoAction.triggered.connect(lambda: self.undo())
+        self.redoAction = editMenu.addAction("Redo")
+        self.redoAction.setShortcut(QtGui.QKeySequence.StandardKey.Redo)
+        self.redoAction.triggered.connect(lambda: self.redo())
+
         viewMenu = self.menuBar().addMenu("View")
         self.showHintsAction = addShowHintsAction(viewMenu, self.settings)
 
@@ -192,6 +200,19 @@ class LauncherWindow(QtWidgets.QMainWindow):
         )
         if fileName:
             self.tryOpenPuzzle(name, fileName)
+
+    def currentPuzzleWindow(self) -> BasicMainWindow | None:
+        widget = self.tabs.currentWidget()
+        return widget if isinstance(widget, BasicMainWindow) else None
+
+    def undo(self) -> bool:
+        """Undo the last change in the current tab."""
+        window = self.currentPuzzleWindow()
+        return window is not None and window.undo()
+
+    def redo(self) -> bool:
+        window = self.currentPuzzleWindow()
+        return window is not None and window.redo()
 
     def puzzleWindows(self) -> list[BasicMainWindow]:
         windows = []

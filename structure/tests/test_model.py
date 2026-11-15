@@ -3,7 +3,7 @@
 import unittest
 
 from constraints.uniquevalueconstraint import UniqueValueConstraint
-from structure.cell import PositionedCell
+from structure.cell import PositionedCell, ValueSource
 from structure.errors import ContradictionError
 from structure.position import Position
 from structure.puzzle import Puzzle
@@ -74,7 +74,7 @@ class CellTest(unittest.TestCase):
         self.assertTrue(self.cell.isInferred())
         self.assertFalse(self.cell.isGiven())
         other = self.puzzle.grid.addCell()
-        other.setValue(1, isEntered=True)
+        other.setValue(1, ValueSource.ENTERED)
         self.assertTrue(other.isEntered())
         self.assertFalse(other.isGiven())
 

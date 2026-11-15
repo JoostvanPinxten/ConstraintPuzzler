@@ -385,6 +385,33 @@ class CellInputTest(unittest.TestCase):
         QtTest.QTest.keyClick(self.view, key)
         self.app.processEvents()
 
+    def test_undo_and_redo(self):
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        piece = self.window.puzzlePieces[cell]
+        self.assertFalse(self.window.undoAction.isEnabled())
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertTrue(self.window.undoAction.isEnabled())
+
+        QtTest.QTest.keySequence(self.view, QtGui.QKeySequence.StandardKey.Undo)
+        self.app.processEvents()
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(piece.valueTextItem.opacity(), 0)
+        self.assertFalse(self.window.undoAction.isEnabled())
+        self.assertTrue(self.window.redoAction.isEnabled())
+
+        self.window.redoAction.trigger()
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(piece.valueTextItem.toPlainText(), "4")
+
+        # a solve is one step: undo brings back the puzzle as it was before
+        assert self.window.puzzle is not None
+        before = self.window.puzzle.saveState()
+        self.window.ui.solvePushButton.click()
+        self.assertTrue(self.window.puzzle.isSolved())
+        self.window.undoAction.trigger()
+        self.assertEqual(self.window.puzzle.saveState(), before)
+
     def test_clicking_a_cell_selects_it(self):
         cell = self.grid.getCellFromSquareGrid(4, 2)
         self.click(cell)
@@ -507,6 +534,24 @@ class LauncherSmokeTest(unittest.TestCase):
 
     def test_smoke_test_flag(self):
         self.assertEqual(self.launcherModule.main(["--smoke-test"]), 0)
+
+    def test_undo_acts_on_the_current_tab(self):
+        self.assertFalse(self.launcher.undo())  # no tabs
+        sudoku = self.launcher.openPuzzle("sudoku")
+        other = self.launcher.openPuzzle("sudoku")
+        assert sudoku.puzzle is not None and other.puzzle is not None
+        before = sudoku.puzzle.saveState()
+        sudoku.ui.solvePushButton.click()
+        self.launcher.tabs.setCurrentWidget(other)
+        self.assertFalse(self.launcher.undo())  # nothing happened in this tab
+        self.launcher.tabs.setCurrentWidget(sudoku)
+        self.launcher.activateWindow()
+        sudoku.ui.puzzleTreeView.setFocus()
+        QtTest.QTest.keySequence(sudoku.ui.puzzleTreeView, QtGui.QKeySequence.StandardKey.Undo)
+        self.app.processEvents()
+        self.assertEqual(sudoku.puzzle.saveState(), before)
+        self.assertTrue(self.launcher.redo())
+        self.assertTrue(sudoku.puzzle.isSolved())
 
     def test_start_page_lists_all_puzzles(self):
         import kakuroMain

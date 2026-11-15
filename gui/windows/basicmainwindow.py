@@ -25,8 +25,9 @@ from gui.puzzlemodel.puzzletreemodel import (
 from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.ui import mainWindowUi
 from solver.Solver import Solver
-from structure.entries import EntryError, UserEntries
+from structure.entries import EntryError
 from structure.errors import ContradictionError
+from structure.game import Game
 from structure.puzzle import Puzzle
 from utility.puzzletypes import PuzzleType
 from utility.resources import resourcePath
@@ -97,6 +98,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.solver = None
 
         self.createMenus()
+        self.createEditMenu()
         self.createViewMenu()
         self.createSolverMenu()
         self.createHelpMenu()
@@ -153,7 +155,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.initializePuzzleRepresentation()
         self.applyShowHints(self.settings.showHints)
         self.highlightRoles = {}
-        self.userEntries = UserEntries(self.puzzle)
+        self.game = Game(self.puzzle)
         self.inputMessage = None
         self.violations = set()
         # to find the cell under the mouse, and the tree row of a cell
@@ -170,6 +172,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 self.cellIndexes[item.cell] = index
         self.refreshCellStyles()
         self.updateSelectionInfo()
+        self.updateUndoActions()
         # The puzzle is drawn in black on a transparent background, so with a dark palette it
         # would be black on black. Give the puzzle a fixed white background regardless of theme.
         self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
@@ -205,6 +208,45 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         )
         if fileName:
             self.loadPuzzle(fileName)
+
+    def createEditMenu(self):
+        editMenu = self.menuBar().addMenu("Edit")
+        self.undoAction = editMenu.addAction("Undo")
+        self.undoAction.triggered.connect(self.undo)
+        self.redoAction = editMenu.addAction("Redo")
+        self.redoAction.triggered.connect(self.redo)
+        # an embedded window's launcher has the shortcuts
+        if not self.embedded:
+            self.undoAction.setShortcut(QtGui.QKeySequence.StandardKey.Undo)
+            self.redoAction.setShortcut(QtGui.QKeySequence.StandardKey.Redo)
+        self.updateUndoActions()
+
+    def updateUndoActions(self):
+        game = getattr(self, "game", None)
+        self.undoAction.setEnabled(game is not None and game.canUndo())
+        self.redoAction.setEnabled(game is not None and game.canRedo())
+
+    def undo(self) -> bool:
+        """Undo the last change to the puzzle (an entry or a solver action)."""
+        if self.game is None or not self.game.undo():
+            return False
+        self.inputMessage = None
+        self.puzzleChanged()
+        return True
+
+    def redo(self) -> bool:
+        if self.game is None or not self.game.redo():
+            return False
+        self.inputMessage = None
+        self.puzzleChanged()
+        return True
+
+    def puzzleChanged(self):
+        """Redraw after values changed: cell colours, highlight, description and undo state."""
+        self.refreshCellStyles()
+        self.updateHighlight()
+        self.updateSelectionInfo()
+        self.updateUndoActions()
 
     def createViewMenu(self):
         viewMenu = self.menuBar().addMenu("View")
@@ -384,7 +426,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def createCellInput(self):
         """Clicking a cell selects it; typing a number enters it in the selected cell."""
-        self.userEntries: UserEntries | None = None
+        self.game: Game | None = None
         self.inputMessage: str | None = None
         # the cells whose shown value breaks a rule (drawn in red)
         self.violations = set()
@@ -450,66 +492,59 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def handleCellKey(self, event) -> bool:
         """Enter (a number) or clear (Delete, Backspace) the value of the selected cell."""
         cell = self.selectedCell()
-        puzzle = self.puzzle
-        if cell is None or self.userEntries is None or puzzle is None:
+        game = self.game
+        if cell is None or game is None:
             return False
         text = event.text()
         clearKeys = (QtCore.Qt.Key.Key_Delete, QtCore.Qt.Key.Key_Backspace)
         try:
-            if event.key() in clearKeys or (text == "0" and 0 not in puzzle.getValues()):
-                self.userEntries.clear(cell)
+            if event.key() in clearKeys or (text == "0" and 0 not in game.puzzle.getValues()):
+                game.clear(cell)
             elif len(text) == 1 and text.isdigit():
-                self.userEntries.enter(cell, int(text))
+                game.enter(cell, int(text))
             else:
                 return False
             self.inputMessage = None
         except EntryError as e:
             self.inputMessage = str(e)
         self.refreshCellStyles()
-        if puzzle.isSolved() and not self.violations:
+        if game.isSolved(self.violations):
             self.inputMessage = "Solved!"
         self.updateHighlight()
         self.updateSelectionInfo()
+        self.updateUndoActions()
         return True
 
     def violationNote(self, cell):
         """Explain why the value of a cell is drawn in red (None when it is not)."""
-        if self.userEntries is None or cell not in self.violations or self.puzzle is None:
+        if self.game is None:
             return None
-        value = self.userEntries.valueOf(cell)
-        clashes = set()
-        for group in cell.getConstraintGroups():
-            clashes |= self.violations & set(group.getCells())
-        clashes.discard(cell)
-        if clashes:
-            names = ", ".join(sorted(c.getName() for c in clashes))
-            return f"{value} breaks a rule together with cell(s) {names}."
-        return f"{value} does not fit: it leaves no possible value for another cell."
+        return self.game.violationNote(cell, self.violations)
 
     def refreshPiece(self, cell):
         """Redraw a cell, showing a mistake typed in it and drawing broken rules in red."""
         piece = self.puzzlePieces[cell]
         piece.updateRepresentation()
-        if self.userEntries is None:
+        if self.game is None:
             return
-        if self.userEntries.isMistake(cell):
-            piece.showMistake(self.userEntries.valueOf(cell))
+        if self.game.isMistake(cell):
+            piece.showMistake(self.game.valueOf(cell))
         elif cell in self.violations and cell.hasValue():
             piece.markViolation()
 
     def refreshCellStyles(self):
         """Find the cells that break a rule and redraw all cells."""
-        if self.userEntries is None:
+        if self.game is None:
             return
-        self.violations = self.userEntries.violations()
+        self.violations = self.game.violations()
         for cell in self.puzzlePieceProxies:
             self.refreshPiece(cell)
 
     def solveButtonClicked(self):
-        if self.solver is not None:
+        if self.solver is not None and self.game is not None:
             self.solver.allowGuessing = self.settings.allowGuessing
             try:
-                self.solver.solve()
+                self.game.solve(self.solver)
             except ContradictionError as e:
                 QtWidgets.QMessageBox.warning(
                     self,
@@ -517,16 +552,14 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                     "The solver ran into a contradiction:\n\n" + str(e),
                 )
             # cells may have been solved: refresh their colours and the description
-            self.refreshCellStyles()
-            self.updateHighlight()
-            self.updateSelectionInfo()
+            self.puzzleChanged()
 
     def solveStepButtonClicked(self):
         """Fill in one deducible cell, so the solver can be followed step by step."""
-        if self.solver is None or self.puzzle is None or self.puzzle.isSolved():
+        if self.solver is None or self.game is None or self.game.puzzle.isSolved():
             return
         try:
-            changed = self.solver.solveStep()
+            changed = self.game.solveStep(self.solver)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -535,9 +568,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             )
             return
         # a cell may have been solved: refresh its colour and the description
-        self.refreshCellStyles()
-        self.updateHighlight()
-        self.updateSelectionInfo()
+        self.puzzleChanged()
         if not changed:
             QtWidgets.QMessageBox.information(
                 self,

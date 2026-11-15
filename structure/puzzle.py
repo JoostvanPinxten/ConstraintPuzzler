@@ -39,9 +39,7 @@ class Puzzle:
     def saveState(self):
         """Snapshot of all mutable solving state. The snapshot is immutable and
         comparable, so it can also be used to detect whether anything changed."""
-        cells = tuple(
-            (frozenset(c.values), c.value, c.inferred, c.entered) for c in self.grid.cells
-        )
+        cells = tuple((frozenset(c.values), c.value, c.source) for c in self.grid.cells)
         constraints = tuple(tuple(c.values) for c in self.getConstraints())
         return (cells, constraints)
 
@@ -52,13 +50,12 @@ class Puzzle:
         cellStates, constraintStates = state
         changedCells = []
         for cell, cellState in zip(self.grid.cells, cellStates, strict=True):
-            if (frozenset(cell.values), cell.value, cell.inferred, cell.entered) == cellState:
+            if (frozenset(cell.values), cell.value, cell.source) == cellState:
                 continue
-            values, value, inferred, entered = cellState
+            values, value, source = cellState
             cell.values = set(values)
             cell.value = value
-            cell.inferred = inferred
-            cell.entered = entered
+            cell.source = source
             changedCells.append(cell)
         for constraint, values in zip(self.getConstraints(), constraintStates, strict=True):
             constraint.values = list(values)

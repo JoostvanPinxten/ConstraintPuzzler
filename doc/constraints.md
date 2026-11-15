@@ -34,7 +34,8 @@ A cell starts with every puzzle value as a possibility. Solving means removing p
 - `cell.remove(value)` removes one possibility. If no possibility is left, the puzzle is
   contradictory.
 - `cell.setValue(value)` / `cell.inferValue(value)` fixes the value of the cell (a given vs. a
-  value the solver deduced). The other possibilities disappear.
+  value the solver deduced). The other possibilities disappear. The cell remembers where the
+  value came from (`cell.getSource()`, a `ValueSource`: given, entered, deduced or guessed).
 
 Whenever something impossible happens (removing the last possibility of a cell, removing the
 value a cell already has, setting a value that is no longer possible, a sum that does not add

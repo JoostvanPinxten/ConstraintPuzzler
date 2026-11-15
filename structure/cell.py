@@ -4,8 +4,19 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+from enum import Enum
+
 from structure.errors import ContradictionError
 from structure.signal import Signal
+
+
+class ValueSource(Enum):
+    """Where the value of a cell came from."""
+
+    GIVEN = "given"  # part of the puzzle as it was loaded
+    ENTERED = "entered"  # typed in by the user
+    DEDUCED = "deduced"  # deduced by the solver from the rules
+    GUESSED = "guessed"  # tried by the solver while backtracking
 
 
 class Cell:
@@ -22,9 +33,8 @@ class Cell:
     def reset(self):
         self.values = set(self.initialValues)
         self.value = None
-        self.inferred = False
-        # the value was typed in by the user (not given by the puzzle, not deduced)
-        self.entered = False
+        # where the value came from; None while the cell has no value
+        self.source: ValueSource | None = None
 
     def getValue(self):
         return self.value
@@ -33,16 +43,20 @@ class Cell:
         return self.getValue() is not None
 
     def inferValue(self, value):
-        self.setValue(value, True)
+        """Set a value the solver deduced."""
+        self.setValue(value, ValueSource.DEDUCED)
 
-    def setValue(self, value, isInferred=False, isEntered=False):
+    def guessValue(self, value):
+        """Set a value the solver tries while backtracking."""
+        self.setValue(value, ValueSource.GUESSED)
+
+    def setValue(self, value, source=ValueSource.GIVEN):
         if value not in self.values:
             raise ContradictionError(
                 "value " + str(value) + " not in my values: " + str(self.values)
             )
 
-        self.inferred = isInferred
-        self.entered = isEntered
+        self.source = source
 
         self.value = value
         self.values = {value}
@@ -86,16 +100,25 @@ class Cell:
     def isFixed(self):
         return self.value is not None
 
+    def getSource(self):
+        """Where the value came from (a ValueSource), or None without a value."""
+        return self.source
+
     def isInferred(self):
-        return self.inferred
+        """The value was filled in by the solver (deduced or guessed)."""
+        return self.source in (ValueSource.DEDUCED, ValueSource.GUESSED)
+
+    def isGuessed(self):
+        """The value was tried by the solver while backtracking."""
+        return self.source is ValueSource.GUESSED
 
     def isEntered(self):
         """The value was typed in by the user."""
-        return self.entered
+        return self.source is ValueSource.ENTERED
 
     def isGiven(self):
         """The value is part of the puzzle as it was loaded."""
-        return self.hasValue() and not self.inferred and not self.entered
+        return self.source is ValueSource.GIVEN
 
     def getGrid(self):
         return self.grid

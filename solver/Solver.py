@@ -82,7 +82,7 @@ class Solver:
         for value in sorted(cell.getPossibleValues()):
             state = self.puzzle.saveState()
             try:
-                cell.inferValue(value)
+                cell.guessValue(value)
                 self.propagate()  # the state changed by the guess, so a new snapshot is needed
                 if self._search():
                     return True

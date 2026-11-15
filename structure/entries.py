@@ -12,6 +12,7 @@ entered again; an earlier mistake may fit after that. Values deduced by the solv
 that way; the solver can deduce them again.
 """
 
+from structure.cell import ValueSource
 from structure.errors import ContradictionError
 
 
@@ -69,6 +70,12 @@ class UserEntries:
         entries.pop(cell, None)
         self._replay(entries)
 
+    def dropMistakes(self, cells):
+        """Forget the mistakes typed in the given cells (e.g. after the solver filled them)."""
+        for cell in cells:
+            if self.mistakes.pop(cell, None) is not None:
+                self.entries.pop(cell, None)
+
     def violations(self):
         """The cells whose shown value breaks a rule, including every mistake."""
         cells = set(self.mistakes)
@@ -82,7 +89,7 @@ class UserEntries:
         try:
             if value not in cell.getPossibleValues():
                 raise ContradictionError(f"{value} is not possible in cell {cell.getName()}")
-            cell.setValue(value, isEntered=True)
+            cell.setValue(value, ValueSource.ENTERED)
         except ContradictionError:
             self.puzzle.restoreState(state)
             self.mistakes[cell] = value
