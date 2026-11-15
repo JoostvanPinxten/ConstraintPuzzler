@@ -24,6 +24,14 @@ from structure.errors import ContradictionError
 from utility.version import APP_NAME, getVersion
 
 
+def appIcon() -> QtGui.QIcon:
+    """The ConstraintPuzzler logo, at every size bundled in the icon resources."""
+    icon = QtGui.QIcon()
+    for size in (16, 32, 64, 256):
+        icon.addFile(f":/icons/appIcon{size}", QtCore.QSize(size, size))
+    return icon
+
+
 class BasicMainWindow(QtWidgets.QMainWindow):
     #    MaxRecentFiles = 5
     #    windowList = []
@@ -43,6 +51,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
 
         self.setWindowTitle(f"{APP_NAME} {getVersion()}")
+        self.setWindowIcon(appIcon())
 
         #        self.recentFileActs = []
         #
