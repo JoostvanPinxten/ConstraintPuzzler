@@ -35,6 +35,9 @@ class GuiSmokeTest(unittest.TestCase):
             window.show()
             self.app.processEvents()
             self.assertTrue(window.isVisible())
+            icon = window.windowIcon()
+            self.assertFalse(icon.isNull(), "window icon (logo) is missing")
+            self.assertEqual(len(icon.availableSizes()), 4)
         finally:
             window.close()
             window.deleteLater()

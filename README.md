@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="doc/logo/constraintpuzzler-logo.svg" alt="ConstraintPuzzler - the power of deduction" width="560">
+</p>
+
 ConstraintPuzzler - the power of deduction
 ==========================================
 

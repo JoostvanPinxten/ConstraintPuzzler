@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>ConstraintPuzzler</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2B3A7A"/>
+      <stop offset="1" stop-color="#141B3D"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC24D"/>
+      <stop offset="1" stop-color="#F08A1C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Badge -->
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+
+  <!-- Open cells: still to be deduced -->
+  <g fill="#FFFFFF" fill-opacity="0.14">
+    <rect x="102" y="36"  width="52" height="52" rx="10"/>
+    <rect x="168" y="36"  width="52" height="52" rx="10"/>
+    <rect x="36"  y="102" width="52" height="52" rx="10"/>
+    <rect x="168" y="102" width="52" height="52" rx="10"/>
+    <rect x="36"  y="168" width="52" height="52" rx="10"/>
+    <rect x="102" y="168" width="52" height="52" rx="10"/>
+  </g>
+
+  <!-- Known cells -->
+  <g fill="#EEF1FA">
+    <rect x="36"  y="36"  width="52" height="52" rx="10"/>
+    <rect x="102" y="102" width="52" height="52" rx="10"/>
+  </g>
+  <g font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="36"
+     fill="#1B2550" text-anchor="middle">
+    <text x="62"  y="75">3</text>
+    <text x="128" y="141">5</text>
+  </g>
+
+  <!-- Candidate pencil marks -->
+  <g font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-weight="600" font-size="14"
+     fill="#C9D2F0" text-anchor="middle">
+    <text x="116" y="56">1</text>
+    <text x="140" y="56">2</text>
+  </g>
+
+  <!-- Constraints: inequality chevrons between cells -->
+  <g fill="none" stroke="#FFB43A" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M91 54 L99 62 L91 70"/>      <!-- 3 > ? -->
+    <path d="M120 157 L128 165 L136 157"/> <!-- 5 > ? -->
+  </g>
+
+  <!-- The deduced piece clicking into place -->
+  <g transform="rotate(-8 194 194) translate(5 5)">
+    <rect x="168" y="172" width="52" height="52" rx="10" fill="#0A0F26" fill-opacity="0.35"/>
+    <rect x="168" y="168" width="52" height="52" rx="10" fill="url(#amber)"/>
+    <text x="194" y="207" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-weight="800"
+          font-size="36" fill="#1B2550" text-anchor="middle">9</text>
+  </g>
+</svg>
