@@ -14,12 +14,13 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
 from structure.cell import PositionedCell
 from utility.puzzlefactory import PuzzleFactory
-from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Futoshiki"
     fileFilter = "Futoshiki Files (*.txt *.fut)"
+    examples = {"7x7": "futoshiki.txt"}
+    defaultExample = "7x7"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
@@ -51,6 +52,6 @@ class MainWindow(BasicMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(resourcePath("futoshiki.txt"))
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())

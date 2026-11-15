@@ -19,6 +19,8 @@ from utility.puzzlefactory import PuzzleFactory
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Sudoku"
     fileFilter = "Sudoku Files (*.txt *.sud)"
+    examples = {"Easy": "easySudoku.txt", "Medium": "mediumSudoku.txt", "Hard": "hardSudoku.txt"}
+    defaultExample = "Easy"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
@@ -76,6 +78,6 @@ class MainWindow(BasicMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    # mainWin.loadPuzzle("./easySudoku.txt")
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())

@@ -14,12 +14,13 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
 from structure.puzzle import Puzzle
 from utility.puzzlefactory import PuzzleFactory, PuzzleFileError
-from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Kakuro"
     fileFilter = "Kakuro Files (*.txt)"
+    examples = {"Simple": "simpleKakuro.txt", "Medium": "mediumKakuro.txt"}
+    defaultExample = "Medium"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
@@ -134,6 +135,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(resourcePath("mediumKakuro.txt"))
+    mainWin.loadExample()
     mainWin.show()
     sys.exit(app.exec())
