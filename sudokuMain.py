@@ -17,17 +17,8 @@ from utility.puzzlefactory import PuzzleFactory
 
 
 class MainWindow(BasicMainWindow):
-    def createMenus(self):
-        f = self.menuBar().addMenu("File")
-        openSudoku = f.addAction("Open Sudoku")
-        openSudoku.triggered.connect(self.openSudoku)
-
-    def openSudoku(self):
-        fileName = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Open Sudoku", "", "Sudoku Files (*.txt *.sud)"
-        )
-        if fileName[0]:
-            self.loadPuzzle(fileName[0])
+    puzzleTypeName = "Sudoku"
+    fileFilter = "Sudoku Files (*.txt *.sud)"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)

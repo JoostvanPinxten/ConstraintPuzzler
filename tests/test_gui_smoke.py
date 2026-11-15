@@ -10,7 +10,8 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6 import QtGui, QtWidgets  # noqa: E402
+import shiboken6  # noqa: E402
+from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -63,37 +64,91 @@ class LauncherSmokeTest(unittest.TestCase):
     def setUpClass(cls):
         cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-    def test_every_puzzle_window_shows_version(self):
+    def setUp(self):
         import constraintPuzzlerMain
+
+        self.launcherModule = constraintPuzzlerMain
+        self.launcher = constraintPuzzlerMain.LauncherWindow()
+        self.launcher.show()
+        self.app.processEvents()
+
+    def tearDown(self):
+        self.launcher.close()
+        self.launcher.deleteLater()
+        self._flushDeletes()
+
+    def _flushDeletes(self):
+        self.app.processEvents()
+        QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+
+    def test_launcher_shows_version(self):
         from utility.version import getVersion
 
-        for name in constraintPuzzlerMain.PUZZLES:
-            with self.subTest(puzzle=name):
-                window = constraintPuzzlerMain.createWindow(name)
-                try:
-                    window.show()
-                    self.app.processEvents()
-                    self.assertIn(getVersion(), window.windowTitle())
-                    self.assertIn(getVersion(), window.aboutText())
-                finally:
-                    window.close()
-                    window.deleteLater()
-                    self.app.processEvents()
+        self.assertIn(getVersion(), self.launcher.windowTitle())
 
     def test_smoke_test_flag(self):
-        import constraintPuzzlerMain
+        self.assertEqual(self.launcherModule.main(["--smoke-test"]), 0)
 
-        self.assertEqual(constraintPuzzlerMain.main(["--smoke-test"]), 0)
+    def test_start_page_lists_all_puzzles(self):
+        import kakuroMain
 
-    def test_chooser_lists_all_puzzles(self):
-        import constraintPuzzlerMain
+        self.assertIs(self.launcher.stack.currentWidget(), self.launcher.startPage)
+        buttons = self.launcher.startPage.findChildren(QtWidgets.QPushButton)
+        self.assertEqual(len(buttons), len(self.launcherModule.PUZZLES))
 
-        dialog = constraintPuzzlerMain.PuzzleChooserDialog()
-        buttons = dialog.findChildren(QtWidgets.QPushButton)
-        self.assertEqual(len(buttons), len(constraintPuzzlerMain.PUZZLES))
-        buttons[1].click()
-        self.assertEqual(dialog.choice, "kakuro")
-        dialog.deleteLater()
+        buttons[1].click()  # kakuro
+        self.assertEqual(self.launcher.tabs.count(), 1)
+        self.assertIs(self.launcher.stack.currentWidget(), self.launcher.tabs)
+        self.assertIsInstance(self.launcher.tabs.widget(0), kakuroMain.MainWindow)
+
+    def test_open_and_close_tabs(self):
+        names = list(self.launcherModule.PUZZLES)
+        windows = [self.launcher.openPuzzle(name) for name in names]
+        self.launcher.openPuzzle("sudoku")  # a second puzzle of the same type
+        self.app.processEvents()
+        self.assertEqual(self.launcher.tabs.count(), len(names) + 1)
+        for window in windows:
+            self.assertTrue(window.embedded)
+            self.assertFalse(window.menuBar().isVisible())
+
+        first = windows[0]
+        self.launcher.closeTab(0)
+        self._flushDeletes()
+        self.assertEqual(self.launcher.tabs.count(), len(names))
+        self.assertFalse(shiboken6.isValid(first))
+
+        while self.launcher.tabs.count():
+            self.launcher.closeCurrentTab()
+        self._flushDeletes()
+        self.assertIs(self.launcher.stack.currentWidget(), self.launcher.startPage)
+        self.assertFalse(self.launcher.closeTabAction.isEnabled())
+
+        # the shared settings must not call into deleted tabs
+        self.launcher.allowGuessingAction.setChecked(True)
+        self.assertTrue(self.launcher.settings.allowGuessing)
+
+    def test_allow_guessing_is_shared(self):
+        sudoku = self.launcher.openPuzzle("sudoku")
+        futoshiki = self.launcher.openPuzzle("futoshiki")
+        self.assertIs(sudoku.settings, self.launcher.settings)
+        self.assertIs(futoshiki.settings, self.launcher.settings)
+
+        self.launcher.allowGuessingAction.setChecked(True)
+        self.assertTrue(sudoku.allowGuessingAction.isChecked())
+        for window in (sudoku, futoshiki):
+            window.solveButtonClicked()
+            assert window.solver is not None
+            self.assertTrue(window.solver.allowGuessing)
+
+        self.launcher.allowGuessingAction.setChecked(False)
+        sudoku.solveButtonClicked()
+        assert sudoku.solver is not None
+        self.assertFalse(sudoku.solver.allowGuessing)
+
+    def test_unloadable_file_adds_no_tab(self):
+        with self.assertRaises(OSError):
+            self.launcher.openPuzzle("sudoku", str(REPO_ROOT / "does-not-exist.txt"))
+        self.assertEqual(self.launcher.tabs.count(), 0)
 
 
 if __name__ == "__main__":
