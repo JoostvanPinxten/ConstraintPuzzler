@@ -11,6 +11,7 @@ import unittest
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.uniquevalueconstraint import UniqueValueConstraint
+from parsers import parseFutoshikiFile, parseSudokuFile
 from solver.Solver import Solver
 from structure.errors import ContradictionError
 from utility.puzzlefactory import PuzzleFactory
@@ -63,14 +64,14 @@ class Test(unittest.TestCase):
             )
 
     def testDeductionRepeatsUntilFixpoint(self):
-        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+        sudoku = parseSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
         solver = Solver(sudoku)
 
         self.assertTrue(solver.solve(), "A single solve() should keep deducing until done")
         self.assertValidSudoku(sudoku)
 
     def testHardSudokuNeedsGuessing(self):
-        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "hardSudoku.txt"))
+        sudoku = parseSudokuFile(os.path.join(ROOT, "hardSudoku.txt"))
         solver = Solver(sudoku)
         self.assertFalse(solver.solve(), "Expected deduction alone to get stuck on this puzzle")
 
@@ -100,8 +101,8 @@ class Test(unittest.TestCase):
             with open(zerosFile, "w") as f:
                 f.write(dashes.replace("-", "0"))
 
-            withZeros = PuzzleFactory.fromSudokuFile(zerosFile)
-        withDashes = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+            withZeros = parseSudokuFile(zerosFile)
+        withDashes = parseSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
 
         self.assertEqual(withZeros.saveState(), withDashes.saveState())
 
@@ -120,7 +121,7 @@ class Test(unittest.TestCase):
         )
 
     def testFutoshikiFile(self):
-        puzzle = PuzzleFactory.fromFutoshikiFile(os.path.join(ROOT, "futoshiki.txt"))
+        puzzle = parseFutoshikiFile(os.path.join(ROOT, "futoshiki.txt"))
         self.assertEqual(len(puzzle.grid.getCells()), 49)
         self.assertEqual(puzzle.grid.getCellFromSquareGrid(0, 0).getValue(), 5)
         self.assertEqual(puzzle.grid.getCellFromSquareGrid(6, 0).getValue(), 6)
@@ -138,7 +139,7 @@ class Test(unittest.TestCase):
             self.assertGreater(relation.greaterCell.getValue(), relation.lesserCell.getValue())
 
     def testSaveAndRestoreState(self):
-        sudoku = PuzzleFactory.fromSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
+        sudoku = parseSudokuFile(os.path.join(ROOT, "easySudoku.txt"))
         state = sudoku.saveState()
         Solver(sudoku).solve()
         self.assertNotEqual(sudoku.saveState(), state)

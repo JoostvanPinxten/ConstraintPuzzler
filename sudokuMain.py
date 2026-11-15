@@ -12,12 +12,12 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
-from solver.Solver import Solver
-from utility.puzzlefactory import PuzzleFactory
+from parsers import parseSudokuFile
 
 
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Sudoku"
+    puzzleParser = staticmethod(parseSudokuFile)
     fileFilter = "Sudoku Files (*.txt *.sud)"
     examples = {"Easy": "easySudoku.txt", "Medium": "mediumSudoku.txt", "Hard": "hardSudoku.txt"}
     defaultExample = "Easy"
@@ -67,12 +67,6 @@ class MainWindow(BasicMainWindow):
                 self.blockPadding,
             )
             r.setBrush(QtGui.QColor(0, 0, 0))
-
-    @staticmethod
-    def parsePuzzle(filename):
-        puzzle = PuzzleFactory.fromSudokuFile(filename)
-        solver = Solver(puzzle)
-        return puzzle, solver
 
 
 if __name__ == "__main__":

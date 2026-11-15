@@ -6,6 +6,7 @@ Created on 26 jan. 2013
 
 import os
 import platform
+from collections.abc import Callable
 
 import PySide6
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
@@ -22,7 +23,9 @@ from gui.puzzlemodel.puzzletreemodel import (
 )
 from gui.settings import PuzzleSettings
 from gui.ui import mainWindowUi
+from solver.Solver import Solver
 from structure.errors import ContradictionError
+from structure.puzzle import Puzzle
 from utility.resources import resourcePath
 from utility.version import APP_NAME, getVersion
 
@@ -44,6 +47,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     # Set by subclasses: shown in the File menu and the open-file dialog
     puzzleTypeName = "Puzzle"
     fileFilter = "Puzzle Files (*.txt)"
+    # Reads a puzzle file into a Puzzle; subclasses set it to one of the `parsers` functions
+    puzzleParser: Callable[[str], Puzzle] | None = None
     # Set by subclasses: the bundled example puzzles (label -> file name, in menu order) and
     # the label of the example that is opened when no file is given.
     examples: dict[str, str] = {}
@@ -163,10 +168,15 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
         self.ui.puzzleGraphicsView.setScene(self.scene)
 
-    def parsePuzzle(self, filename):
-        raise NotImplementedError(
-            "This should be implemented to enable loading of puzzles through the main menu"
-        )
+    def parsePuzzle(self, filename) -> tuple[Puzzle, Solver]:
+        """Reads filename with puzzleParser and returns the puzzle with a solver for it."""
+        parser = type(self).puzzleParser
+        if parser is None:
+            raise NotImplementedError(
+                "Set puzzleParser to enable loading of puzzles through the main menu"
+            )
+        puzzle = parser(filename)
+        return puzzle, Solver(puzzle)
 
     def createActions(self):
         pass

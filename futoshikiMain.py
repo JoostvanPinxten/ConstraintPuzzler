@@ -11,13 +11,13 @@ from PySide6 import QtWidgets
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
-from solver.Solver import Solver
+from parsers import parseFutoshikiFile
 from structure.cell import PositionedCell
-from utility.puzzlefactory import PuzzleFactory
 
 
 class MainWindow(BasicMainWindow):
     puzzleTypeName = "Futoshiki"
+    puzzleParser = staticmethod(parseFutoshikiFile)
     fileFilter = "Futoshiki Files (*.txt *.fut)"
     examples = {"7x7": "futoshiki.txt"}
     defaultExample = "7x7"
@@ -42,11 +42,6 @@ class MainWindow(BasicMainWindow):
                 self.puzzlePieces[c] = rect
                 proxy = PuzzlePieceProxy(rect)
                 self.puzzlePieceProxies[c] = proxy
-
-    def parsePuzzle(self, filename):
-        puzzle = PuzzleFactory.fromFutoshikiFile(filename)
-        solver = Solver(puzzle)
-        return puzzle, solver
 
 
 if __name__ == "__main__":

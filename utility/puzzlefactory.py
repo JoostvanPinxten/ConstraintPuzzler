@@ -4,63 +4,18 @@ Created on 5 jan. 2013
 @author: Juice
 """
 
-import re
 from math import floor
 
-from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from constraints.exactcoverconstraint import ExactCoverConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 from structure.position import Position
 from structure.puzzle import Puzzle
 
-_POSITION_PATTERN = re.compile(r"\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)")
-_INTEGER_PATTERN = re.compile(r"\(\s*(-?\d+)\s*\)")
-
-
-class PuzzleFileError(ValueError):
-    """A puzzle file could not be parsed; the message names the file and line."""
-
-    def __init__(self, filename, lineNumber, message):
-        super().__init__(f"{filename}, line {lineNumber}: {message}")
-
 
 class PuzzleFactory:
     def __init__(self):
         pass
-
-    @staticmethod
-    def parsePosition(text):
-        """Parses '(x,y)' (whitespace allowed) into a Position, or raises ValueError."""
-        match = _POSITION_PATTERN.fullmatch(text.strip())
-        if match is None:
-            raise ValueError(f"expected a cell like (x,y), got {text.strip()!r}")
-        return Position(int(match.group(1)), int(match.group(2)))
-
-    @staticmethod
-    def parsePositionList(text):
-        """Parses '(x,y);(x,y);...' (whitespace allowed) into a list of Positions,
-        or raises ValueError."""
-        return [PuzzleFactory.parsePosition(part) for part in text.split(";")]
-
-    @staticmethod
-    def parseIndex(text):
-        """Parses '(n)' (whitespace allowed) into an int, or raises ValueError."""
-        match = _INTEGER_PATTERN.fullmatch(text.strip())
-        if match is None:
-            raise ValueError(f"expected a number like (n), got {text.strip()!r}")
-        return int(match.group(1))
-
-    @staticmethod
-    def parseRange(text):
-        """Parses 'min,max' into the inclusive range of values, or raises ValueError."""
-        parts = text.split(",")
-        if len(parts) != 2:
-            raise ValueError(f"expected a range like 1,9, got {text.strip()!r}")
-        minimum, maximum = (int(part) for part in parts)
-        if minimum > maximum:
-            raise ValueError(f"range {minimum},{maximum} is empty")
-        return range(minimum, maximum + 1)
 
     @staticmethod
     def createEmptySudoku():
@@ -102,59 +57,6 @@ class PuzzleFactory:
             cell.addConstraintGroup(columns[x])
 
         return sudoku
-
-    @staticmethod
-    def fromSudokuFile(filename):
-        """Reads a 9x9 sudoku: one row per line, values separated by spaces.
-        Anything that is not one of the puzzle values (e.g. '-' or '0') is an empty cell."""
-        sudoku = PuzzleFactory.createEmptySudoku()
-        with open(filename) as f:
-            PuzzleFactory.readGridValues(sudoku, f.readlines())
-        return sudoku
-
-    @staticmethod
-    def fromFutoshikiFile(filename):
-        """Reads a square futoshiki: the grid in the sudoku file format, followed by a
-        'relativity' line and one 'x1,y1>x2,y2' line per inequality (1-based coordinates),
-        meaning that cell (x1,y1) is greater than cell (x2,y2)."""
-        with open(filename) as f:
-            lines = [line.strip() for line in f]
-
-        if "relativity" in lines:
-            split = lines.index("relativity")
-            gridLines, relationLines = lines[:split], lines[split + 1 :]
-        else:
-            gridLines, relationLines = lines, []
-        gridLines = [line for line in gridLines if line]
-
-        puzzle = PuzzleFactory.createFutoshikiPuzzle(len(gridLines))
-        PuzzleFactory.readGridValues(puzzle, gridLines)
-
-        for line in relationLines:
-            if ">" not in line:
-                continue
-            greater, lesser = [[int(v) - 1 for v in cell.split(",")] for cell in line.split(">")]
-            greaterCell = puzzle.grid.getCellFromSquareGrid(*greater)
-            lesserCell = puzzle.grid.getCellFromSquareGrid(*lesser)
-
-            cg = puzzle.addConstraintGroup("Relativity")
-            constraint = cg.addConstraint(CellGreaterThanCellConstraint)
-            cg.addCell(greaterCell)
-            cg.addCell(lesserCell)
-            constraint.setGreaterCell(greaterCell)
-            constraint.setLesserCell(lesserCell)
-
-        return puzzle
-
-    @staticmethod
-    def readGridValues(puzzle, lines):
-        """Sets the givens of a square grid: one row per line, values separated by
-        whitespace. Anything that is not one of the puzzle values is an empty cell."""
-        values = puzzle.getValues()
-        for y, line in enumerate(lines):
-            for x, el in enumerate(line.split()):
-                if el.isdigit() and int(el) in values:
-                    puzzle.grid.setConstraintGridValue(x, y, int(el))
 
     @staticmethod
     def createVerySimpleKakuro():

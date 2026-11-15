@@ -45,7 +45,7 @@ pencil-mark hints per cell, so puzzles with more than nine values only show the 
 
 ## Sudoku
 
-Parser: `PuzzleFactory.fromSudokuFile` (`utility/puzzlefactory.py`). Examples: `easySudoku.txt`,
+Parser: `parseSudokuFile` (`parsers/sudoku.py`). Examples: `easySudoku.txt`,
 `mediumSudoku.txt`, `hardSudoku.txt`.
 
 A 9×9 picture of the grid: nine lines, nine entries per line, separated by whitespace. A digit
@@ -75,7 +75,7 @@ Things to watch:
 
 ## Futoshiki
 
-Parser: `PuzzleFactory.fromFutoshikiFile` (`utility/puzzlefactory.py`). Example: `futoshiki.txt`.
+Parser: `parseFutoshikiFile` (`parsers/futoshiki.py`). Example: `futoshiki.txt`.
 
 A Futoshiki file has two parts: the grid, in the same format as a Sudoku, followed by a line
 `relativity` and the inequality signs.
@@ -112,7 +112,7 @@ with a `CellGreaterThanCellConstraint` per relation.
 
 ## Kakuro
 
-Parser: `MainWindow.parsePuzzle` in `kakuroMain.py`. Examples: `simpleKakuro.txt`,
+Parser: `parseKakuroFile` (`parsers/kakuro.py`). Examples: `simpleKakuro.txt`,
 `mediumKakuro.txt`.
 
 A Kakuro file is a list of statements, one per line. Unlike the square grids, you list the white
@@ -170,7 +170,7 @@ This happens for:
 
 ## Sumbrero
 
-Parser: `MainWindow.parsePuzzle` in `sumbreroMain.py`. Example: `simpleSumbrero.txt`.
+Parser: `parseSumbreroFile` (`parsers/sumbrero.py`). Example: `simpleSumbrero.txt`.
 
 Sumbrero uses the hexagonal grid. Like Kakuro, the file lists the cells, but a clue names a whole
 line of hexagons instead of listing its cells. Lines run in three directions:
@@ -248,19 +248,20 @@ You can also parse and solve a file without the GUI, which is handy while you ar
 puzzle:
 
 ```python
+from parsers import parseFutoshikiFile
 from solver.Solver import Solver
-from utility.puzzlefactory import PuzzleFactory
 
-puzzle = PuzzleFactory.fromFutoshikiFile("myFutoshiki.txt")  # or fromSudokuFile
+# or parseSudokuFile, parseKakuroFile, parseSumbreroFile
+puzzle = parseFutoshikiFile("myFutoshiki.txt")
 solver = Solver(puzzle, allowGuessing=True)
 print(solver.solve())  # True when solved
 for cell in puzzle.getGrid().getCells():
     print(cell.getPosition(), cell.getValue())
 ```
 
-For Kakuro and Sumbrero, `from kakuroMain import MainWindow` (or `sumbreroMain`) and
-`puzzle, solver = MainWindow.parsePuzzle(path)` do the same (this imports PySide6, but does not
-open a window).
+The parsers do not import PySide6. Each also has a `parse<Type>Lines(lines)` variant that takes
+the lines of a file, e.g. `parseKakuroLines(text.splitlines())`. The Kakuro and Sumbrero
+parsers raise `parsers.PuzzleFileError`, naming the line, when a file cannot be read.
 
 ## Defining a puzzle in Python
 
@@ -317,8 +318,8 @@ print(Solver(puzzle, allowGuessing=True).solve())
 Notes:
 
 - The order of `addCell` calls matters for square grids: `grid.getCellFromSquareGrid(x, y)`
-  (0-based) assumes the cells were added row by row, which `fromSudokuFile` and
-  `fromFutoshikiFile` rely on. For other layouts, look cells up with
+  (0-based) assumes the cells were added row by row, which `parseSudokuFile` and
+  `parseFutoshikiFile` rely on. For other layouts, look cells up with
   `grid.searchCellWithPosition(Position(x, y))`.
 - A cell can be in any number of groups, and the groups do not need to be rows or columns: any
   set of cells works. This is how you add extra regions, diagonals or cages.
@@ -331,11 +332,14 @@ To make a puzzle type available in the GUI and the launcher, you need a parser f
 format, a window that draws its cells, an example file and tests. The `/new-puzzle <name>`
 Claude Code skill scaffolds all of these. By hand:
 
-1. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that implements
-   `parsePuzzle(filename)` (returning `(puzzle, solver)`) and `initializePuzzleRepresentation()`
-   (one `ValueRectangle`, `ValueTriangle` or `ValueHexagon` per cell, see the existing
-   windows).
-2. Add an example `<name>.txt` in the repository root, and add it to `datas` in
+1. Write the parser in `parsers/<name>.py`: `parse<Name>Lines(lines)` returning a `Puzzle`, and a
+   `parse<Name>File(filename)` wrapper. Export both from `parsers/__init__.py`. The parser must not
+   import PySide6.
+2. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleTypeName`,
+   `fileFilter` and `puzzleParser = staticmethod(parse<Name>File)`, and implements
+   `initializePuzzleRepresentation()` (one `ValueRectangle`, `ValueTriangle` or `ValueHexagon`
+   per cell, see the existing windows).
+3. Add an example `<name>.txt` in the repository root, and add it to `datas` in
    `constraintpuzzler.spec` so the standalone build includes it.
-3. Register the type in the `PUZZLES` dict in `constraintPuzzlerMain.py`.
-4. Add parser tests, and the window to `tests/test_gui_smoke.py`.
+4. Register the type in the `PUZZLES` dict in `constraintPuzzlerMain.py`.
+5. Add parser tests to `parsers/tests/test_parsers.py`, and the window to `tests/test_gui_smoke.py`.
