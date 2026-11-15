@@ -8,6 +8,8 @@ import sys
 
 from PySide6 import QtWidgets
 
+from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+from gui.puzzlerepresentation.inequalitysign import InequalitySign
 from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuerectangle import ValueRectangle
 from gui.windows.basicmainwindow import BasicMainWindow
@@ -23,25 +25,44 @@ class MainWindow(BasicMainWindow):
     defaultExample = "7x7"
 
     def initializePuzzleRepresentation(self):
+        assert self.puzzle is not None
         self.scene = QtWidgets.QGraphicsScene(self)
 
         #        self.view.setScene(self.scene)
         self.puzzlePieces = {}
 
         self.cellSize = 55
-        # self.blockPadding = 3
+        # room between the cells for the inequality signs
+        self.cellGap = 22
+        self.cellPitch = self.cellSize + self.cellGap
 
         self.selectedItems = set()
 
         for c in self.puzzle.grid.getCells():
             if isinstance(c, PositionedCell):
-                rect = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellSize)
+                rect = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellPitch)
                 self.scene.addItem(rect)
                 c.valueChanged.connect(self.cellValueChanged)
                 c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
                 self.puzzlePieces[c] = rect
                 proxy = PuzzlePieceProxy(rect)
                 self.puzzlePieceProxies[c] = proxy
+
+        self.inequalitySigns = {}
+        for constraint in self.puzzle.getConstraints():
+            if isinstance(constraint, CellGreaterThanCellConstraint):
+                sign = InequalitySign(
+                    self.cellCenter(constraint.greaterCell),
+                    self.cellCenter(constraint.lesserCell),
+                    depth=self.cellGap * 0.45,
+                    width=self.cellGap * 0.8,
+                )
+                self.scene.addItem(sign)
+                self.inequalitySigns[constraint] = sign
+
+    def cellCenter(self, cell):
+        rect = self.puzzlePieces[cell].rect()
+        return rect.center()
 
 
 if __name__ == "__main__":

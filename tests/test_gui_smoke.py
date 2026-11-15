@@ -144,6 +144,62 @@ class SumbreroWindowTest(unittest.TestCase):
             self.assertEqual(piece.valueTextItem.opacity(), 1)
 
 
+class FutoshikiWindowTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def setUp(self):
+        import futoshikiMain
+
+        self.window = futoshikiMain.MainWindow()
+        self.window.loadPuzzle(str(REPO_ROOT / "futoshiki.txt"))
+        self.addCleanup(self.window.deleteLater)
+        self.addCleanup(self.window.close)
+        assert self.window.puzzle is not None
+        self.puzzle = self.window.puzzle
+
+    def test_every_inequality_has_a_sign_pointing_to_the_lesser_cell(self):
+        from math import hypot
+
+        from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
+
+        inequalities = [
+            c for c in self.puzzle.getConstraints() if isinstance(c, CellGreaterThanCellConstraint)
+        ]
+        self.assertEqual(len(inequalities), 24)  # the relations in futoshiki.txt
+        self.assertEqual(set(self.window.inequalitySigns), set(inequalities))
+
+        cellRects = [piece.sceneBoundingRect() for piece in self.window.puzzlePieces.values()]
+        for constraint, sign in self.window.inequalitySigns.items():
+            greater = self.window.puzzlePieces[constraint.greaterCell].rect().center()
+            lesser = self.window.puzzlePieces[constraint.lesserCell].rect().center()
+
+            def distance(a, b):
+                return hypot(a.x() - b.x(), a.y() - b.y())
+
+            self.assertLess(distance(sign.tip, lesser), distance(sign.tip, greater))
+            # the sign is drawn in the gap between the cells, not on top of one
+            outline = sign.path().boundingRect()
+            for rect in cellRects:
+                self.assertFalse(rect.intersects(outline), constraint)
+
+    def test_example_relation_is_drawn_between_the_right_cells(self):
+        # futoshiki.txt: "2,1>3,1" (1-based x,y): (2,1) is greater than its right neighbour
+        greater = self.puzzle.grid.getCellFromSquareGrid(1, 0)
+        lesser = self.puzzle.grid.getCellFromSquareGrid(2, 0)
+        (sign,) = [
+            s
+            for c, s in self.window.inequalitySigns.items()
+            if c.greaterCell is greater and c.lesserCell is lesser
+        ]
+        greaterRect = self.window.puzzlePieces[greater].rect()
+        lesserRect = self.window.puzzlePieces[lesser].rect()
+        self.assertGreater(sign.tip.x(), greaterRect.right())
+        self.assertLess(sign.tip.x(), lesserRect.left())
+        self.assertAlmostEqual(sign.tip.y(), greaterRect.center().y())
+
+
 class SelectionHighlightTest(unittest.TestCase):
     """Selecting an item in the puzzle tree colours its cells and explains it below the tree."""
 
