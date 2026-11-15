@@ -19,6 +19,20 @@ class PuzzleSettingsTest(unittest.TestCase):
         self.assertEqual(received, [True, False])
         self.assertFalse(settings.allowGuessing)
 
+    def test_hints_are_shown_by_default(self):
+        self.assertTrue(PuzzleSettings().showHints)
+
+    def test_show_hints_change_emits_signal_once(self):
+        settings = PuzzleSettings()
+        received = []
+        settings.showHintsChanged.connect(received.append)
+
+        settings.setShowHints(False)
+        settings.showHints = False  # unchanged: no second emission
+        settings.setShowHints(True)
+
+        self.assertEqual(received, [False, True])
+
 
 if __name__ == "__main__":
     unittest.main()

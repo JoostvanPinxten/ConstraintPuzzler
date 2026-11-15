@@ -306,6 +306,52 @@ class SelectionHighlightTest(unittest.TestCase):
         self.assertEqual(self.brushColor(cell).alpha(), 0)
         self.assertIn("Click a cell", self.window.selectionInfoLabel.text())
 
+    def test_show_hints_toggles_cell_candidates_and_explanations(self):
+        from gui.puzzlemodel.puzzletreemodel import CellProxyItem
+
+        gridIndex = self.model.index(0, 0, self.puzzleIndex)
+        # the first open cell of the grid
+        for row in range(self.model.rowCount(gridIndex)):
+            openIndex = self.model.index(row, 0, gridIndex)
+            cellItem = self.model.getItem(openIndex)
+            assert isinstance(cellItem, CellProxyItem)
+            if not cellItem.cell.hasValue():
+                break
+        else:
+            self.fail("the example has no open cell")
+        piece = self.window.puzzlePieces[cellItem.cell]
+        self.select(openIndex)
+        label = self.window.selectionInfoLabel
+
+        def visibleHints():
+            return [v for v, item in piece.hintValueItemMap.items() if item.opacity() > 0]
+
+        def tooltip() -> str:
+            return str(self.model.data(openIndex, QtCore.Qt.ItemDataRole.ToolTipRole))
+
+        self.assertTrue(self.window.showHintsAction.isChecked())
+        self.assertTrue(visibleHints())
+        self.assertIn("Candidates:", label.text())
+        self.assertIn("Candidates:", tooltip())
+
+        self.window.showHintsAction.setChecked(False)
+        self.assertFalse(self.window.settings.showHints)
+        self.assertEqual(visibleHints(), [])
+        self.assertNotIn("Candidates", label.text())
+        self.assertIn("Open", label.text())
+        self.assertNotIn("Candidates", tooltip())
+
+        self.window.showHintsAction.setChecked(True)
+        self.assertTrue(visibleHints())
+        self.assertIn("Candidates:", label.text())
+
+    def test_hints_setting_applies_to_a_newly_loaded_puzzle(self):
+        self.window.settings.setShowHints(False)
+        self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
+        self.assertFalse(self.window.constraintModel.showHints)
+        for piece in self.window.puzzlePieces.values():
+            self.assertFalse(piece.hintsEnabled)
+
 
 class CellInputTest(unittest.TestCase):
     """Clicking a cell selects it; typing a number enters a value in it."""
@@ -518,6 +564,30 @@ class LauncherSmokeTest(unittest.TestCase):
         sudoku.solveButtonClicked()
         assert sudoku.solver is not None
         self.assertFalse(sudoku.solver.allowGuessing)
+
+    def test_show_hints_is_shared(self):
+        sudoku = self.launcher.openPuzzle("sudoku")
+        kakuro = self.launcher.openPuzzle("kakuro")  # its sum triangles have no hints
+
+        self.launcher.showHintsAction.setChecked(False)
+        for window in (sudoku, kakuro):
+            self.assertFalse(window.showHintsAction.isChecked())
+            self.assertFalse(window.constraintModel.showHints)
+        self.assertFalse(any(p.hintsEnabled for p in sudoku.puzzlePieces.values()))
+
+        sudoku.showHintsAction.setChecked(True)
+        self.assertTrue(self.launcher.showHintsAction.isChecked())
+        self.assertTrue(kakuro.constraintModel.showHints)
+
+        # Ctrl+H works in a tab: only the launcher has the shortcut, so it is not ambiguous
+        self.launcher.activateWindow()
+        kakuro.ui.puzzleTreeView.setFocus()
+        QtTest.QTest.keyClick(
+            kakuro.ui.puzzleTreeView,
+            QtCore.Qt.Key.Key_H,
+            QtCore.Qt.KeyboardModifier.ControlModifier,
+        )
+        self.assertFalse(self.launcher.settings.showHints)
 
     def test_examples_are_marked_as_examples(self):
         for name, (_label, windowClass) in self.launcherModule.PUZZLES.items():

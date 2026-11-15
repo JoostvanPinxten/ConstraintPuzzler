@@ -19,11 +19,15 @@ def _cellCounts(cells):
     return f"{len(cells)} cells: {filled} filled, {len(cells) - filled} open"
 
 
-def describeCell(cell):
-    """Rich text describing the value or the candidates of a cell and its groups."""
+def describeCell(cell, showHints=True):
+    """Rich text describing the value or the candidates of a cell and its groups.
+
+    With showHints False, the candidates of an open cell are not listed."""
     if cell.hasValue():
         how = "deduced" if cell.isInferred() else "entered" if cell.isEntered() else "given"
         state = f"Value: {cell.getValue()} ({how})"
+    elif not showHints:
+        state = "Open"
     else:
         candidates = ", ".join(str(v) for v in sorted(cell.getPossibleValues()))
         state = f"Candidates: {candidates}"
@@ -39,6 +43,8 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.root = ConstraintPuzzleRootItem()
+        # whether the tooltips mention the candidate values of open cells
+        self.showHints = True
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         parentItem = self.getItem(parent)
@@ -100,7 +106,7 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
             else:
                 return item.getIcon()
         elif role == Qt.ItemDataRole.ToolTipRole:
-            return self.getItem(index).describe()
+            return self.getItem(index).describe(self.showHints)
         else:
             return None
 
@@ -161,8 +167,10 @@ class ProxyItem(QtCore.QObject):
     def getIcon(self):
         return QtGui.QColor(255, 255, 255)
 
-    def describe(self):
-        """Rich text that explains the item (shown as tooltip and below the tree)."""
+    def describe(self, showHints=True):
+        """Rich text that explains the item (shown as tooltip and below the tree).
+
+        With showHints False, the text leaves out the candidate values of open cells."""
         return f"<b>{html.escape(str(self.getName()))}</b> ({html.escape(str(self.getType()))})"
 
     def setParent(self, parent):
@@ -198,7 +206,7 @@ class PuzzleProxyItem(ProxyItem):
     def getType(self):
         return self.tr("Puzzle")
 
-    def describe(self):
+    def describe(self, showHints=True):
         cells = self.puzzle.getGrid().getCells()
         groups = len(self.puzzle.getConstraintGroups())
         return (
@@ -230,7 +238,7 @@ class GridProxyItem(ProxyItem):
     def getPuzzle(self):
         return self.parent()
 
-    def describe(self):
+    def describe(self, showHints=True):
         return f"<b>Grid</b><br>{_cellCounts(self.grid.getCells())}"
 
     def getItem(self):
@@ -259,8 +267,8 @@ class CellProxyItem(ProxyItem):
         s.add(self.cell)
         return s
 
-    def describe(self):
-        return describeCell(self.cell)
+    def describe(self, showHints=True):
+        return describeCell(self.cell, showHints)
 
     def getItem(self):
         return self.cell
@@ -288,8 +296,8 @@ class ReferencedCellProxyItem(ProxyItem):
         s.add(self.cell)
         return s
 
-    def describe(self):
-        return describeCell(self.cell)
+    def describe(self, showHints=True):
+        return describeCell(self.cell, showHints)
 
     def getItem(self):
         return self.cell
@@ -309,9 +317,11 @@ class ConstraintGroupProxyItem(ProxyItem):
     def getType(self):
         return self.tr("Constraint Group")
 
-    def describe(self):
+    def describe(self, showHints=True):
         group = self.constraintGroup
-        rules = "".join(f"<li>{html.escape(c.describe())}</li>" for c in group.getConstraints())
+        rules = "".join(
+            f"<li>{html.escape(c.describe(showHints))}</li>" for c in group.getConstraints()
+        )
         return (
             f"<b>{html.escape(group.getName())}</b> (constraint group)<br>"
             f"{_cellCounts(group.getCells())}<ul>{rules}</ul>"
@@ -343,12 +353,12 @@ class ConstraintProxyItem(ProxyItem):
     def getCells(self):
         return self.parent().getCells()
 
-    def describe(self):
+    def describe(self, showHints=True):
         group = self.constraint.group
         return (
             f"<b>{html.escape(self.constraint.summary())}</b> "
             f"({html.escape(self.constraint.getType())})<br>"
-            f"{html.escape(self.constraint.describe())}<br>"
+            f"{html.escape(self.constraint.describe(showHints))}<br>"
             f"Group {html.escape(group.getName())}: {_cellCounts(group.getCells())}"
         )
 

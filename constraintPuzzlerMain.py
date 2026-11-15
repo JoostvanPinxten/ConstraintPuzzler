@@ -18,7 +18,7 @@ import futoshikiMain
 import kakuroMain
 import sudokuMain
 import sumbreroMain
-from gui.settings import PuzzleSettings
+from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.windows.basicmainwindow import BasicMainWindow, appIcon
 from utility.version import APP_NAME, getVersion
 
@@ -139,6 +139,9 @@ class LauncherWindow(QtWidgets.QMainWindow):
         quitAction.setShortcut(QtGui.QKeySequence.StandardKey.Quit)
         quitAction.setMenuRole(QtGui.QAction.MenuRole.QuitRole)
         quitAction.triggered.connect(self.close)
+
+        viewMenu = self.menuBar().addMenu("View")
+        self.showHintsAction = addShowHintsAction(viewMenu, self.settings)
 
         solverMenu = self.menuBar().addMenu("Solver")
         self.allowGuessingAction = solverMenu.addAction("Allow guessing (backtracking)")

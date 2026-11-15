@@ -56,13 +56,15 @@ class CellGreaterThanCellConstraint(Constraint):
             return "smaller than (cells not set)"
         return f"({self.lesserCell.getName()}) < ({self.greaterCell.getName()})"
 
-    def describe(self):
+    def describe(self, showHints=True):
         if self.lesserCell is None or self.greaterCell is None:
             return "The cells of this constraint have not been set."
         lesser, greater = self.lesserCell, self.greaterCell
         text = f"Cell ({lesser.getName()}) is smaller than cell ({greater.getName()})"
         if lesser.hasValue() and greater.hasValue():
             return f"{text}; satisfied: {lesser.getValue()} < {greater.getValue()}."
+        if not showHints:
+            return f"{text}."
         return (
             f"{text}; candidates {formatValues(lesser.getPossibleValues())}"
             f" < {formatValues(greater.getPossibleValues())}."

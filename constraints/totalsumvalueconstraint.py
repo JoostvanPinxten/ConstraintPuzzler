@@ -95,7 +95,7 @@ class TotalSumValueConstraint(Constraint):
             return set(filled)
         return set()
 
-    def describe(self):
+    def describe(self, showHints=True):
         if self.totalValue is None:
             return "The total of this sum has not been set."
         cells = self.group.getCells()
@@ -110,6 +110,8 @@ class TotalSumValueConstraint(Constraint):
             text += f"; {sum(placed)} is placed, so {left} is left for {openCount} open {cellWord}"
         else:
             text += f" over {openCount} open {cellWord}"
+        if not showHints:
+            return f"{text}."
         # the values that can still complete the sum (without changing any state)
         candidates = set(self.values) & self.applyConstraintRecursively(left, openCount, placed)
         return f"{text}; candidates: {formatValues(candidates)}."

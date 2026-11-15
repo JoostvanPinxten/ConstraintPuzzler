@@ -23,7 +23,7 @@ from gui.puzzlemodel.puzzletreemodel import (
     ReferencedCellProxyItem,
     buildPuzzleTree,
 )
-from gui.settings import PuzzleSettings
+from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.ui import mainWindowUi
 from solver.Solver import Solver
 from structure.entries import EntryError, UserEntries
@@ -106,11 +106,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
         self.createActions()
         self.createMenus()
+        self.createViewMenu()
         self.createSolverMenu()
         self.createHelpMenu()
         self.createStatusBar()
         self.createSelectionInfo()
         self.createCellInput()
+        self.settings.showHintsChanged.connect(self.applyShowHints)
 
         if embedded:
             self.setWindowFlags(QtCore.Qt.WindowType.Widget)
@@ -146,6 +148,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
         # create a new PuzzleModel, presenting the puzzle in the tree view
         self.constraintModel = ConstraintPuzzleModel()
+        self.constraintModel.showHints = self.settings.showHints
         buildPuzzleTree(self.puzzle, self.constraintModel.getItem(QtCore.QModelIndex()))
         self.ui.puzzleTreeView.setModel(self.constraintModel)
         self.fitTreeNameColumn()
@@ -157,6 +160,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.stopHighlightAnimation()
         self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
+        self.applyShowHints(self.settings.showHints)
         self.highlightRoles = {}
         self.userEntries = UserEntries(self.puzzle)
         self.inputMessage = None
@@ -218,6 +222,25 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         )
         if fileName:
             self.loadPuzzle(fileName)
+
+    def createViewMenu(self):
+        viewMenu = self.menuBar().addMenu("View")
+        # an embedded window's launcher has the shortcut
+        self.showHintsAction = addShowHintsAction(
+            viewMenu, self.settings, shortcut=not self.embedded
+        )
+
+    def applyShowHints(self, show: bool):
+        """Show or hide the candidate values in the cells and in the explanations."""
+        if self.puzzle is None:
+            return
+        for piece in self.puzzlePieces.values():
+            # only the cells have hints, not e.g. the Kakuro sum triangles
+            setHintsEnabled = getattr(piece, "setHintsEnabled", None)
+            if setHintsEnabled is not None:
+                setHintsEnabled(show)
+        self.constraintModel.showHints = show
+        self.updateSelectionInfo()
 
     def createSolverMenu(self):
         solverMenu = self.menuBar().addMenu("Solver")
@@ -364,7 +387,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 " to see its cells and rules."
             )
             return
-        parts = [self.constraintModel.getItem(index).describe() for index in rows]
+        showHints = self.settings.showHints
+        parts = [self.constraintModel.getItem(index).describe(showHints) for index in rows]
         cell = self.selectedCell()
         if cell is not None and not cell.isGiven():
             parts.append("<i>Type a number to enter it; Delete clears the cell.</i>")

@@ -47,7 +47,7 @@ class NonogramConstraint(Constraint):
     def summary(self):
         return "runs " + ", ".join(str(x) for x in getattr(self, "adjacencies", []))
 
-    def describe(self):
+    def describe(self, showHints=True):
         return f"Filled runs of lengths {', '.join(str(x) for x in self.adjacencies)}, in order."
 
     #    def getAllowedValuesForValueList(self, allowedValues, usedValues):

@@ -37,7 +37,7 @@ class UniqueValueConstraint(Constraint):
                 cellsByValue.setdefault(value, []).append(cell)
         return {c for cells in cellsByValue.values() if len(cells) > 1 for c in cells}
 
-    def describe(self):
+    def describe(self, showHints=True):
         placed = placedValues(self.group.getCells())
         if not placed:
             return "The values must all differ; nothing is placed yet."
