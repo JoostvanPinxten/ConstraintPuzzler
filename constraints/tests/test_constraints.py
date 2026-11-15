@@ -48,10 +48,13 @@ class Test(unittest.TestCase):
     def testUVCWithSudoku(self):
         sudoku = PuzzleFactory.createEmptySudoku()
         
-        for i in range(1,10):
-            sudoku.grid.setConstraintGridValue(i,0,i)
-            
-        possibleValues = sudoku.grid.getCellFromSquareGrid(9, 0).getPossibleValues()
+        # fill the first 8 cells of the top row with 1..8; the last one must become 9
+        for x in range(0, 8):
+            sudoku.grid.setConstraintGridValue(x, 0, x + 1)
+
+        lastCell = sudoku.grid.getCellFromSquareGrid(8, 0)
+        self.assertFalse(lastCell.hasValue(), "Test setup must leave the last cell open")
+        possibleValues = lastCell.getPossibleValues()
 
         self.assertEqual(possibleValues, set([9]), 
                          "Exact cover failed to identify single value")
