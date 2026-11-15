@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="doc/logo/constraintpuzzler-logo.svg" alt="ConstraintPuzzler - the power of deduction" width="560">
+</p>
+
 ConstraintPuzzler - the power of deduction
 ==========================================
 
@@ -40,13 +44,13 @@ Start one of the GUIs with its example puzzle:
 
 | Command | Puzzle |
 |---|---|
-| `uv run python constraintPuzzlerMain.py` | Launcher: choose any puzzle (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero`) |
+| `uv run python constraintPuzzlerMain.py` | Launcher: one window with a tab per puzzle. Open any number of puzzles via the start page, *File > New puzzle* or the **+** button, and close them with the tab's close button (or pass `--puzzle sudoku\|kakuro\|futoshiki\|sumbrero` to open one directly) |
 | `uv run python sudokuMain.py` | Sudoku; use *File > Open Sudoku* to load e.g. `easySudoku.txt` or `hardSudoku.txt` |
 | `uv run python futoshikiMain.py` | Futoshiki, loads `futoshiki.txt` |
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
 | `uv run python sumbreroMain.py` | Sumbrero (work in progress), loads `simpleSumbrero.txt` |
 
-Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck. If the puzzle turns out to be contradictory, a message explains why.
+Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck (in the launcher this setting applies to all open tabs). If the puzzle turns out to be contradictory, a message explains why.
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle.
 
@@ -84,7 +88,7 @@ uv version --bump minor              # or patch / major; also updates uv.lock
 git commit -am "Release vX.Y.Z"      # via a pull request
 git tag vX.Y.Z && git push origin vX.Y.Z   # after merging, on master
 ```
-Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `pyproject.toml`, builds a PyInstaller bundle on Windows, Linux and macOS, smoke-tests each executable (`--smoke-test`) and publishes the archives as a GitHub Release. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts.
+Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `pyproject.toml`, builds a PyInstaller bundle on Windows, Linux and macOS, smoke-tests each executable (`--smoke-test`) and publishes the archives as a GitHub Release. If a release for the tag already exists (for example, one you created by hand), the archives are attached to it. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts.
 
 To build locally: `uv run python -m PyInstaller constraintpuzzler.spec --noconfirm`. The result ends up in `dist/`.
 

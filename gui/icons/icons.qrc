@@ -3,5 +3,9 @@
         <file alias="cellIcon">cell.png</file>
         <file alias="constraintIcon">constraint.png</file>
         <file alias="gridIcon">grid.png</file>
+        <file alias="appIcon16">app-16.png</file>
+        <file alias="appIcon32">app-32.png</file>
+        <file alias="appIcon64">app-64.png</file>
+        <file alias="appIcon256">app-256.png</file>
     </qresource>
 </RCC>

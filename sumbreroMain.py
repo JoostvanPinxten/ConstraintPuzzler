@@ -95,6 +95,9 @@ def clueLayout(puzzle):
 
 
 class MainWindow(BasicMainWindow):
+    puzzleTypeName = "Sumbrero"
+    fileFilter = "Sumbrero Files (*.txt)"
+
     def hexScenePosition(self, position):
         """Scene coordinates of the hexagon at position"""
         # see for an explanation of the rotated version (i.e. horizontal iso vertical):

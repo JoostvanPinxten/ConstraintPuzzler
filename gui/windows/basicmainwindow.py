@@ -19,9 +19,18 @@ from gui.puzzlemodel.puzzletreemodel import (
     ReferencedCellProxyItem,
     buildPuzzleTree,
 )
+from gui.settings import PuzzleSettings
 from gui.ui import mainWindowUi
 from structure.errors import ContradictionError
 from utility.version import APP_NAME, getVersion
+
+
+def appIcon() -> QtGui.QIcon:
+    """The ConstraintPuzzler logo, at every size bundled in the icon resources."""
+    icon = QtGui.QIcon()
+    for size in (16, 32, 64, 256):
+        icon.addFile(f":/icons/appIcon{size}", QtCore.QSize(size, size))
+    return icon
 
 
 class BasicMainWindow(QtWidgets.QMainWindow):
@@ -30,6 +39,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
 
+    # Set by subclasses: shown in the File menu and the open-file dialog
+    puzzleTypeName = "Puzzle"
+    fileFilter = "Puzzle Files (*.txt)"
+
     showNextSelectionState = QtCore.Signal()
 
     # Set by subclasses in initializePuzzleRepresentation()
@@ -37,12 +50,22 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     puzzlePieces: dict
     selectedItems: set
 
-    def __init__(self):
+    def __init__(self, settings: PuzzleSettings | None = None, embedded: bool = False):
+        """Create a puzzle window.
+
+        settings: solver settings, shared with other puzzles (a new instance when omitted).
+        embedded: the window is a page inside another window (a launcher tab), which provides
+        the menus; this window then hides its own menu and status bar.
+        """
         super().__init__()
+        self.settings = settings if settings is not None else PuzzleSettings(self)
+        self.embedded = embedded
+        self.puzzleFile: str | None = None
         self.ui = mainWindowUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.setWindowTitle(f"{APP_NAME} {getVersion()}")
+        self.setWindowIcon(appIcon())
 
         #        self.recentFileActs = []
         #
@@ -84,12 +107,22 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.createHelpMenu()
         self.createStatusBar()
 
+        if embedded:
+            self.setWindowFlags(QtCore.Qt.WindowType.Widget)
+            self.menuBar().hide()
+            self.statusBar().hide()
+            # keep the structure dock inside the tab: it can neither float away nor be closed
+            self.ui.puzzleStructureDockWidget.setFeatures(
+                QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable
+            )
+
     #
     #        self.setWindowTitle("Constraints solver")
     #        self.resize(800, 600)
 
     def loadPuzzle(self, filename):
         self.puzzle, self.solver = self.parsePuzzle(filename)
+        self.puzzleFile = filename
 
         # create a new PuzzleModel, presenting the puzzle in the tree view
         self.constraintModel = ConstraintPuzzleModel()
@@ -102,6 +135,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         # one animation proxy per cell of the current puzzle
         self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
+        # The puzzle is drawn in black on a transparent background, so with a dark palette it
+        # would be black on black. Give the puzzle a fixed white background regardless of theme.
+        self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
         self.ui.puzzleGraphicsView.setScene(self.scene)
 
     def parsePuzzle(self, filename):
@@ -113,12 +149,24 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         pass
 
     def createMenus(self):
-        pass
+        fileMenu = self.menuBar().addMenu("File")
+        openAction = fileMenu.addAction(f"Open {self.puzzleTypeName}...")
+        openAction.triggered.connect(self.openPuzzleDialog)
+
+    def openPuzzleDialog(self):
+        fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, f"Open {self.puzzleTypeName}", "", self.fileFilter
+        )
+        if fileName:
+            self.loadPuzzle(fileName)
 
     def createSolverMenu(self):
         solverMenu = self.menuBar().addMenu("Solver")
         self.allowGuessingAction = solverMenu.addAction("Allow guessing (backtracking)")
         self.allowGuessingAction.setCheckable(True)
+        self.allowGuessingAction.setChecked(self.settings.allowGuessing)
+        self.allowGuessingAction.toggled.connect(self.settings.setAllowGuessing)
+        self.settings.allowGuessingChanged.connect(self.allowGuessingAction.setChecked)
 
     def createHelpMenu(self):
         helpMenu = self.menuBar().addMenu("Help")
@@ -246,7 +294,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def solveButtonClicked(self):
         if self.solver is not None:
-            self.solver.allowGuessing = self.allowGuessingAction.isChecked()
+            self.solver.allowGuessing = self.settings.allowGuessing
             try:
                 self.solver.solve()
             except ContradictionError as e:

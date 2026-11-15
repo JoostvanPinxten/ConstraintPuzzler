@@ -18,17 +18,8 @@ from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
-    def createMenus(self):
-        f = self.menuBar().addMenu("File")
-        openFutoshiki = f.addAction("Open Futoshiki")
-        openFutoshiki.triggered.connect(self.openFutoshiki)
-
-    def openFutoshiki(self):
-        fileName = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Open Futoshiki", "", "Futoshiki Files (*.txt *.fut)"
-        )
-        if fileName[0]:
-            self.loadPuzzle(fileName[0])
+    puzzleTypeName = "Futoshiki"
+    fileFilter = "Futoshiki Files (*.txt *.fut)"
 
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)

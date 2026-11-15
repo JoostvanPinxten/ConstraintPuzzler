@@ -222,14 +222,20 @@ the last cell if that spot is taken, or one step further out.
 
 ## Opening your own puzzle file
 
-| Puzzle | How to open a file |
-|---|---|
-| Sudoku | *File > Open Sudoku* (`*.txt`, `*.sud`) |
-| Futoshiki | *File > Open Futoshiki* (`*.txt`, `*.fut`) |
-| Kakuro, Sumbrero | No menu yet: they open their bundled example. Change the file name in the `__main__` block of `kakuroMain.py` / `sumbreroMain.py`, or load it from Python (below). |
+In the launcher (`constraintPuzzlerMain.py`, the standalone executable), use
+*File > Open file > Sudoku... / Futoshiki... / Kakuro... / Sumbrero...*. The puzzle opens in a new
+tab. A file that cannot be read shows a *Cannot open puzzle* message with the error, which for
+Kakuro and Sumbrero names the line. The separate `*Main.py` windows have the same option as
+*File > Open <puzzle>...*.
 
-You can also parse and solve a file without the GUI, which gives clearer error messages while
-you are writing a puzzle:
+| Puzzle | File types offered |
+|---|---|
+| Sudoku | `*.txt`, `*.sud` |
+| Futoshiki | `*.txt`, `*.fut` |
+| Kakuro, Sumbrero | `*.txt` |
+
+You can also parse and solve a file without the GUI, which is handy while you are writing a
+puzzle:
 
 ```python
 from solver.Solver import Solver
@@ -242,8 +248,9 @@ for cell in puzzle.getGrid().getCells():
     print(cell.getPosition(), cell.getValue())
 ```
 
-For Kakuro, `from kakuroMain import MainWindow` and `puzzle, solver = MainWindow.parsePuzzle(path)`
-do the same (this imports PySide6, but does not open a window).
+For Kakuro and Sumbrero, `from kakuroMain import MainWindow` (or `sumbreroMain`) and
+`puzzle, solver = MainWindow.parsePuzzle(path)` do the same (this imports PySide6, but does not
+open a window).
 
 ## Defining a puzzle in Python
 

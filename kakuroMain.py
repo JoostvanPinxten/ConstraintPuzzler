@@ -18,6 +18,9 @@ from utility.resources import resourcePath
 
 
 class MainWindow(BasicMainWindow):
+    puzzleTypeName = "Kakuro"
+    fileFilter = "Kakuro Files (*.txt)"
+
     def initializePuzzleRepresentation(self):
         self.scene = QtWidgets.QGraphicsScene(self)
 
