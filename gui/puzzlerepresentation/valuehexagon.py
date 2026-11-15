@@ -9,6 +9,7 @@ from math import cos, floor, pi, sin, sqrt
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from constraints import Constraint
+from gui.puzzlerepresentation.valuerectangle import ENTERED_VALUE_COLOR, VIOLATION_COLOR
 from structure.cell import Cell
 
 
@@ -120,6 +121,8 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
             else:
                 f.setWeight(QtGui.QFont.Weight.ExtraLight)
                 self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.Blue)
+            if isinstance(self.cell, Cell) and self.cell.isEntered():
+                self.valueTextItem.setDefaultTextColor(ENTERED_VALUE_COLOR)
 
         else:
             self.valueTextItem.setOpacity(0)
@@ -142,3 +145,16 @@ class ValueHexagon(QtWidgets.QGraphicsPolygonItem):
     def hideHints(self):
         for val in self.values:
             self.hintValueItemMap[val].setOpacity(0)
+
+    def showMistake(self, value):
+        """Show a value typed in by the user that does not fit (it is not in the model)."""
+        self.hideHints()
+        self.valueTextItem.setOpacity(1)
+        self.valueTextItem.setPlainText(str(value))
+        centerTextItem(self.valueTextItem)
+        self.placeValueText()
+        self.markViolation()
+
+    def markViolation(self):
+        """Draw the value in red: it breaks a rule of the puzzle."""
+        self.valueTextItem.setDefaultTextColor(VIOLATION_COLOR)

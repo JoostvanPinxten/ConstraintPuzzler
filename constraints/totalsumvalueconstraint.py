@@ -83,6 +83,18 @@ class TotalSumValueConstraint(Constraint):
     def summary(self):
         return f"sum = {self.totalValue}"
 
+    def violations(self, valueOf):
+        """All filled cells, when they already add up to more than the total, or when the
+        group is complete and does not add up to the total."""
+        if self.totalValue is None:
+            return set()
+        cells = self.group.getCells()
+        filled = [c for c in cells if valueOf(c) is not None]
+        total = sum(valueOf(c) for c in filled)
+        if total > self.totalValue or (len(filled) == len(cells) and total != self.totalValue):
+            return set(filled)
+        return set()
+
     def describe(self):
         if self.totalValue is None:
             return "The total of this sum has not been set."

@@ -4,6 +4,7 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
+import html
 import os
 import platform
 from collections.abc import Callable
@@ -25,6 +26,7 @@ from gui.puzzlemodel.puzzletreemodel import (
 from gui.settings import PuzzleSettings
 from gui.ui import mainWindowUi
 from solver.Solver import Solver
+from structure.entries import EntryError, UserEntries
 from structure.errors import ContradictionError
 from structure.puzzle import Puzzle
 from utility.resources import resourcePath
@@ -100,6 +102,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.createHelpMenu()
         self.createStatusBar()
         self.createSelectionInfo()
+        self.createCellInput()
 
         if embedded:
             self.setWindowFlags(QtCore.Qt.WindowType.Widget)
@@ -146,6 +149,22 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
         self.highlightRoles = {}
+        self.userEntries = UserEntries(self.puzzle)
+        self.inputMessage = None
+        self.violations = set()
+        # to find the cell under the mouse, and the tree row of a cell
+        self.pieceCells = {
+            proxy.getPuzzlePiece(): cell for cell, proxy in self.puzzlePieceProxies.items()
+        }
+        puzzleIndex = self.constraintModel.index(0, 0, QtCore.QModelIndex())
+        gridIndex = self.constraintModel.index(0, 0, puzzleIndex)
+        self.cellIndexes = {}
+        for row in range(self.constraintModel.rowCount(gridIndex)):
+            index = self.constraintModel.index(row, 0, gridIndex)
+            item = self.constraintModel.getItem(index)
+            if isinstance(item, CellProxyItem):
+                self.cellIndexes[item.cell] = index
+        self.refreshCellStyles()
         self.updateSelectionInfo()
         # The puzzle is drawn in black on a transparent background, so with a dark palette it
         # would be black on black. Give the puzzle a fixed white background regardless of theme.
@@ -215,6 +234,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def showSelectionInPuzzleView(self, selectedItems, deselectedItems):
         selectionChanged = False
+        # a message about entering a value belongs to the previous selection
+        self.inputMessage = None
 
         # update the selected cells:
         for itemRange in selectedItems:
@@ -322,14 +343,147 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         rows = selectionModel.selectedRows(0) if selectionModel is not None else []
         if not rows:
             self.selectionInfoLabel.setText(
-                "Select a cell, group or constraint in the tree to see its cells and rules."
+                "Click a cell in the puzzle, or select a cell, group or constraint in the tree"
+                " to see its cells and rules."
             )
             return
         parts = [self.constraintModel.getItem(index).describe() for index in rows]
+        cell = self.selectedCell()
+        if cell is not None and not cell.isGiven():
+            parts.append("<i>Type a number to enter it; Delete clears the cell.</i>")
+        note = self.violationNote(cell) if cell is not None else None
+        if note:
+            parts.append(f'<span style="color:#c00000">{html.escape(note)}</span>')
+        if self.inputMessage:
+            parts.append(f'<span style="color:#c00000">{html.escape(self.inputMessage)}</span>')
         legend = legendHtml(self.highlightRoles.values())
         if legend:
             parts.append(legend)
         self.selectionInfoLabel.setText("<br>".join(parts))
+
+    def createCellInput(self):
+        """Clicking a cell selects it; typing a number enters it in the selected cell."""
+        self.userEntries: UserEntries | None = None
+        self.inputMessage: str | None = None
+        # the cells whose shown value breaks a rule (drawn in red)
+        self.violations = set()
+        self.pieceCells = {}
+        self.cellIndexes = {}
+        view = self.ui.puzzleGraphicsView
+        view.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
+        view.viewport().installEventFilter(self)
+        view.installEventFilter(self)
+        self.ui.puzzleTreeView.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        view = self.ui.puzzleGraphicsView
+        if (
+            watched is view.viewport()
+            and event.type() == QtCore.QEvent.Type.MouseButtonPress
+            and event.button() == QtCore.Qt.MouseButton.LeftButton
+        ):
+            self.selectCell(self.cellAt(view.mapToScene(event.position().toPoint())))
+            view.setFocus()
+        elif (
+            watched in (view, self.ui.puzzleTreeView)
+            and event.type() == QtCore.QEvent.Type.KeyPress
+            and self.handleCellKey(event)
+        ):
+            return True
+        return super().eventFilter(watched, event)
+
+    def cellAt(self, scenePosition):
+        """The cell drawn at a position in the scene (or None)."""
+        for item in self.scene.items(scenePosition):
+            # the value and hint texts are children of the cell's shape
+            while item is not None:
+                if item in self.pieceCells:
+                    return self.pieceCells[item]
+                item = item.parentItem()
+        return None
+
+    def selectCell(self, cell):
+        """Select a cell in the tree (which highlights it), or clear the selection for None."""
+        tree = self.ui.puzzleTreeView
+        if cell is None or cell not in self.cellIndexes:
+            if tree.selectionModel() is not None:
+                tree.selectionModel().clearSelection()
+            return
+        index = self.cellIndexes[cell]
+        tree.setCurrentIndex(index)
+        tree.scrollTo(index)
+
+    def selectedCell(self):
+        """The cell selected in the tree, if a single cell is selected."""
+        selectionModel = self.ui.puzzleTreeView.selectionModel()
+        if selectionModel is None:
+            return None
+        rows = selectionModel.selectedRows(0)
+        if len(rows) != 1:
+            return None
+        item = self.constraintModel.getItem(rows[0])
+        if isinstance(item, (CellProxyItem, ReferencedCellProxyItem)):
+            return item.cell
+        return None
+
+    def handleCellKey(self, event) -> bool:
+        """Enter (a number) or clear (Delete, Backspace) the value of the selected cell."""
+        cell = self.selectedCell()
+        puzzle = self.puzzle
+        if cell is None or self.userEntries is None or puzzle is None:
+            return False
+        text = event.text()
+        clearKeys = (QtCore.Qt.Key.Key_Delete, QtCore.Qt.Key.Key_Backspace)
+        try:
+            if event.key() in clearKeys or (text == "0" and 0 not in puzzle.getValues()):
+                self.userEntries.clear(cell)
+            elif len(text) == 1 and text.isdigit():
+                self.userEntries.enter(cell, int(text))
+            else:
+                return False
+            self.inputMessage = None
+        except EntryError as e:
+            self.inputMessage = str(e)
+        self.refreshCellStyles()
+        if puzzle.isSolved() and not self.violations:
+            self.inputMessage = "Solved!"
+        self.updateHighlight()
+        self.updateSelectionInfo()
+        return True
+
+    def violationNote(self, cell):
+        """Explain why the value of a cell is drawn in red (None when it is not)."""
+        if self.userEntries is None or cell not in self.violations or self.puzzle is None:
+            return None
+        value = self.userEntries.valueOf(cell)
+        clashes = set()
+        for group in self.puzzle.getConstraintGroups():
+            if cell in group.getCells():
+                clashes |= self.violations & set(group.getCells())
+        clashes.discard(cell)
+        if clashes:
+            names = ", ".join(sorted(c.getName() for c in clashes))
+            return f"{value} breaks a rule together with cell(s) {names}."
+        return f"{value} does not fit: it leaves no possible value for another cell."
+
+    def refreshPiece(self, cell):
+        """Redraw a cell, showing a mistake typed in it and drawing broken rules in red."""
+        piece = self.puzzlePieces[cell]
+        piece.updateRepresentation()
+        if self.userEntries is None:
+            return
+        if self.userEntries.isMistake(cell):
+            piece.showMistake(self.userEntries.valueOf(cell))
+        elif cell in self.violations and cell.hasValue():
+            piece.markViolation()
+
+    def refreshCellStyles(self):
+        """Find the cells that break a rule and redraw all cells."""
+        if self.userEntries is None:
+            return
+        self.violations = self.userEntries.violations()
+        for cell in self.puzzlePieceProxies:
+            self.refreshPiece(cell)
 
     def solveButtonClicked(self):
         if self.solver is not None:
@@ -343,6 +497,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                     "The solver ran into a contradiction:\n\n" + str(e),
                 )
             # cells may have been solved: refresh their colours and the description
+            self.refreshCellStyles()
             self.updateHighlight()
             self.updateSelectionInfo()
 
@@ -353,7 +508,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         pass
 
     def cellPossibleValuesChanged(self, cell):
-        self.puzzlePieces[cell].updateRepresentation()
+        self.refreshPiece(cell)
 
     def initializePuzzleRepresentation(self):
         raise NotImplementedError
@@ -365,4 +520,4 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         pass
 
     def cellValueChanged(self, cell):
-        self.puzzlePieces[cell].updateRepresentation()
+        self.refreshPiece(cell)
