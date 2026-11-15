@@ -42,6 +42,15 @@ class CellGreaterThanCellConstraint(Constraint):
     def getType(self):
         return "Cell Greater Than Cell Constraint"
 
+    def violations(self, valueOf):
+        """Both cells, when the smaller cell does not have the smaller value."""
+        if self.lesserCell is None or self.greaterCell is None:
+            return set()
+        lesser, greater = valueOf(self.lesserCell), valueOf(self.greaterCell)
+        if lesser is not None and greater is not None and lesser >= greater:
+            return {self.lesserCell, self.greaterCell}
+        return set()
+
     def summary(self):
         if self.lesserCell is None or self.greaterCell is None:
             return "smaller than (cells not set)"

@@ -52,7 +52,9 @@ Start one of the GUIs with its example puzzle:
 
 Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck (in the launcher this setting applies to all open tabs). If the puzzle turns out to be contradictory, a message explains why.
 
-Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle.
+Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the panel below the tree explains the selection.
+
+Click a cell to select it, then type a number to enter it (given cells cannot be changed). Typed values are shown in green; Delete or Backspace clears them. You can also make mistakes: a value that breaks a rule is drawn in red, together with the cells it clashes with (e.g. the other 6 in the row), and the panel below the tree explains the clash. Mistakes are kept out of the puzzle model, so **Solve** only uses the values that fit.
 
 Each puzzle type has its own file format (see [doc/puzzle-files.md](doc/puzzle-files.md)), read by a parser in `parsers/` such as `parsers.parseKakuroFile`. Each `*Main.py` file contains a subclass of `BasicMainWindow` that names its parser and determines the layout and shapes of the puzzle.
 

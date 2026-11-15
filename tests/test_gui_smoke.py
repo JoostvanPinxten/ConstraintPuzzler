@@ -41,6 +41,11 @@ class GuiSmokeTest(unittest.TestCase):
             self.assertEqual(len(icon.availableSizes()), 4)
             # fixed white background, independent of a (dark) system palette
             self.assertEqual(window.scene.backgroundBrush().color(), QtGui.QColorConstants.White)
+            # the Name column fits its (indented) contents, so icons don't overlap the Type text
+            tree = window.ui.puzzleTreeView
+            tree.expandAll()
+            self.app.processEvents()
+            self.assertGreaterEqual(tree.header().sectionSize(0), tree.sizeHintForColumn(0))
         finally:
             window.close()
             window.deleteLater()
@@ -233,7 +238,7 @@ class SelectionHighlightTest(unittest.TestCase):
         from gui.puzzlemodel.puzzletreemodel import ConstraintGroupProxyItem
 
         label = self.window.selectionInfoLabel
-        self.assertIn("Select a cell", label.text())
+        self.assertIn("Click a cell", label.text())
 
         blockIndex = self.model.index(1, 0, self.puzzleIndex)  # Block 1
         self.select(blockIndex)
@@ -276,7 +281,7 @@ class SelectionHighlightTest(unittest.TestCase):
         self.window.ui.puzzleTreeView.selectionModel().clearSelection()
         QtTest.QTest.qWait(400)
         self.assertEqual(self.brushColor(cell).alpha(), 0)
-        self.assertIn("Select a cell", self.window.selectionInfoLabel.text())
+        self.assertIn("Click a cell", self.window.selectionInfoLabel.text())
 
     def test_show_hints_toggles_cell_candidates_and_explanations(self):
         from gui.puzzlemodel.puzzletreemodel import CellProxyItem
@@ -323,6 +328,132 @@ class SelectionHighlightTest(unittest.TestCase):
         self.assertFalse(self.window.constraintModel.showHints)
         for piece in self.window.puzzlePieces.values():
             self.assertFalse(piece.hintsEnabled)
+
+
+class CellInputTest(unittest.TestCase):
+    """Clicking a cell selects it; typing a number enters a value in it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def setUp(self):
+        import sudokuMain
+
+        self.window = sudokuMain.MainWindow()
+        self.window.resize(1000, 700)
+        self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
+        self.window.show()
+        self.app.processEvents()
+        self.addCleanup(self.window.deleteLater)
+        self.addCleanup(self.window.close)
+        assert self.window.puzzle is not None
+        self.grid = self.window.puzzle.grid
+        self.view = self.window.ui.puzzleGraphicsView
+
+    def click(self, cell):
+        center = self.window.puzzlePieces[cell].sceneBoundingRect().center()
+        position = self.view.mapFromScene(center)
+        QtTest.QTest.mouseClick(
+            self.view.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=position
+        )
+        self.app.processEvents()
+
+    def type(self, key):
+        QtTest.QTest.keyClick(self.view, key)
+        self.app.processEvents()
+
+    def test_clicking_a_cell_selects_it(self):
+        cell = self.grid.getCellFromSquareGrid(4, 2)
+        self.click(cell)
+        self.assertIs(self.window.selectedCell(), cell)
+        tree = self.window.ui.puzzleTreeView
+        self.assertEqual(tree.currentIndex(), self.window.cellIndexes[cell])
+        self.assertIn(f"Cell {cell.getName()}", self.window.selectionInfoLabel.text())
+        self.assertTrue(self.view.hasFocus())
+
+        # clicking next to the puzzle clears the selection
+        corner = self.view.mapFromScene(self.window.scene.itemsBoundingRect().bottomRight())
+        QtTest.QTest.mouseClick(
+            self.view.viewport(),
+            QtCore.Qt.MouseButton.LeftButton,
+            pos=corner + QtCore.QPoint(20, 20),
+        )
+        self.assertIsNone(self.window.selectedCell())
+
+    def test_typing_enters_changes_and_clears_a_value(self):
+        from gui.puzzlerepresentation.valuerectangle import ENTERED_VALUE_COLOR
+
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(cell.getValue(), 4)
+        self.assertTrue(cell.isEntered())
+        piece = self.window.puzzlePieces[cell]
+        self.assertEqual(piece.valueTextItem.toPlainText(), "4")
+        self.assertEqual(piece.valueTextItem.defaultTextColor(), ENTERED_VALUE_COLOR)
+        self.assertIn("Value: 4 (entered)", self.window.selectionInfoLabel.text())
+
+        self.type(QtCore.Qt.Key.Key_7)
+        self.assertEqual(cell.getValue(), 7)
+
+        self.type(QtCore.Qt.Key.Key_Delete)
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(cell.getPossibleValues(), {4, 7})
+        self.assertEqual(piece.valueTextItem.opacity(), 0)
+
+    def test_given_cells_cannot_be_changed(self):
+        given = self.grid.getCellFromSquareGrid(1, 0)
+        self.click(given)
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(given.getValue(), 6)
+        self.assertIn("is given", self.window.selectionInfoLabel.text())
+
+        self.click(self.grid.getCellFromSquareGrid(0, 0))
+        self.assertNotIn("is given", self.window.selectionInfoLabel.text())
+
+    def test_a_mistake_is_shown_in_red_with_the_cells_it_clashes_with(self):
+        from gui.puzzlerepresentation.valuerectangle import (
+            ENTERED_VALUE_COLOR,
+            VIOLATION_COLOR,
+        )
+
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        given = self.grid.getCellFromSquareGrid(1, 0)  # the 6 in the same row
+        piece, givenPiece = self.window.puzzlePieces[cell], self.window.puzzlePieces[given]
+        givenColor = givenPiece.valueTextItem.defaultTextColor()
+
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_6)
+        # the mistake is shown, but not set in the puzzle
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(piece.valueTextItem.toPlainText(), "6")
+        self.assertEqual(piece.valueTextItem.opacity(), 1)
+        self.assertEqual(piece.valueTextItem.defaultTextColor(), VIOLATION_COLOR)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), VIOLATION_COLOR)
+        self.assertIn(
+            f"6 breaks a rule together with cell(s) {given.getName()}",
+            self.window.selectionInfoLabel.text(),
+        )
+
+        # fixing it turns both back to their normal colours
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(piece.valueTextItem.defaultTextColor(), ENTERED_VALUE_COLOR)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
+        self.assertNotIn("breaks a rule", self.window.selectionInfoLabel.text())
+
+        # a mistake can be cleared too
+        self.type(QtCore.Qt.Key.Key_6)
+        self.type(QtCore.Qt.Key.Key_Delete)
+        self.assertEqual(piece.valueTextItem.opacity(), 0)
+        self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
+
+    def test_typing_in_the_tree_enters_a_value_too(self):
+        cell = self.grid.getCellFromSquareGrid(0, 0)
+        self.window.selectCell(cell)
+        QtTest.QTest.keyClick(self.window.ui.puzzleTreeView, QtCore.Qt.Key.Key_7)
+        self.assertEqual(cell.getValue(), 7)
 
 
 class LauncherSmokeTest(unittest.TestCase):

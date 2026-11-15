@@ -24,7 +24,7 @@ def describeCell(cell, showHints=True):
 
     With showHints False, the candidates of an open cell are not listed."""
     if cell.hasValue():
-        how = "deduced" if cell.isInferred() else "given"
+        how = "deduced" if cell.isInferred() else "entered" if cell.isEntered() else "given"
         state = f"Value: {cell.getValue()} ({how})"
     elif not showHints:
         state = "Open"

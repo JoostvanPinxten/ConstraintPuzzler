@@ -22,6 +22,8 @@ class Cell:
         self.values = set(self.initialValues)
         self.value = None
         self.inferred = False
+        # the value was typed in by the user (not given by the puzzle, not deduced)
+        self.entered = False
 
     def getValue(self):
         return self.value
@@ -32,13 +34,14 @@ class Cell:
     def inferValue(self, value):
         self.setValue(value, True)
 
-    def setValue(self, value, isInferred=False):
+    def setValue(self, value, isInferred=False, isEntered=False):
         if value not in self.values:
             raise ContradictionError(
                 "value " + str(value) + " not in my values: " + str(self.values)
             )
 
         self.inferred = isInferred
+        self.entered = isEntered
 
         self.value = value
         self.values = {value}
@@ -90,6 +93,14 @@ class Cell:
 
     def isInferred(self):
         return self.inferred
+
+    def isEntered(self):
+        """The value was typed in by the user."""
+        return self.entered
+
+    def isGiven(self):
+        """The value is part of the puzzle as it was loaded."""
+        return self.hasValue() and not self.inferred and not self.entered
 
     def getGrid(self):
         return self.grid

@@ -45,3 +45,11 @@ class Constraint:
         With showHints False, the description leaves out the candidate values the solver has
         deduced, so it does not give away hints about the solution."""
         return self.summary()
+
+    def violations(self, valueOf):
+        """The cells that break this rule, given the value shown in each cell.
+
+        valueOf(cell) returns the value of a cell, or None for an empty cell. It may differ
+        from cell.getValue(), e.g. for a mistake the user typed in that the model rejected.
+        """
+        return set()
