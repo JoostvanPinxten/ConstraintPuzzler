@@ -7,7 +7,8 @@ that one") is a constraint attached to a group of cells. The solver repeatedly a
 constraint to remove values that can no longer be correct, until nothing changes anymore.
 
 This page explains the building blocks and each constraint type: what rule it expresses, what
-it deduces, and how to use it.
+it deduces, and how to use it. For the grid types and the puzzle file formats, see
+[puzzle-files.md](puzzle-files.md).
 
 - [The building blocks](#the-building-blocks)
 - [How the solver uses constraints](#how-the-solver-uses-constraints)
