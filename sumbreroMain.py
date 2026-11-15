@@ -15,6 +15,7 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from solver.Solver import Solver
 from structure.position import Position
 from structure.puzzle import Puzzle
+from utility.resources import resourcePath
 
 
 def hexrow(position: Position, asc: bool = True):
@@ -165,13 +166,10 @@ class MainWindow(BasicMainWindow):
 
 
 if __name__ == "__main__":
-    import os
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
     mainWin = MainWindow()
-    mainWin.loadPuzzle(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "simpleSumbrero.txt")
-    )
+    mainWin.loadPuzzle(resourcePath("simpleSumbrero.txt"))
     mainWin.show()
     sys.exit(app.exec())
