@@ -7,7 +7,12 @@ requires-python = ">=3.13"
 dependencies = ["PySide6>=6.8"]
 
 [dependency-groups]
-dev = ["ruff", "pyright", "pre-commit"]
+dev = [
+    "ruff",
+    "pyright",
+    "pre-commit",
+    "pyinstaller>=6.22.3",
+]
 
 [tool.uv]
 # An application run from the repository root, not an installable package.

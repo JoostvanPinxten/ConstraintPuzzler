@@ -1,0 +1,109 @@
+name: Release
+
+# Push a tag vX.Y.Z (matching [project].version in pyproject.toml) to build standalone executables
+# for Windows, Linux and macOS and publish them as a GitHub Release.
+# Run it manually (workflow_dispatch) for a dry run: it builds and uploads workflow artifacts only.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+          # Oldest available runner, so the bundled binaries need only an older glibc.
+          - os: ubuntu-22.04
+            name: linux
+          - os: macos-latest
+            name: macos
+    defaults:
+      run:
+        shell: bash
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install Qt runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libxkbcommon0 libgl1 libfontconfig1 libdbus-1-3
+      - run: uv sync --locked
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(uv version --short)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pyproject.toml version $VERSION"
+            exit 1
+          fi
+
+      - name: Build with PyInstaller
+        run: uv run python -m PyInstaller constraintpuzzler.spec --noconfirm
+
+      - name: Smoke test the executable
+        run: |
+          case "${{ matrix.name }}" in
+            windows) dist/ConstraintPuzzler/ConstraintPuzzler.exe --smoke-test ;;
+            linux)   dist/ConstraintPuzzler/ConstraintPuzzler --smoke-test ;;
+            macos)   dist/ConstraintPuzzler.app/Contents/MacOS/ConstraintPuzzler --smoke-test ;;
+          esac
+
+      - name: Archive
+        id: archive
+        run: |
+          BASE="ConstraintPuzzler-${{ steps.version.outputs.version }}-${{ matrix.name }}"
+          cd dist
+          case "${{ matrix.name }}" in
+            windows)
+              7z a -tzip "../$BASE.zip" ConstraintPuzzler > /dev/null
+              echo "file=$BASE.zip" >> "$GITHUB_OUTPUT" ;;
+            linux)
+              tar czf "../$BASE.tar.gz" ConstraintPuzzler
+              echo "file=$BASE.tar.gz" >> "$GITHUB_OUTPUT" ;;
+            macos)
+              ditto -c -k --keepParent ConstraintPuzzler.app "../$BASE.zip"
+              echo "file=$BASE.zip" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ steps.archive.outputs.file }}
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "ConstraintPuzzler ${GITHUB_REF_NAME#v}" \
+            --generate-notes
