@@ -111,6 +111,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         # one animation proxy per cell of the current puzzle
         self.puzzlePieceProxies = {}
         self.initializePuzzleRepresentation()
+        # The puzzle is drawn in black on a transparent background, so with a dark palette it
+        # would be black on black. Give the puzzle a fixed white background regardless of theme.
+        self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
         self.ui.puzzleGraphicsView.setScene(self.scene)
 
     def parsePuzzle(self, filename):

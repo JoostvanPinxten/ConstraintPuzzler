@@ -10,7 +10,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6 import QtWidgets  # noqa: E402
+from PySide6 import QtGui, QtWidgets  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -38,6 +38,8 @@ class GuiSmokeTest(unittest.TestCase):
             icon = window.windowIcon()
             self.assertFalse(icon.isNull(), "window icon (logo) is missing")
             self.assertEqual(len(icon.availableSizes()), 4)
+            # fixed white background, independent of a (dark) system palette
+            self.assertEqual(window.scene.backgroundBrush().color(), QtGui.QColorConstants.White)
         finally:
             window.close()
             window.deleteLater()
