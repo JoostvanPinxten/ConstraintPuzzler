@@ -234,7 +234,7 @@ does not implement `getAllowedValuesForValueList`, so it cannot be combined with
 | Sudoku | Each row, column and 3x3 block: `ExactCoverConstraint`. |
 | Futoshiki | Each row and column: `ExactCoverConstraint`. Each inequality sign: a two-cell group with `CellGreaterThanCellConstraint`. |
 | Kakuro | Each horizontal or vertical line of white cells: `UniqueValueConstraint` + `TotalSumValueConstraint` with the clue. |
-| Sumbrero | Each column and diagonal clue: `UniqueValueConstraint` + `TotalSumValueConstraint`. (Work in progress.) |
+| Sumbrero | Each column and diagonal row with a clue: `UniqueValueConstraint` + `TotalSumValueConstraint`. |
 
 The power comes from cells being in several groups at once. In Kakuro, the horizontal line
 narrows a cell to `{1, 3}` and the vertical line to `{3, 5, 7}`, so the cell must be 3, which in
