@@ -71,10 +71,21 @@ class Ui_MainWindow(object):
         self.solverGroupBox.setObjectName(u"solverGroupBox")
         self.verticalLayout_3 = QVBoxLayout(self.solverGroupBox)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.notesPushButton = QPushButton(self.solverGroupBox)
+        self.notesPushButton.setObjectName(u"notesPushButton")
+        self.notesPushButton.setCheckable(True)
+
+        self.verticalLayout_3.addWidget(self.notesPushButton)
+
         self.hintPushButton = QPushButton(self.solverGroupBox)
         self.hintPushButton.setObjectName(u"hintPushButton")
 
         self.verticalLayout_3.addWidget(self.hintPushButton)
+
+        self.checkPushButton = QPushButton(self.solverGroupBox)
+        self.checkPushButton.setObjectName(u"checkPushButton")
+
+        self.verticalLayout_3.addWidget(self.checkPushButton)
 
         self.solveStepPushButton = QPushButton(self.solverGroupBox)
         self.solveStepPushButton.setObjectName(u"solveStepPushButton")
@@ -105,9 +116,17 @@ class Ui_MainWindow(object):
         self.puzzleStructureDockWidget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Puzzle structure", None))
         self.solverGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Solver steps", None))
 #if QT_CONFIG(tooltip)
-        self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show a cell whose value follows from the constraints, and why, without filling it in", None))
+        self.notesPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Notes mode: typing a number toggles it as a note in the cell instead of entering it (N; Ctrl+number toggles a note in any mode)", None))
+#endif // QT_CONFIG(tooltip)
+        self.notesPushButton.setText(QCoreApplication.translate("MainWindow", u"Notes (N)", None))
+#if QT_CONFIG(tooltip)
+        self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show where to look; click again for the cell, and again for its value and why (nothing is filled in)", None))
 #endif // QT_CONFIG(tooltip)
         self.hintPushButton.setText(QCoreApplication.translate("MainWindow", u"Hint", None))
+#if QT_CONFIG(tooltip)
+        self.checkPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Compare the filled-in values and notes with the solution", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkPushButton.setText(QCoreApplication.translate("MainWindow", u"Check", None))
 #if QT_CONFIG(tooltip)
         self.solveStepPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Fill in one cell whose value follows from the constraints", None))
 #endif // QT_CONFIG(tooltip)

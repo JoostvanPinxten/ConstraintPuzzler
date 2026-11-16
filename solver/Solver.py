@@ -80,10 +80,16 @@ class Solver:
             d for d in self.log.since(start) if d.setsValue() and d.source is ValueSource.DEDUCED
         ]
 
+    def _easiest(self, deductions: list[Deduction]) -> Deduction:
+        """One of the easiest deductions (see Deduction.difficulty), chosen at random."""
+        lowest = min(d.difficulty() for d in deductions)
+        return self.random.choice([d for d in deductions if d.difficulty() == lowest])
+
     def hint(self) -> Deduction | None:
         """The next value the rules determine (a Deduction with its reason), without changing
-        the puzzle; None when a deduction pass does not determine any value. Raises
-        ContradictionError when the pass shows that the puzzle has no solution."""
+        the puzzle; of the values a pass determines, one of the easiest is chosen. None when a
+        deduction pass does not determine any value. Raises ContradictionError when the pass
+        shows that the puzzle has no solution."""
         state = self.puzzle.saveState()
         try:
             with self._record():
@@ -91,14 +97,15 @@ class Solver:
             values = self._deducedValues()
         finally:
             self.puzzle.restoreState(state)
-        return self.random.choice(values) if values else None
+        return self._easiest(values) if values else None
 
-    def solveStep(self) -> bool:
+    def solveStep(self, preferred: Deduction | None = None) -> bool:
         """Fill in a single cell, e.g. to follow the solver step by step (no guessing).
         A deduction pass is tried; if it determines the values of one or more cells, the puzzle
-        is reset and only one of those cells, chosen at random, gets its value (lastStep tells
-        which, and why). If the pass only narrows down possible values, that narrowing is kept,
-        so the next step can progress.
+        is reset and only one of those cells gets its value (lastStep tells which, and why):
+        the cell and value of `preferred` (e.g. the hint shown last) if the pass determines
+        it, else one of the easiest deductions. If the pass only narrows down possible values,
+        that narrowing is kept, so the next step can progress.
         Returns whether the puzzle changed. Raises ContradictionError if the pass detects that
         the puzzle has no solution; the puzzle is then restored to the state it had before."""
         state = self.puzzle.saveState()
@@ -109,7 +116,7 @@ class Solver:
                 values = self._deducedValues()
                 if values:
                     self.puzzle.restoreState(state)
-                    chosen = self.random.choice(values)
+                    chosen = self._preferredOrEasiest(values, preferred)
                     assert chosen.value is not None  # _deducedValues only lists set values
                     self.log.truncate(0)
                     with self.puzzle.causedBy(chosen.cause):
@@ -119,6 +126,15 @@ class Solver:
             self.puzzle.restoreState(state)
             raise
         return self.puzzle.saveState() != state
+
+    def _preferredOrEasiest(
+        self, deductions: list[Deduction], preferred: Deduction | None
+    ) -> Deduction:
+        if preferred is not None:
+            for d in deductions:
+                if d.cell is preferred.cell and d.value == preferred.value:
+                    return d
+        return self._easiest(deductions)
 
     def propagate(self, state: PuzzleState | None = None) -> None:
         """Repeat deduction passes until a pass no longer changes anything.
@@ -177,6 +193,28 @@ class Solver:
         finally:
             self.puzzle.restoreState(initialState)
 
+    def findSolution(
+        self, shouldStop: Callable[[], bool] | None = None
+    ) -> tuple[PuzzleState, bool]:
+        """The solved state of the puzzle (found with guessing, whatever allowGuessing says),
+        and whether it is the only solution, e.g. to check a user's entries against. The puzzle
+        is left as it was. Raises ContradictionError when there is no solution, and
+        SolveCancelled when shouldStop() returns True."""
+        initialState = self.puzzle.saveState()
+        allowGuessing = self.allowGuessing
+        try:
+            self.shouldStop = shouldStop
+            count = self.countSolutions(limit=2)
+            if count == 0:
+                raise ContradictionError("The puzzle has no solution")
+            self.allowGuessing = True
+            self.solve(shouldStop)
+            return self.puzzle.saveState(), count == 1
+        finally:
+            self.allowGuessing = allowGuessing
+            self.shouldStop = None
+            self.puzzle.restoreState(initialState)
+
     def _count(self, limit: int) -> int:
         openCells = self.puzzle.getOpenCells()
         if not openCells:
@@ -184,6 +222,7 @@ class Solver:
         cell = min(openCells, key=lambda c: len(c.getPossibleValues()))
         found = 0
         for value in sorted(cell.getPossibleValues()):
+            self._checkStop()
             state = self.puzzle.saveState()
             mark = len(self.log)
             try:

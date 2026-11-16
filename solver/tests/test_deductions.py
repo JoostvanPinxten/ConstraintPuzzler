@@ -2,9 +2,13 @@
 
 import unittest
 
+from constraints.exactcoverconstraint import ExactCoverConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.uniquevalueconstraint import UniqueValueConstraint
 from parsers.sudoku import parseSudokuLines
 from solver.Solver import SolveCancelled, Solver
 from structure.cell import ValueSource
+from structure.deduction import NAKED_SINGLE, DeductionLog
 from structure.errors import ContradictionError
 from structure.tests.test_entries import EASY
 from utility.puzzletypes import PUZZLE_TYPES
@@ -125,6 +129,58 @@ class DeductionTest(unittest.TestCase):
             self.assertIn("guess", d.reason())
 
 
+def passDeductions(puzzle):
+    """The values a single deduction pass determines (the puzzle is left unchanged)."""
+    solver = Solver(puzzle)
+    state = puzzle.saveState()
+    log = DeductionLog()
+    with puzzle.recording(log):
+        solver.step()
+    puzzle.restoreState(state)
+    return [d for d in log.deductions if d.setsValue()]
+
+
+class EasiestFirstTest(unittest.TestCase):
+    def testHintIsAnEasiestDeduction(self):
+        for name, load in loadExamples():
+            with self.subTest(puzzle=name):
+                puzzle = load()
+                deductions = passDeductions(puzzle)
+                if not deductions:
+                    continue
+                lowest = min(d.difficulty() for d in deductions)
+                solver = Solver(puzzle)
+                for seed in range(5):
+                    solver.random.seed(seed)
+                    hint = solver.hint()
+                    assert hint is not None
+                    self.assertEqual(hint.difficulty(), lowest)
+
+    def testSolveStepIsAnEasiestDeduction(self):
+        puzzle = parseSudokuLines(EASY)
+        lowest = min(d.difficulty() for d in passDeductions(puzzle))
+        solver = Solver(puzzle)
+        self.assertTrue(solver.solveStep())
+        assert solver.lastStep is not None
+        self.assertEqual(solver.lastStep.difficulty(), lowest)
+
+    def testDifficultyOrder(self):
+        self.assertLess(NAKED_SINGLE, UniqueValueConstraint.difficulty)
+        self.assertEqual(ExactCoverConstraint.difficulty, UniqueValueConstraint.difficulty)
+        self.assertLess(UniqueValueConstraint.difficulty, TotalSumValueConstraint.difficulty)
+
+    def testSolveStepFillsThePreferredCell(self):
+        puzzle = parseSudokuLines(EASY)
+        deductions = passDeductions(puzzle)
+        # the hardest one, which solveStep would not choose by itself
+        preferred = max(deductions, key=lambda d: d.difficulty())
+        solver = Solver(puzzle)
+        self.assertTrue(solver.solveStep(preferred))
+        assert solver.lastStep is not None
+        self.assertIs(solver.lastStep.cell, preferred.cell)
+        self.assertEqual(preferred.cell.getValue(), preferred.value)
+
+
 class CountSolutionsTest(unittest.TestCase):
     def testUniqueSolution(self):
         puzzle = parseSudokuLines(EASY)
@@ -145,6 +201,51 @@ class CountSolutionsTest(unittest.TestCase):
         except ContradictionError:
             return  # the parser already noticed
         self.assertEqual(Solver(puzzle).countSolutions(), 0)
+
+
+class FindSolutionTest(unittest.TestCase):
+    def testUniqueSolution(self):
+        puzzle = parseSudokuLines(EASY)
+        state = puzzle.saveState()
+        solver = Solver(puzzle)
+        solution, unique = solver.findSolution()
+        self.assertTrue(unique)
+        self.assertEqual(puzzle.saveState(), state)
+        self.assertFalse(solver.allowGuessing)
+        solved = parseSudokuLines(EASY)
+        Solver(solved).solve()
+        self.assertEqual(solution[0], solved.saveState()[0])
+
+    def testHardPuzzleNeedsGuessing(self):
+        puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))
+        solution, unique = Solver(puzzle).findSolution()
+        self.assertTrue(unique)
+        self.assertTrue(all(value is not None for _, value, _ in solution[0]))
+
+    def testSeveralSolutions(self):
+        puzzle = parseSudokuLines(["- - - - - - - - -"] * 9)
+        solution, unique = Solver(puzzle).findSolution()
+        self.assertFalse(unique)
+        self.assertTrue(all(value is not None for _, value, _ in solution[0]))
+
+    def testNoSolution(self):
+        lines = list(EASY)
+        lines[8] = "- - 6 5 3 2 - - -"  # a 6 in the bottom row, which another 6 needs
+        puzzle = parseSudokuLines(lines)
+        self.assertEqual(Solver(puzzle).countSolutions(), 0)
+        state = puzzle.saveState()
+        with self.assertRaises(ContradictionError):
+            Solver(puzzle).findSolution()
+        self.assertEqual(puzzle.saveState(), state)
+
+    def testCancelRestoresThePuzzle(self):
+        puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))
+        state = puzzle.saveState()
+        solver = Solver(puzzle)
+        with self.assertRaises(SolveCancelled):
+            solver.findSolution(shouldStop=lambda: True)
+        self.assertEqual(puzzle.saveState(), state)
+        self.assertIsNone(solver.shouldStop)
 
 
 class CancelTest(unittest.TestCase):

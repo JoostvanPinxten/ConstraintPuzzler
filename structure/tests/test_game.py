@@ -101,6 +101,103 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.undo())
 
 
+class NotesTest(unittest.TestCase):
+    def setUp(self):
+        self.puzzle = parseSudokuLines(EASY)
+        self.game = Game(self.puzzle)
+        self.topLeft = self.puzzle.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        self.given = self.puzzle.grid.getCellFromSquareGrid(1, 0)
+
+    def testToggleANote(self):
+        state = self.puzzle.saveState()
+        self.game.toggleNote(self.topLeft, 4)
+        self.game.toggleNote(self.topLeft, 1)  # any value of the puzzle, not only candidates
+        self.assertEqual(self.game.notesOf(self.topLeft), {1, 4})
+        self.game.toggleNote(self.topLeft, 4)
+        self.assertEqual(self.game.notesOf(self.topLeft), {1})
+        self.game.toggleNote(self.topLeft, 1)
+        self.assertEqual(self.game.notesOf(self.topLeft), frozenset())
+        self.assertNotIn(self.topLeft, self.game.notes)
+        # notes do not touch the puzzle model
+        self.assertEqual(self.puzzle.saveState(), state)
+
+    def testNotesAreUndone(self):
+        self.game.toggleNote(self.topLeft, 4)
+        self.game.toggleNote(self.topLeft, 7)
+        self.assertTrue(self.game.undo())
+        self.assertEqual(self.game.notesOf(self.topLeft), {4})
+        self.assertTrue(self.game.redo())
+        self.assertEqual(self.game.notesOf(self.topLeft), {4, 7})
+
+    def testNoNotesInAGivenOrFilledCell(self):
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.given, 4)
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.topLeft, 0)  # not a value of a sudoku
+        self.game.enter(self.topLeft, 4)
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.topLeft, 7)
+        self.game.undo()
+        self.assertFalse(self.game.canUndo())  # the rejected notes were not recorded
+
+    def testNotesStayWhileTheCellHasAValue(self):
+        self.game.toggleNote(self.topLeft, 7)
+        self.game.enter(self.topLeft, 4)
+        self.game.clear(self.topLeft)
+        self.assertEqual(self.game.notesOf(self.topLeft), {7})
+
+
+class CheckTest(unittest.TestCase):
+    def setUp(self):
+        self.puzzle = parseSudokuLines(EASY)
+        self.game = Game(self.puzzle)
+        self.solution, unique = Solver(self.puzzle).findSolution()
+        self.assertTrue(unique)
+        cells = self.puzzle.grid.getCells()
+        self.correct = {c: value for c, (_, value, _) in zip(cells, self.solution[0], strict=True)}
+        self.topLeft = self.puzzle.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        right = self.correct[self.topLeft]
+        assert right is not None
+        self.right = right
+        self.wrong = ({4, 7} - {self.right}).pop()
+
+    def testNothingFilledIn(self):
+        result = self.game.check(self.solution)
+        self.assertEqual(result.checked, 0)
+        self.assertTrue(result.isAllCorrect())
+        self.assertIn("Nothing is filled in", result.summary())
+
+    def testCorrectEntries(self):
+        self.game.enter(self.topLeft, self.right)
+        result = self.game.check(self.solution)
+        self.assertEqual(result.checked, 1)
+        self.assertTrue(result.isAllCorrect())
+        self.assertIn("All 1 filled-in cells are correct", result.summary())
+
+    def testAWrongEntryThatFitsTheRules(self):
+        self.game.enter(self.topLeft, self.wrong)
+        self.assertNotIn(self.topLeft, self.game.violations())  # no rule says it is wrong
+        result = self.game.check(self.solution)
+        self.assertEqual(result.wrongValues, {self.topLeft})
+        self.assertIn("1 of 1 filled-in cells are wrong", result.summary())
+
+    def testAMistakeIsWrong(self):
+        self.game.enter(self.topLeft, 6)  # the 6 is already in the row
+        self.assertTrue(self.game.isMistake(self.topLeft))
+        self.assertEqual(self.game.check(self.solution).wrongValues, {self.topLeft})
+
+    def testNotesWithoutTheCorrectValue(self):
+        self.game.toggleNote(self.topLeft, self.wrong)
+        other = self.puzzle.grid.getCellFromSquareGrid(3, 0)
+        otherValue = self.correct[other]
+        assert otherValue is not None
+        self.game.toggleNote(other, otherValue)
+        result = self.game.check(self.solution)
+        self.assertEqual(result.wrongNotes, {self.topLeft})
+        self.assertEqual(result.wrongValues, set())
+        self.assertIn("the notes of 1 cell rules out the correct value", result.summary())
+
+
 class GuessedValuesTest(unittest.TestCase):
     def testSolverMarksGuesses(self):
         puzzle = parseSudokuFile(resourcePath("hardSudoku.txt"))
