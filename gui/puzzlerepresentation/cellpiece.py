@@ -1,7 +1,8 @@
 """What all shapes that show a cell have in common (ValueRectangle, ValueHexagon).
 
-A cell piece shows the value of its cell in a large text, or, while the cell is open, its
-candidates as small hints in a grid. The grid has ceil(sqrt(n)) columns for n values (3x3 for
+A cell piece shows the value of its cell in a large text, or, while the cell is open, small
+values in a grid: the user's notes (green) and, with *Show hints*, the solver's candidates
+(grey). The grid has ceil(sqrt(n)) columns for n values (3x3 for
 1-9, 4x4 for 16 values, ...), placed in the shape's hintArea(). The colour of the value says
 where it came from: given (blue), deduced or guessed by the solver (black), typed in by the user
 (green), or breaking a rule (red).
@@ -26,6 +27,9 @@ SOLVER_VALUE_COLOR = QtGui.QColorConstants.Black
 ENTERED_VALUE_COLOR = QtGui.QColor(0, 120, 60)
 # colour of a value that breaks a rule of the puzzle (e.g. a number twice in a row)
 VIOLATION_COLOR = QtGui.QColor(220, 0, 0)
+# colours of the small values of an open cell: a note of the user, a candidate of the solver
+NOTE_COLOR = ENTERED_VALUE_COLOR
+CANDIDATE_COLOR = QtGui.QColor(110, 110, 110)
 
 
 class PointLike(Protocol):
@@ -73,6 +77,8 @@ class CellPiece:
         self.position = position
         self.values = list(cell.getGrid().getPuzzle().getValues())
         self.hintsEnabled = True
+        # the values the user noted in the cell
+        self.notes: frozenset[Value] = frozenset()
         self.hintValueItemMap: dict[Value, QtWidgets.QGraphicsTextItem] = {}
         self.item().setCacheMode(QtWidgets.QGraphicsItem.CacheMode.DeviceCoordinateCache)
         self.createHints()
@@ -132,9 +138,22 @@ class CellPiece:
             self.showValueText(value, self.valueColor())
             return
         self.valueTextItem.setOpacity(0)
-        candidates = self.cell.getPossibleValues()
+        candidates = self.cell.getPossibleValues() if self.hintsEnabled else set()
         for value, hint in self.hintValueItemMap.items():
-            hint.setOpacity(1 if self.hintsEnabled and value in candidates else 0)
+            if value in self.notes:
+                hint.setDefaultTextColor(NOTE_COLOR)
+                hint.setOpacity(1)
+            elif value in candidates:
+                hint.setDefaultTextColor(CANDIDATE_COLOR)
+                hint.setOpacity(1)
+            else:
+                hint.setOpacity(0)
+
+    def setNotes(self, notes: frozenset[Value]) -> None:
+        """Show the values the user noted (while the cell is open)."""
+        if notes != self.notes:
+            self.notes = notes
+            self.updateRepresentation()
 
     def setHintsEnabled(self, hintsEnabled: bool) -> None:
         self.hintsEnabled = hintsEnabled

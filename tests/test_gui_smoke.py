@@ -611,6 +611,63 @@ class CellInputTest(unittest.TestCase):
         self.assertEqual(piece.valueTextItem.opacity(), 0)
         self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
 
+    def visibleSmallValues(self, cell):
+        piece = self.window.puzzlePieces[cell]
+        return {
+            v: item.defaultTextColor()
+            for v, item in piece.hintValueItemMap.items()
+            if item.opacity() > 0
+        }
+
+    def test_notes_mode_toggles_notes(self):
+        from gui.puzzlerepresentation.cellpiece import NOTE_COLOR
+
+        game = self.window.game
+        assert game is not None
+        cell = self.grid.getCellFromSquareGrid(0, 0)
+        self.window.settings.setShowHints(False)
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_N)
+        self.assertTrue(self.window.ui.notesPushButton.isChecked())
+        self.assertIn("Notes mode", self.window.selectionInfoLabel.text())
+        self.type(QtCore.Qt.Key.Key_4)
+        self.type(QtCore.Qt.Key.Key_9)
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(game.notesOf(cell), {4, 9})
+        self.assertEqual(self.visibleSmallValues(cell), {4: NOTE_COLOR, 9: NOTE_COLOR})
+        self.type(QtCore.Qt.Key.Key_9)
+        self.assertEqual(self.visibleSmallValues(cell), {4: NOTE_COLOR})
+
+        # undo brings the note back
+        self.window.undoAction.trigger()
+        self.assertEqual(game.notesOf(cell), {4, 9})
+        self.assertIn(9, self.visibleSmallValues(cell))
+
+        # N again: numbers are entered as values
+        self.type(QtCore.Qt.Key.Key_N)
+        self.assertFalse(self.window.ui.notesPushButton.isChecked())
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(self.visibleSmallValues(cell), {})
+
+    def test_ctrl_number_toggles_a_note(self):
+        from gui.puzzlerepresentation.cellpiece import CANDIDATE_COLOR, NOTE_COLOR
+
+        game = self.window.game
+        assert game is not None
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        self.click(cell)
+        QtTest.QTest.keyClick(
+            self.view, QtCore.Qt.Key.Key_7, QtCore.Qt.KeyboardModifier.ControlModifier
+        )
+        self.app.processEvents()
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(game.notesOf(cell), {7})
+        # with Show hints, the solver's other candidates are shown in grey next to the note
+        self.window.settings.setShowHints(True)
+        self.assertEqual(self.visibleSmallValues(cell), {4: CANDIDATE_COLOR, 7: NOTE_COLOR})
+        self.window.settings.setShowHints(False)
+
     def test_typing_in_the_tree_enters_a_value_too(self):
         cell = self.grid.getCellFromSquareGrid(0, 0)
         self.window.selectCell(cell)

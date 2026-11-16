@@ -71,6 +71,12 @@ class Ui_MainWindow(object):
         self.solverGroupBox.setObjectName(u"solverGroupBox")
         self.verticalLayout_3 = QVBoxLayout(self.solverGroupBox)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.notesPushButton = QPushButton(self.solverGroupBox)
+        self.notesPushButton.setObjectName(u"notesPushButton")
+        self.notesPushButton.setCheckable(True)
+
+        self.verticalLayout_3.addWidget(self.notesPushButton)
+
         self.hintPushButton = QPushButton(self.solverGroupBox)
         self.hintPushButton.setObjectName(u"hintPushButton")
 
@@ -105,7 +111,11 @@ class Ui_MainWindow(object):
         self.puzzleStructureDockWidget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Puzzle structure", None))
         self.solverGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Solver steps", None))
 #if QT_CONFIG(tooltip)
-        self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show a cell whose value follows from the constraints, and why, without filling it in", None))
+        self.notesPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Notes mode: typing a number toggles it as a note in the cell instead of entering it (N; Ctrl+number toggles a note in any mode)", None))
+#endif // QT_CONFIG(tooltip)
+        self.notesPushButton.setText(QCoreApplication.translate("MainWindow", u"Notes (N)", None))
+#if QT_CONFIG(tooltip)
+        self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show where to look; click again for the cell, and again for its value and why (nothing is filled in)", None))
 #endif // QT_CONFIG(tooltip)
         self.hintPushButton.setText(QCoreApplication.translate("MainWindow", u"Hint", None))
 #if QT_CONFIG(tooltip)

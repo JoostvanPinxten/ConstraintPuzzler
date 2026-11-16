@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from structure.entries import UserEntries
+from structure.entries import EntryError, UserEntries
 
 if TYPE_CHECKING:
     # for the annotations only: at run time, this module does not import the solver
@@ -27,14 +27,18 @@ if TYPE_CHECKING:
     from structure.puzzle import Puzzle
     from structure.types import PuzzleState, Value
 
-# what undo() goes back to: the puzzle, and the entries and mistakes
-type Snapshot = tuple[PuzzleState, dict[Cell, Value], dict[Cell, Value]]
+# what undo() goes back to: the puzzle, the entries and mistakes, and the notes
+type Snapshot = tuple[
+    PuzzleState, dict[Cell, Value], dict[Cell, Value], dict[Cell, frozenset[Value]]
+]
 
 
 class Game:
     def __init__(self, puzzle: Puzzle, maxHistory: int = 1000) -> None:
         self.puzzle = puzzle
         self.entries = UserEntries(puzzle)
+        # the candidates the user noted in cells (pencil marks); separate from the solver's
+        self.notes: dict[Cell, frozenset[Value]] = {}
         self.undoStack: list[Snapshot] = []
         self.redoStack: list[Snapshot] = []
         self.maxHistory = maxHistory
@@ -42,13 +46,19 @@ class Game:
     # --- history --------------------------------------------------------------------------
 
     def _snapshot(self) -> Snapshot:
-        return (self.puzzle.saveState(), dict(self.entries.entries), dict(self.entries.mistakes))
+        return (
+            self.puzzle.saveState(),
+            dict(self.entries.entries),
+            dict(self.entries.mistakes),
+            dict(self.notes),
+        )
 
     def _restore(self, snapshot: Snapshot) -> None:
-        state, entries, mistakes = snapshot
+        state, entries, mistakes, notes = snapshot
         self.puzzle.restoreState(state)
         self.entries.entries = dict(entries)
         self.entries.mistakes = dict(mistakes)
+        self.notes = dict(notes)
 
     def perform[T](self, action: Callable[[], T]) -> T:
         """Run action() as one undoable step and return its result.
@@ -95,6 +105,28 @@ class Game:
         """Clear the value of a cell (see UserEntries.clear)."""
         self.perform(lambda: self.entries.clear(cell))
 
+    def toggleNote(self, cell: Cell, value: Value) -> None:
+        """Add a value to the notes of an open cell, or remove it when it is already noted.
+
+        Raises an EntryError for a given cell, a cell that shows a value, or a value that the
+        puzzle does not use. The notes of a cell stay when a value is entered in it, and are
+        shown again when the value is cleared."""
+        if cell.isGiven():
+            raise EntryError(f"Cell {cell.getName()} is given; it cannot have notes.")
+        if value not in self.puzzle.getValues():
+            raise EntryError(f"{value} is not a value of this puzzle.")
+        if self.valueOf(cell) is not None:
+            raise EntryError(f"Cell {cell.getName()} has a value; clear it to make notes.")
+
+        def action() -> None:
+            notes = self.notes.get(cell, frozenset()) ^ {value}
+            if notes:
+                self.notes[cell] = notes
+            else:
+                self.notes.pop(cell, None)
+
+        self.perform(action)
+
     def solve(self, solver: Solver) -> bool:
         """Let the solver fill in the puzzle. Mistakes in cells the solver filled in are
         dropped, so the solution is shown. Returns whether the puzzle is solved."""
@@ -123,6 +155,10 @@ class Game:
         return self.perform(lambda: solver.solveStep(preferred))
 
     # --- queries --------------------------------------------------------------------------
+
+    def notesOf(self, cell: Cell) -> frozenset[Value]:
+        """The values the user noted in a cell (empty when there are none)."""
+        return self.notes.get(cell, frozenset())
 
     def valueOf(self, cell: Cell) -> Value | None:
         return self.entries.valueOf(cell)

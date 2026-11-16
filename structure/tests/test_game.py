@@ -101,6 +101,52 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.undo())
 
 
+class NotesTest(unittest.TestCase):
+    def setUp(self):
+        self.puzzle = parseSudokuLines(EASY)
+        self.game = Game(self.puzzle)
+        self.topLeft = self.puzzle.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        self.given = self.puzzle.grid.getCellFromSquareGrid(1, 0)
+
+    def testToggleANote(self):
+        state = self.puzzle.saveState()
+        self.game.toggleNote(self.topLeft, 4)
+        self.game.toggleNote(self.topLeft, 1)  # any value of the puzzle, not only candidates
+        self.assertEqual(self.game.notesOf(self.topLeft), {1, 4})
+        self.game.toggleNote(self.topLeft, 4)
+        self.assertEqual(self.game.notesOf(self.topLeft), {1})
+        self.game.toggleNote(self.topLeft, 1)
+        self.assertEqual(self.game.notesOf(self.topLeft), frozenset())
+        self.assertNotIn(self.topLeft, self.game.notes)
+        # notes do not touch the puzzle model
+        self.assertEqual(self.puzzle.saveState(), state)
+
+    def testNotesAreUndone(self):
+        self.game.toggleNote(self.topLeft, 4)
+        self.game.toggleNote(self.topLeft, 7)
+        self.assertTrue(self.game.undo())
+        self.assertEqual(self.game.notesOf(self.topLeft), {4})
+        self.assertTrue(self.game.redo())
+        self.assertEqual(self.game.notesOf(self.topLeft), {4, 7})
+
+    def testNoNotesInAGivenOrFilledCell(self):
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.given, 4)
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.topLeft, 0)  # not a value of a sudoku
+        self.game.enter(self.topLeft, 4)
+        with self.assertRaises(EntryError):
+            self.game.toggleNote(self.topLeft, 7)
+        self.game.undo()
+        self.assertFalse(self.game.canUndo())  # the rejected notes were not recorded
+
+    def testNotesStayWhileTheCellHasAValue(self):
+        self.game.toggleNote(self.topLeft, 7)
+        self.game.enter(self.topLeft, 4)
+        self.game.clear(self.topLeft)
+        self.assertEqual(self.game.notesOf(self.topLeft), {7})
+
+
 class GuessedValuesTest(unittest.TestCase):
     def testSolverMarksGuesses(self):
         puzzle = parseSudokuFile(resourcePath("hardSudoku.txt"))

@@ -105,6 +105,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
         self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
         self.ui.hintPushButton.clicked.connect(self.hintButtonClicked)
+        self.ui.notesPushButton.toggled.connect(lambda _checked: self.updateSelectionInfo())
         # the running background solve, if any (see solveButtonClicked)
         self.solveJob: SolveJob | None = None
         # the running fade of the cell highlight, if any (kept so it is not garbage collected)
@@ -467,7 +468,16 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         parts = [self.constraintModel.getItem(index).describe(showHints) for index in rows]
         cell = self.selectedCell()
         if cell is not None and not cell.isGiven():
-            parts.append("<i>Type a number to enter it; Delete clears the cell.</i>")
+            if self.ui.notesPushButton.isChecked():
+                parts.append(
+                    "<i>Notes mode: type a number to note it, again to remove it (N ends"
+                    " notes mode).</i>"
+                )
+            else:
+                parts.append(
+                    "<i>Type a number to enter it; Delete clears the cell. Ctrl+number (or"
+                    " notes mode, N) notes a candidate.</i>"
+                )
         note = self.violationNote(cell) if cell is not None else None
         if note:
             parts.append(f'<span style="color:#c00000">{html.escape(note)}</span>')
@@ -548,22 +558,37 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         return None
 
     def handleCellKey(self, event: QtGui.QKeyEvent) -> bool:
-        """Enter (a number) or clear (Delete, Backspace) the value of the selected cell."""
-        cell = self.selectedCell()
+        """Enter (a number) or clear (Delete, Backspace) the value of the selected cell.
+
+        In notes mode (N toggles it), or with Ctrl held, a number toggles a note instead."""
         game = self.game
-        if cell is None or game is None:
+        if game is None:
             return False
-        text = event.text()
+        modifiers = event.modifiers()
+        ctrl = bool(modifiers & QtCore.Qt.KeyboardModifier.ControlModifier)
+        if event.key() == QtCore.Qt.Key.Key_N and not ctrl:
+            self.ui.notesPushButton.toggle()
+            return True
+        cell = self.selectedCell()
+        if cell is None:
+            return False
+        # the digit of the key itself: with Ctrl, text() is a control character
+        digit = event.key() - QtCore.Qt.Key.Key_0.value
+        isDigit = 0 <= digit <= 9
         clearKeys = (QtCore.Qt.Key.Key_Delete, QtCore.Qt.Key.Key_Backspace)
-        if self.solveJob is not None and (event.key() in clearKeys or text.isdigit()):
+        if self.solveJob is not None and (event.key() in clearKeys or isDigit):
             self.inputMessage = "The solver is busy; wait for it or cancel it first."
             self.updateSelectionInfo()
             return True
         try:
-            if event.key() in clearKeys or (text == "0" and 0 not in game.puzzle.getValues()):
+            if isDigit and (ctrl or self.ui.notesPushButton.isChecked()):
+                game.toggleNote(cell, digit)
+            elif ctrl:
+                return False  # leave e.g. Ctrl+Z to the shortcuts
+            elif event.key() in clearKeys or (digit == 0 and 0 not in game.puzzle.getValues()):
                 game.clear(cell)
-            elif len(text) == 1 and text.isdigit():
-                game.enter(cell, int(text))
+            elif isDigit:
+                game.enter(cell, digit)
             else:
                 return False
             self.inputMessage = None
@@ -586,6 +611,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def refreshPiece(self, cell: Cell) -> None:
         """Redraw a cell, showing a mistake typed in it and drawing broken rules in red."""
         piece = self.puzzlePieces[cell]
+        if self.game is not None:
+            # only the cell shapes have notes (see CellPiece)
+            setNotes = getattr(piece, "setNotes", None)
+            if setNotes is not None:
+                setNotes(self.game.notesOf(cell))
         piece.updateRepresentation()
         if self.game is None:
             return

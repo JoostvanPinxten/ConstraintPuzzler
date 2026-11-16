@@ -72,9 +72,22 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
+           <widget class="QPushButton" name="notesPushButton">
+            <property name="toolTip">
+             <string>Notes mode: typing a number toggles it as a note in the cell instead of entering it (N; Ctrl+number toggles a note in any mode)</string>
+            </property>
+            <property name="text">
+             <string>Notes (N)</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="hintPushButton">
             <property name="toolTip">
-             <string>Show a cell whose value follows from the constraints, and why, without filling it in</string>
+             <string>Show where to look; click again for the cell, and again for its value and why (nothing is filled in)</string>
             </property>
             <property name="text">
              <string>Hint</string>
