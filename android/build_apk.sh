@@ -7,7 +7,8 @@
 # Needs: uv, git, a JDK 17 (JAVA_HOME), and the usual python-for-android host packages
 # (autoconf, automake, libtool, pkg-config, cmake, zlib/libffi/libssl headers, zip, unzip).
 # The Android NDK (r28c) is downloaded to ~/.pyside6_android_deploy and the SDK to ~/.buildozer
-# on the first run. Set ANDROID_SDK_PATH to use an existing SDK instead.
+# on the first run. Set ANDROID_SDK_PATH to use an existing SDK instead, and ANDROID_DEBUG_KEYSTORE
+# (a base64-encoded debug.keystore: alias androiddebugkey, password android) to sign with a fixed key.
 #
 # Output: dist/ConstraintPuzzler-<version>-android-<arm64|x86_64>.apk
 #
@@ -136,6 +137,14 @@ with open("buildozer.spec", "w") as f:
     f.write("\n".join(out) + "\n")
 EOF
 grep -E '^(title|package\.|version|source\.|orientation|icon\.|requirements|android\.(archs|api|minapi|accept)|p4a\.)' buildozer.spec
+
+# Sign with a fixed debug key, so a new APK installs over an older one (Android refuses an update
+# signed with another key). CI passes the keystore base64-encoded in ANDROID_DEBUG_KEYSTORE;
+# otherwise Gradle uses (or creates) ~/.android/debug.keystore.
+if [[ -n "${ANDROID_DEBUG_KEYSTORE:-}" ]]; then
+    mkdir -p ~/.android
+    base64 -d <<< "$ANDROID_DEBUG_KEYSTORE" > ~/.android/debug.keystore
+fi
 
 python -m buildozer android debug
 
