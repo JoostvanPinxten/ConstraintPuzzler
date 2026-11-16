@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 
 
 class TotalSumValueConstraint(Constraint):
+    difficulty = 4  # needs the combinations that make up the sum
+
     def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
         self.totalValue: int | None = None

@@ -134,21 +134,48 @@ class GuiSmokeTest(unittest.TestCase):
 
     def test_hint_button(self):
         import sudokuMain
+        from gui.highlighting import HighlightRole
 
         window = sudokuMain.MainWindow()
         try:
             window.loadPuzzle("easySudoku.txt")
             assert window.puzzle is not None
             before = window.puzzle.saveState()
-            window.ui.hintPushButton.click()
-            # the hint does not fill in the cell, but selects it and explains its value
-            self.assertEqual(window.puzzle.saveState(), before)
-            cell = window.selectedCell()
-            assert cell is not None
-            self.assertFalse(cell.hasValue())
+            button = window.ui.hintPushButton
+
+            # 1st click: where to look; no cell is selected yet
+            button.click()
+            hint = window.hintSession.deduction
+            assert hint is not None
+            self.assertIsNone(window.selectedCell())
+            region = window.hintSession.regionCells()
+            self.assertIn(hint.cell, region)
+            self.assertEqual(window.hintRegion, region)
+            self.assertTrue(all(window.highlightRoles[c] >= HighlightRole.HINT for c in region))
+            self.assertIn("Hint: ", window.selectionInfoLabel.text())
+            self.assertNotIn(f"cell {hint.cell.getName()}", window.selectionInfoLabel.text())
+            self.assertEqual(button.text(), "Hint: which cell?")
+
+            # 2nd click: the cell
+            button.click()
+            self.assertIs(window.hintSession.deduction, hint)
+            self.assertIs(window.selectedCell(), hint.cell)
+            self.assertIn(f"Look at cell {hint.cell.getName()}", window.selectionInfoLabel.text())
+            self.assertEqual(button.text(), "Hint: show value")
+
+            # 3rd click: the value and why; nothing is filled in
+            button.click()
             text = window.selectionInfoLabel.text()
-            self.assertIn("Hint: cell", text)
-            self.assertIn(cell.getName(), text)
+            self.assertIn(f"Hint: cell {hint.cell.getName()} is {hint.value}", text)
+            self.assertEqual(window.puzzle.saveState(), before)
+            self.assertFalse(hint.cell.hasValue())
+            self.assertEqual(button.text(), "Hint")
+
+            # Solve single step fills in the hinted cell, and the hint is over
+            window.ui.solveStepPushButton.click()
+            self.assertEqual(hint.cell.getValue(), hint.value)
+            self.assertIsNone(window.hintSession.deduction)
+            self.assertEqual(window.hintRegion, set())
         finally:
             window.close()
             window.deleteLater()

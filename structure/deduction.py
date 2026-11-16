@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from structure.types import Value
 
 
+# the difficulty of a value that is the only candidate left in its cell (no constraint involved)
+NAKED_SINGLE = 1
+
+
 @dataclass(frozen=True, eq=False)
 class Deduction:
     cell: Cell
@@ -36,6 +40,10 @@ class Deduction:
 
     def setsValue(self) -> bool:
         return self.value is not None
+
+    def difficulty(self) -> int:
+        """How hard the deduction is for a person: NAKED_SINGLE, or its constraint's level."""
+        return self.cause.difficulty if self.cause is not None else NAKED_SINGLE
 
     def reason(self) -> str:
         """Why the change was made, in words."""

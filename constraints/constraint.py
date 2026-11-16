@@ -7,7 +7,7 @@ Created on 24 dec. 2012
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from constraints.constraintgroup import ConstraintGroup
@@ -28,6 +28,10 @@ def placedValues(cells: Iterable[Cell]) -> list[Value]:
 
 
 class Constraint:
+    # how hard a deduction of this constraint is for a person (see Deduction.difficulty); hints
+    # and single steps show the easiest deduction first
+    difficulty: ClassVar[int] = 5
+
     def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         self.initialValues: list[Value] = list(initialValues)
         self.group = group

@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 class CellGreaterThanCellConstraint(Constraint):
     """Enforces lesserCell < greaterCell"""
 
+    difficulty = 3
+
     def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
 

@@ -2,9 +2,13 @@
 
 import unittest
 
+from constraints.exactcoverconstraint import ExactCoverConstraint
+from constraints.totalsumvalueconstraint import TotalSumValueConstraint
+from constraints.uniquevalueconstraint import UniqueValueConstraint
 from parsers.sudoku import parseSudokuLines
 from solver.Solver import SolveCancelled, Solver
 from structure.cell import ValueSource
+from structure.deduction import NAKED_SINGLE, DeductionLog
 from structure.errors import ContradictionError
 from structure.tests.test_entries import EASY
 from utility.puzzletypes import PUZZLE_TYPES
@@ -123,6 +127,58 @@ class DeductionTest(unittest.TestCase):
         for d in guesses:
             self.assertEqual(d.cell.getValue(), d.value)
             self.assertIn("guess", d.reason())
+
+
+def passDeductions(puzzle):
+    """The values a single deduction pass determines (the puzzle is left unchanged)."""
+    solver = Solver(puzzle)
+    state = puzzle.saveState()
+    log = DeductionLog()
+    with puzzle.recording(log):
+        solver.step()
+    puzzle.restoreState(state)
+    return [d for d in log.deductions if d.setsValue()]
+
+
+class EasiestFirstTest(unittest.TestCase):
+    def testHintIsAnEasiestDeduction(self):
+        for name, load in loadExamples():
+            with self.subTest(puzzle=name):
+                puzzle = load()
+                deductions = passDeductions(puzzle)
+                if not deductions:
+                    continue
+                lowest = min(d.difficulty() for d in deductions)
+                solver = Solver(puzzle)
+                for seed in range(5):
+                    solver.random.seed(seed)
+                    hint = solver.hint()
+                    assert hint is not None
+                    self.assertEqual(hint.difficulty(), lowest)
+
+    def testSolveStepIsAnEasiestDeduction(self):
+        puzzle = parseSudokuLines(EASY)
+        lowest = min(d.difficulty() for d in passDeductions(puzzle))
+        solver = Solver(puzzle)
+        self.assertTrue(solver.solveStep())
+        assert solver.lastStep is not None
+        self.assertEqual(solver.lastStep.difficulty(), lowest)
+
+    def testDifficultyOrder(self):
+        self.assertLess(NAKED_SINGLE, UniqueValueConstraint.difficulty)
+        self.assertEqual(ExactCoverConstraint.difficulty, UniqueValueConstraint.difficulty)
+        self.assertLess(UniqueValueConstraint.difficulty, TotalSumValueConstraint.difficulty)
+
+    def testSolveStepFillsThePreferredCell(self):
+        puzzle = parseSudokuLines(EASY)
+        deductions = passDeductions(puzzle)
+        # the hardest one, which solveStep would not choose by itself
+        preferred = max(deductions, key=lambda d: d.difficulty())
+        solver = Solver(puzzle)
+        self.assertTrue(solver.solveStep(preferred))
+        assert solver.lastStep is not None
+        self.assertIs(solver.lastStep.cell, preferred.cell)
+        self.assertEqual(preferred.cell.getValue(), preferred.value)
 
 
 class CountSolutionsTest(unittest.TestCase):

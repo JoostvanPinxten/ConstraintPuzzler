@@ -31,6 +31,7 @@ from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.solverworker import SolveJob, SolveWorker
 from gui.ui import mainWindowUi
+from solver.hints import CELL, REGION, VALUE, HintSession
 from solver.Solver import Solver
 from structure.entries import EntryError
 from structure.errors import ContradictionError
@@ -111,6 +112,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
         self.puzzle: Puzzle | None = None
         self.solver: Solver | None = None
+        # explains the value the last solver step filled in (shown until the selection changes)
+        self.stepMessage: str | None = None
+        # the hint being revealed level by level (see hintButtonClicked), and its region
+        self.hintSession = HintSession()
+        self.hintRegion: set[Cell] = set()
+        # the cells Check marked as wrong (until the puzzle changes)
+        self.checkMarks: set[Cell] = set()
 
         self.createMenus()
         self.createEditMenu()
@@ -173,6 +181,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.highlightRoles = {}
         self.game = Game(self.puzzle)
         self.inputMessage = None
+        self.resetGuidance()
         self.violations = set()
         # to find the cell under the mouse, and the tree row of a cell
         self.pieceCells = {
@@ -260,10 +269,19 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def puzzleChanged(self) -> None:
         """Redraw after values changed: cell colours, highlight, description and undo state."""
+        self.resetGuidance()
         self.refreshCellStyles()
         self.updateHighlight()
         self.updateSelectionInfo()
         self.updateUndoActions()
+
+    def resetGuidance(self) -> None:
+        """Forget the hint being revealed and the Check marks: they belong to the puzzle as it
+        was before a change."""
+        self.hintSession.reset()
+        self.hintRegion = set()
+        self.checkMarks = set()
+        self.ui.hintPushButton.setText("Hint")
 
     def createViewMenu(self) -> None:
         viewMenu = self.menuBar().addMenu("View")
@@ -382,6 +400,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def updateHighlight(self) -> None:
         """Colour the cells of the selected tree items by the role they play in them."""
         roles = combinedHighlightRoles(self.selectedItems)
+        # where a hint says to look, and what Check found to be wrong
+        for cells, role in (
+            (self.hintRegion, HighlightRole.HINT),
+            (self.checkMarks, HighlightRole.WRONG),
+        ):
+            for cell in cells:
+                roles[cell] = max(role, roles.get(cell, HighlightRole.NONE))
         self.highlightRoles = roles
 
         # continue from wherever the previous fade got to
@@ -427,6 +452,12 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         selectionModel = self.ui.puzzleTreeView.selectionModel()
         rows = selectionModel.selectedRows(0) if selectionModel is not None else []
         if not rows:
+            # e.g. a hint that shows where to look, without selecting a cell yet
+            if self.stepMessage:
+                legend = legendHtml(self.highlightRoles.values())
+                parts = [f"<i>{html.escape(self.stepMessage)}</i>"] + ([legend] if legend else [])
+                self.selectionInfoLabel.setText("<br>".join(parts))
+                return
             self.selectionInfoLabel.setText(
                 "Click a cell in the puzzle, or select a cell, group or constraint in the tree"
                 " to see its cells and rules."
@@ -453,8 +484,6 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         """Clicking a cell selects it; typing a number enters it in the selected cell."""
         self.game: Game | None = None
         self.inputMessage: str | None = None
-        # explains the value the last solver step filled in (shown until the selection changes)
-        self.stepMessage: str | None = None
         # the cells whose shown value breaks a rule (drawn in red)
         self.violations = set()
         self.pieceCells = {}
@@ -655,11 +684,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         super().closeEvent(event)
 
     def hintButtonClicked(self) -> None:
-        """Show a cell whose value follows from the constraints, and why, without filling it."""
+        """Reveal a value that follows from the constraints, a bit more on every click: first
+        where to look, then the cell, then the value and why. Nothing is filled in."""
         if self.solver is None or self.game is None or self.solveJob is not None:
             return
+        session = self.hintSession
         try:
-            hint = self.solver.hint()
+            hint = session.advance(self.solver)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -674,9 +705,21 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 "No value follows from a single round of the rules. Use Solve single step to"
                 " narrow down the candidates, or Solve.",
             )
+            self.resetGuidance()
+            self.updateHighlight()
             return
-        self.selectCell(hint.cell)
-        self.stepMessage = "Hint: " + hint.describe()
+        if session.level == REGION:
+            # show the area without giving away the cell
+            self.selectCell(None)
+            self.hintRegion = session.regionCells()
+        else:
+            self.hintRegion = set()
+            self.selectCell(hint.cell)
+        # after selectCell, which clears the message of the previous selection
+        self.stepMessage = "Hint: " + session.message()
+        nextText = {REGION: "Hint: which cell?", CELL: "Hint: show value", VALUE: "Hint"}
+        self.ui.hintPushButton.setText(nextText[session.level])
+        self.updateHighlight()
         self.updateSelectionInfo()
 
     def solveStepButtonClicked(self) -> None:
@@ -684,7 +727,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         if self.solver is None or self.game is None or self.game.puzzle.isSolved():
             return
         try:
-            changed = self.game.solveStep(self.solver)
+            # fill in the cell of the hint being shown, if any
+            changed = self.game.solveStep(self.solver, self.hintSession.deduction)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,

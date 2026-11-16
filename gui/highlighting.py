@@ -33,30 +33,36 @@ class HighlightRole(IntEnum):
 
     NONE = 0
     PEER = 1  # shares a constraint group with the selected cell
-    OPEN = 2  # cell of the selection without a value yet
-    SOLVED = 3  # cell of the selection that has a value
-    LESSER = 4  # the smaller cell of a greater-than constraint
-    GREATER = 5  # the larger cell of a greater-than constraint
-    SELECTED = 6  # the selected cell itself
+    HINT = 2  # where a hint says to look
+    OPEN = 3  # cell of the selection without a value yet
+    SOLVED = 4  # cell of the selection that has a value
+    LESSER = 5  # the smaller cell of a greater-than constraint
+    GREATER = 6  # the larger cell of a greater-than constraint
+    WRONG = 7  # a value or notes that Check found to be wrong
+    SELECTED = 8  # the selected cell itself
 
 
 ROLE_COLORS = {
     # NONE keeps the hue of OPEN, so fading in and out does not pass through another colour
     HighlightRole.NONE: QtGui.QColor(255, 255, 0, 0),
     HighlightRole.PEER: QtGui.QColor(255, 255, 0, 45),
+    HighlightRole.HINT: QtGui.QColor(150, 110, 255, 80),
     HighlightRole.OPEN: QtGui.QColor(255, 255, 0, 110),
     HighlightRole.SOLVED: QtGui.QColor(90, 200, 90, 110),
     HighlightRole.LESSER: QtGui.QColor(70, 140, 255, 130),
     HighlightRole.GREATER: QtGui.QColor(255, 130, 30, 140),
+    HighlightRole.WRONG: QtGui.QColor(230, 40, 40, 120),
     HighlightRole.SELECTED: QtGui.QColor(255, 190, 0, 190),
 }
 
 ROLE_LABELS = {
     HighlightRole.PEER: "shares a group with the cell",
+    HighlightRole.HINT: "where to look",
     HighlightRole.OPEN: "open cell",
     HighlightRole.SOLVED: "solved cell",
     HighlightRole.LESSER: "smaller cell",
     HighlightRole.GREATER: "larger cell",
+    HighlightRole.WRONG: "wrong according to Check",
     HighlightRole.SELECTED: "selected cell",
 }
 

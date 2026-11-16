@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     # for the annotations only: at run time, this module does not import the solver
     from solver.Solver import Solver
     from structure.cell import Cell
+    from structure.deduction import Deduction
     from structure.puzzle import Puzzle
     from structure.types import PuzzleState, Value
 
@@ -116,9 +117,10 @@ class Game:
 
         self.perform(action)
 
-    def solveStep(self, solver: Solver) -> bool:
-        """Let the solver fill in a single cell. Returns whether the puzzle changed."""
-        return self.perform(solver.solveStep)
+    def solveStep(self, solver: Solver, preferred: Deduction | None = None) -> bool:
+        """Let the solver fill in a single cell (the one of `preferred`, e.g. the hint shown
+        last, when it can). Returns whether the puzzle changed."""
+        return self.perform(lambda: solver.solveStep(preferred))
 
     # --- queries --------------------------------------------------------------------------
 
