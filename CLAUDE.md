@@ -33,7 +33,7 @@ QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s . -p "test_*.py"
 ```
 - Tests: unit tests in `<package>/tests/test_*.py`, headless GUI smoke tests in `tests/test_gui_smoke.py`.
 - Ruff rules: E, W, F, I, UP, B and SIM, with line length 100. Fix findings rather than adding `noqa`.
-- Pyright: errors fail CI. `reportOptionalMemberAccess` is a warning for now. Don't add new warnings.
+- Pyright: errors fail CI, including `reportOptionalMemberAccess` (narrow `X | None` values with an `is not None` check or an assert before using them). Don't add new warnings either.
 - In Claude Code, a PostToolUse hook (`.claude/hooks/ruff_on_edit.py`) runs ruff fix + format on every edited `.py` file.
 
 ## Skills (slash commands)
