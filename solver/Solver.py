@@ -4,11 +4,23 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+from __future__ import annotations
+
 import random
+from collections.abc import Callable, Iterable
+from contextlib import AbstractContextManager
+from typing import TYPE_CHECKING
 
 from structure.cell import ValueSource
 from structure.deduction import DeductionLog
 from structure.errors import ContradictionError
+
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
+    from structure.cell import Cell
+    from structure.deduction import Deduction
+    from structure.puzzle import Puzzle
+    from structure.types import PuzzleState
 
 
 class SolveCancelled(Exception):
@@ -23,7 +35,7 @@ class Solver:
     constraint that made it. Propagation only re-applies the constraint groups of the cells
     that changed in the previous pass."""
 
-    def __init__(self, puzzle, allowGuessing=False):
+    def __init__(self, puzzle: Puzzle, allowGuessing: bool = False) -> None:
         self.puzzle = puzzle
         # when deduction gets stuck, try values (depth-first, with backtracking)
         self.allowGuessing = allowGuessing
@@ -32,15 +44,19 @@ class Solver:
         # the changes of the last solve() / propagate() / solveStep()
         self.log = DeductionLog()
         # the value filled in by the last solveStep() (a Deduction), if any
-        self.lastStep = None
+        self.lastStep: Deduction | None = None
         # set during solve(): returns True when the caller wants the solver to stop
-        self.shouldStop = None
+        self.shouldStop: Callable[[], bool] | None = None
 
-    def _checkStop(self):
+    def _checkStop(self) -> None:
         if self.shouldStop is not None and self.shouldStop():
             raise SolveCancelled("solving was cancelled")
 
-    def step(self, groups=None, cells=None):
+    def step(
+        self,
+        groups: Iterable[ConstraintGroup] | None = None,
+        cells: Iterable[Cell] | None = None,
+    ) -> None:
         """A single deduction pass over the given cells and constraint groups (default: all)."""
         if cells is None:
             cells = self.puzzle.getGrid().getCells()
@@ -51,20 +67,20 @@ class Solver:
         for cg in groups:
             cg.applyConstraints()
 
-    def _record(self):
+    def _record(self) -> AbstractContextManager[DeductionLog]:
         """Record the changes made inside the block in the solver's log (a fresh log, unless
         the puzzle is already recording into it)."""
         if self.puzzle.deductionLog is not self.log:
             self.log = DeductionLog()
         return self.puzzle.recording(self.log)
 
-    def _deducedValues(self, start=0):
+    def _deducedValues(self, start: int = 0) -> list[Deduction]:
         """The values deduced (not guessed) since position `start` of the log."""
         return [
             d for d in self.log.since(start) if d.setsValue() and d.source is ValueSource.DEDUCED
         ]
 
-    def hint(self):
+    def hint(self) -> Deduction | None:
         """The next value the rules determine (a Deduction with its reason), without changing
         the puzzle; None when a deduction pass does not determine any value. Raises
         ContradictionError when the pass shows that the puzzle has no solution."""
@@ -77,7 +93,7 @@ class Solver:
             self.puzzle.restoreState(state)
         return self.random.choice(values) if values else None
 
-    def solveStep(self):
+    def solveStep(self) -> bool:
         """Fill in a single cell, e.g. to follow the solver step by step (no guessing).
         A deduction pass is tried; if it determines the values of one or more cells, the puzzle
         is reset and only one of those cells, chosen at random, gets its value (lastStep tells
@@ -94,6 +110,7 @@ class Solver:
                 if values:
                     self.puzzle.restoreState(state)
                     chosen = self.random.choice(values)
+                    assert chosen.value is not None  # _deducedValues only lists set values
                     self.log.truncate(0)
                     with self.puzzle.causedBy(chosen.cause):
                         chosen.cell.inferValue(chosen.value)
@@ -103,7 +120,7 @@ class Solver:
             raise
         return self.puzzle.saveState() != state
 
-    def propagate(self, state=None):
+    def propagate(self, state: PuzzleState | None = None) -> None:
         """Repeat deduction passes until a pass no longer changes anything.
 
         The first pass applies every constraint; later passes only the constraint groups of
@@ -121,7 +138,7 @@ class Solver:
                 # keep the puzzle's order, so the passes are deterministic
                 groups = [g for g in self.puzzle.getConstraintGroups() if g in groups]
 
-    def solve(self, shouldStop=None):
+    def solve(self, shouldStop: Callable[[], bool] | None = None) -> bool:
         """Deduce as much as possible; if allowed, guess when deduction gets stuck.
         Returns whether the puzzle is solved. Raises ContradictionError if the
         puzzle has no solution; the puzzle is then restored to the state it had
@@ -146,7 +163,7 @@ class Solver:
             self.shouldStop = None
         return self.puzzle.isSolved()
 
-    def countSolutions(self, limit=2):
+    def countSolutions(self, limit: int = 2) -> int:
         """The number of solutions, counting up to `limit` (with guessing), e.g. to check that
         a puzzle has exactly one. The puzzle is left as it was."""
         initialState = self.puzzle.saveState()
@@ -160,7 +177,7 @@ class Solver:
         finally:
             self.puzzle.restoreState(initialState)
 
-    def _count(self, limit):
+    def _count(self, limit: int) -> int:
         openCells = self.puzzle.getOpenCells()
         if not openCells:
             return 1
@@ -181,7 +198,7 @@ class Solver:
                 break
         return found
 
-    def _search(self):
+    def _search(self) -> bool:
         openCells = self.puzzle.getOpenCells()
         if not openCells:
             return True
@@ -204,6 +221,6 @@ class Solver:
             self.log.truncate(mark)
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = str(self.puzzle)
         return s

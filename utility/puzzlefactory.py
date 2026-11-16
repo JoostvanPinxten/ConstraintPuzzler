@@ -4,7 +4,11 @@ Created on 5 jan. 2013
 @author: Juice
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
 from math import floor
+from typing import TYPE_CHECKING
 
 from constraints.exactcoverconstraint import ExactCoverConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
@@ -12,13 +16,17 @@ from constraints.uniquevalueconstraint import UniqueValueConstraint
 from structure.position import Position
 from structure.puzzle import Puzzle
 
+if TYPE_CHECKING:
+    from constraints.constraint import Constraint
+    from structure.types import Value
+
 
 class PuzzleFactory:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @staticmethod
-    def createEmptySudoku():
+    def createEmptySudoku() -> Puzzle:
         values = set(range(1, 10))
 
         blocks = []
@@ -59,7 +67,7 @@ class PuzzleFactory:
         return sudoku
 
     @staticmethod
-    def createExampleKakuro():
+    def createExampleKakuro() -> Puzzle:
         possibleValues = range(1, 11)
         puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))
 
@@ -103,7 +111,9 @@ class PuzzleFactory:
         return puzzle
 
     @staticmethod
-    def createSingleConstraintPuzzle(possibleValues, numberOfCells, constraintType):
+    def createSingleConstraintPuzzle(
+        possibleValues: Iterable[Value], numberOfCells: int, constraintType: type[Constraint]
+    ) -> Puzzle:
         puzzle = Puzzle(
             str(numberOfCells) + "Cell test puzzle with single constraint type", set(possibleValues)
         )
@@ -117,7 +127,7 @@ class PuzzleFactory:
         return puzzle
 
     @staticmethod
-    def createFutoshikiPuzzle(size):
+    def createFutoshikiPuzzle(size: int) -> Puzzle:
         puzzle = Puzzle(
             str(size) + "x" + str(size) + " Futoshiki test puzzle", set(range(1, size + 1))
         )

@@ -6,30 +6,38 @@ that was acting at that moment (Puzzle.causedBy). The solver uses the log to kno
 changed, so it only re-applies the constraints of those cells, and to explain a step or a hint.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
 
 from structure.cell import ValueSource
+
+if TYPE_CHECKING:
+    from constraints.constraint import Constraint
+    from structure.cell import Cell
+    from structure.types import Value
 
 
 @dataclass(frozen=True, eq=False)
 class Deduction:
-    cell: Any
+    cell: Cell
     # the candidates removed from the cell (empty when a value was set)
-    removed: frozenset = field(default_factory=frozenset)
+    removed: frozenset[Value] = field(default_factory=frozenset)
     # the value set in the cell (None when candidates were removed)
-    value: Any = None
+    value: Value | None = None
     # where a set value came from (deduced, guessed, entered, given)
     source: ValueSource | None = None
     # the constraint that made the change; None for a cell's own check (a single candidate
     # left), a guess, or a change from outside the solver
-    cause: Any = None
+    cause: Constraint | None = None
 
-    def setsValue(self):
+    def setsValue(self) -> bool:
         return self.value is not None
 
-    def reason(self):
+    def reason(self) -> str:
         """Why the change was made, in words."""
         if self.cause is not None:
             return self.cause.explain(self)
@@ -41,7 +49,7 @@ class Deduction:
             return f"{self.value} was {self.source.value if self.source else 'set'}"
         return "removed"
 
-    def describe(self):
+    def describe(self) -> str:
         """What changed and why, e.g. "cell 3, 4: 7, because ..."."""
         name = self.cell.getName()
         if self.setsValue():
@@ -53,18 +61,18 @@ class Deduction:
 
 
 class DeductionLog:
-    def __init__(self):
+    def __init__(self) -> None:
         self.deductions: list[Deduction] = []
-        self._causes: list[Any] = []
+        self._causes: list[Constraint | None] = []
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.deductions)
 
-    def currentCause(self):
+    def currentCause(self) -> Constraint | None:
         return self._causes[-1] if self._causes else None
 
     @contextmanager
-    def cause(self, constraint):
+    def cause(self, constraint: Constraint | None) -> Iterator[None]:
         """Attribute the changes made inside the block to a constraint."""
         self._causes.append(constraint)
         try:
@@ -72,21 +80,21 @@ class DeductionLog:
         finally:
             self._causes.pop()
 
-    def recordRemoval(self, cell, value):
+    def recordRemoval(self, cell: Cell, value: Value) -> None:
         self.deductions.append(
             Deduction(cell, removed=frozenset([value]), cause=self.currentCause())
         )
 
-    def recordValue(self, cell, value, source):
+    def recordValue(self, cell: Cell, value: Value, source: ValueSource) -> None:
         cause = self.currentCause() if source is ValueSource.DEDUCED else None
         self.deductions.append(Deduction(cell, value=value, source=source, cause=cause))
 
-    def truncate(self, length):
+    def truncate(self, length: int) -> None:
         """Forget the deductions after the first `length` (e.g. after an undone guess)."""
         del self.deductions[length:]
 
-    def since(self, length):
+    def since(self, length: int) -> list[Deduction]:
         return self.deductions[length:]
 
-    def changedCells(self, start=0):
+    def changedCells(self, start: int = 0) -> set[Cell]:
         return {d.cell for d in self.deductions[start:]}

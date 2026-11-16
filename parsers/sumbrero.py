@@ -1,12 +1,18 @@
 """Parser for Sumbrero files, plus the hexagon geometry it relies on; see doc/puzzle-files.md
 for the syntax."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from parsers.common import PuzzleFileError, parseIndex, parsePosition, parseRange
 from structure.position import Position
 from structure.puzzle import Puzzle
+
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
 
 # Sumbrero cells are flat-topped hexagons, laid out in columns: Position(x, y) is column x,
 # row y, and every odd column is shifted down by half a hexagon. A line of cells runs in one
@@ -51,7 +57,7 @@ def neighbour(position: Position, direction: str) -> Position:
     return Position(x + dx, y + dy)
 
 
-def lineKind(group):
+def lineKind(group: ConstraintGroup) -> str | None:
     """COLUMN, DESCENDING_ROW or ASCENDING_ROW for a line created by parseSumbreroLines,
     else None."""
     kind = group.getName().rsplit(" ", 1)[0]

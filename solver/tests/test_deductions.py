@@ -98,7 +98,7 @@ class DeductionTest(unittest.TestCase):
         solver = Solver(puzzle)
         for _ in range(10):
             hint = solver.hint()
-            assert hint is not None
+            assert hint is not None and hint.value is not None
             index = puzzle.grid.getCells().index(hint.cell)
             self.assertEqual(hint.value, solution[(index % 9, index // 9)])
             hint.cell.inferValue(hint.value)

@@ -31,7 +31,7 @@ class MainWindow(BasicMainWindow):
         for cg in self.puzzle.getConstraintGroups():
             for constraint in cg.getConstraints():
                 if isinstance(constraint, TotalSumValueConstraint) and cg.getCells():
-                    anchor, direction = clueAnchor(cg.getCells())
+                    anchor, direction = clueAnchor(cg.getPositionedCells())
                     alignment = (
                         ValueTriangle.BOTTOMLEFT if direction == "down" else ValueTriangle.TOPRIGHT
                     )
