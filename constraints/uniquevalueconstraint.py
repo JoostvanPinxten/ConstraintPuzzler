@@ -28,6 +28,13 @@ class UniqueValueConstraint(Constraint):
     def summary(self):
         return "all different"
 
+    def explain(self, deduction):
+        group = self.group.getName()
+        if deduction.setsValue():
+            return f"{group} needs {deduction.value} and it fits nowhere else"
+        removed = ", ".join(str(v) for v in sorted(deduction.removed))
+        return f"{group} already has {removed} ({self.summary()})"
+
     def violations(self, valueOf):
         """The cells that share their value with another cell of the group."""
         cellsByValue = {}
@@ -44,8 +51,6 @@ class UniqueValueConstraint(Constraint):
         return f"The values must all differ; placed so far: {formatValues(placed)}."
 
     def getAllowedValuesForValueList(self, allowedValues, usedValues):
-        # return allowedValues
-        # print allowedValues, usedValues, set(usedValues) - set(self.values)
         return set(allowedValues) - set(usedValues)
 
     def checkForSinglePosition(self, values):

@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from parsers.common import PuzzleFileError, parsePosition, parsePositionList, parseRange
+from structure.position import Position
 from structure.puzzle import Puzzle
 
 
@@ -66,3 +67,19 @@ def parseKakuroLines(lines: Iterable[str], filename: str = "<kakuro>") -> Puzzle
 def parseKakuroFile(filename: str) -> Puzzle:
     with open(filename) as f:
         return parseKakuroLines(f.readlines(), filename)
+
+
+def clueAnchor(cells) -> tuple[Position, str]:
+    """Where the clue of a Kakuro line is drawn: the position of the black square just before
+    the line's first cell, and the direction of the line ("down" or "across").
+
+    A line whose cells all share their x coordinate (and has more than one cell) runs down;
+    any other line runs across."""
+    positions = [cell.getPosition() for cell in cells]
+    if not positions:
+        raise ValueError("a Kakuro line needs at least one cell")
+    if len(positions) > 1 and len({p.x() for p in positions}) == 1:
+        top = min(positions, key=lambda p: p.y())
+        return Position(top.x(), top.y() - 1), "down"
+    left = min(positions, key=lambda p: (p.x(), p.y()))
+    return Position(left.x() - 1, left.y()), "across"

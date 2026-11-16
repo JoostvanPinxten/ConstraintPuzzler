@@ -4,17 +4,7 @@ Created on 3 jan. 2013
 @author: Juice
 """
 
-from PySide6 import QtCore, QtGui, QtWidgets
-
-
-class PuzzlePiece(QtWidgets.QGraphicsRectItem):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        pass
-
-
-#    def
+from PySide6 import QtCore, QtGui
 
 
 # cannot animate the qgraphicsitem directly, so introduce another proxy,

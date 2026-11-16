@@ -72,6 +72,16 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_3">
           <item>
+           <widget class="QPushButton" name="hintPushButton">
+            <property name="toolTip">
+             <string>Show a cell whose value follows from the constraints, and why, without filling it in</string>
+            </property>
+            <property name="text">
+             <string>Hint</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="solveStepPushButton">
             <property name="toolTip">
              <string>Fill in one cell whose value follows from the constraints</string>

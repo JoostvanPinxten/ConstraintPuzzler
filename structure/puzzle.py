@@ -4,6 +4,8 @@ Created on 6 jan. 2013
 @author: Juice
 """
 
+from contextlib import contextmanager, nullcontext
+
 import constraints
 from structure.grid import Grid
 
@@ -18,6 +20,24 @@ class Puzzle:
         self.name = name
 
         self.grid = Grid(self.values, self)
+        # while set (see recording), changes to the cells are recorded in this DeductionLog
+        self.deductionLog = None
+
+    @contextmanager
+    def recording(self, log):
+        """Record the changes to the cells made inside the block in a DeductionLog."""
+        previous = self.deductionLog
+        self.deductionLog = log
+        try:
+            yield log
+        finally:
+            self.deductionLog = previous
+
+    def causedBy(self, constraint):
+        """Attribute the changes made inside the block to a constraint (while recording)."""
+        if self.deductionLog is None:
+            return nullcontext()
+        return self.deductionLog.cause(constraint)
 
     def getGrid(self):
         return self.grid
@@ -39,9 +59,7 @@ class Puzzle:
     def saveState(self):
         """Snapshot of all mutable solving state. The snapshot is immutable and
         comparable, so it can also be used to detect whether anything changed."""
-        cells = tuple(
-            (frozenset(c.values), c.value, c.inferred, c.entered) for c in self.grid.cells
-        )
+        cells = tuple((frozenset(c.values), c.value, c.source) for c in self.grid.cells)
         constraints = tuple(tuple(c.values) for c in self.getConstraints())
         return (cells, constraints)
 
@@ -52,13 +70,12 @@ class Puzzle:
         cellStates, constraintStates = state
         changedCells = []
         for cell, cellState in zip(self.grid.cells, cellStates, strict=True):
-            if (frozenset(cell.values), cell.value, cell.inferred, cell.entered) == cellState:
+            if (frozenset(cell.values), cell.value, cell.source) == cellState:
                 continue
-            values, value, inferred, entered = cellState
+            values, value, source = cellState
             cell.values = set(values)
             cell.value = value
-            cell.inferred = inferred
-            cell.entered = entered
+            cell.source = source
             changedCells.append(cell)
         for constraint, values in zip(self.getConstraints(), constraintStates, strict=True):
             constraint.values = list(values)

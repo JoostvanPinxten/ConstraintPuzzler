@@ -6,31 +6,36 @@ Created on 28 dec. 2012
 
 
 class ConstraintGroup:
-    def __init__(self, grid, name="Untitled"):
+    """A set of cells together with the constraints that apply to them."""
+
+    def __init__(self, puzzle, name="Untitled"):
         self.constraints = []
         self.cells = []
-        self.grid = grid
+        self.puzzle = puzzle
         self.name = name
 
+    def getValues(self):
+        """All values a cell of the puzzle can take."""
+        return self.puzzle.getValues()
+
     def addConstraint(self, constraintType):
-        constraint = constraintType(self, self.grid.values)
+        constraint = constraintType(self, self.getValues())
         self.constraints.append(constraint)
         return constraint
 
     def addCell(self, cell):
+        """Add a cell to the group; the cell also learns that it belongs to this group."""
         self.cells.append(cell)
-
+        cell.constraintGroups.append(self)
         cell.valueChanged.connect(self.notify)
-        # cell.addConstraintGroup(self)
 
     def notify(self, cell):
-        for c in self.constraints:
-            if c is not cell:
-                c.notify(cell)
+        for constraint in self.constraints:
+            with self.puzzle.causedBy(constraint):
+                constraint.notify(cell)
 
     def removeValue(self, cell, value):
         self.removeValueExceptForList([cell], value)
-        # cell.remove(value)
 
     def removeValueExceptForList(self, cells, value):
         # Cell.remove raises a ContradictionError when the value is already set in that cell
@@ -39,15 +44,9 @@ class ConstraintGroup:
                 c.remove(value)
 
     def applyConstraints(self):
-
         for constraint in self.constraints:
-            constraint.applyConstraint()
-
-            # check if it is the only cell that contains this value
-            # TODO: refactor to different kind of constraint (or make UVC configurable)
-
-        # self.searchForNakedSet() # might actually need to refactor this to a new type of
-        # constraint (exactCover) i.s.o. using it here...
+            with self.puzzle.causedBy(constraint):
+                constraint.applyConstraint()
 
     def getName(self):
         return self.name
@@ -62,9 +61,8 @@ class ConstraintGroup:
         return self.constraints
 
     def valuesAllowedByGroup(self, usedValues):
-        allowedValues = self.grid.getValues()
+        allowedValues = self.getValues()
         for c in self.constraints:
-            # print allowedValues
             allowedValues = c.getAllowedValuesForValueList(allowedValues, usedValues)
 
         return allowedValues

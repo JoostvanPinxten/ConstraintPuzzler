@@ -6,14 +6,7 @@ Created on 6 jan. 2013
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-
-def centerTextItem(text):
-    form = QtGui.QTextBlockFormat()
-    form.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-    cursor = text.textCursor()
-    cursor.select(QtGui.QTextCursor.SelectionType.Document)
-    cursor.mergeBlockFormat(form)
-    cursor.clearSelection()
+from gui.puzzlerepresentation.cellpiece import centerTextItem
 
 
 class ValueTriangle(QtWidgets.QGraphicsPolygonItem):

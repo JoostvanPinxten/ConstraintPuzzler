@@ -13,6 +13,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import shiboken6  # noqa: E402
 from PySide6 import QtCore, QtGui, QtTest, QtWidgets  # noqa: E402
 
+from utility.puzzletypes import PUZZLE_TYPES  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -51,8 +53,14 @@ class GuiSmokeTest(unittest.TestCase):
             window.deleteLater()
             self.app.processEvents()
 
-    def test_sudoku(self):
-        self._smoke("sudokuMain", "easySudoku.txt")
+    def test_every_puzzle_type(self):
+        """Every registered puzzle type opens its default example in its own window."""
+        from utility.puzzletypes import PUZZLE_TYPES
+
+        for puzzleType in PUZZLE_TYPES.values():
+            with self.subTest(puzzle=puzzleType.name):
+                assert puzzleType.defaultExample is not None
+                self._smoke(puzzleType.windowModule, puzzleType.examples[puzzleType.defaultExample])
 
     def test_solve_step_button_advances_the_puzzle(self):
         import sudokuMain
@@ -66,6 +74,10 @@ class GuiSmokeTest(unittest.TestCase):
             window.ui.solveStepPushButton.click()
             self.assertNotEqual(window.puzzle.saveState(), before)
             self.assertEqual(window.puzzle.getNumberOfOpenCells(), openBefore - 1)
+            # the filled cell is selected, with the reason for its value
+            assert window.solver is not None and window.solver.lastStep is not None
+            self.assertIs(window.selectedCell(), window.solver.lastStep.cell)
+            self.assertIn("Solver step: cell", window.selectionInfoLabel.text())
             # the easy sudoku is solved by deduction alone, so stepping reaches the solution
             for _ in range(200):
                 if window.puzzle.isSolved():
@@ -77,14 +89,85 @@ class GuiSmokeTest(unittest.TestCase):
             window.deleteLater()
             self.app.processEvents()
 
-    def test_kakuro(self):
-        self._smoke("kakuroMain", "mediumKakuro.txt")
+    def test_solve_runs_in_the_background(self):
+        import sudokuMain
 
-    def test_sumbrero(self):
-        self._smoke("sumbreroMain", "simpleSumbrero.txt")
+        window = sudokuMain.MainWindow()
+        try:
+            window.settings.setAllowGuessing(True)
+            window.loadPuzzle("hardSudoku.txt")
+            assert window.puzzle is not None
+            before = window.puzzle.saveState()
+            window.ui.solvePushButton.click()
+            # the click returns at once; while the solver runs, Solve becomes Cancel
+            self.assertIsNotNone(window.solveJob)
+            self.assertEqual(window.ui.solvePushButton.text(), "Cancel")
+            self.assertFalse(window.ui.hintPushButton.isEnabled())
+            self.assertFalse(window.ui.solveStepPushButton.isEnabled())
+            self.assertTrue(window.waitForSolve())
+            self.assertTrue(window.puzzle.isSolved())
+            self.assertEqual(window.ui.solvePushButton.text(), "Solve")
+            self.assertTrue(window.ui.hintPushButton.isEnabled())
+            self.assertTrue(any(c.isGuessed() for c in window.puzzle.grid.getCells()))
+            # the background solve is one undo step
+            self.assertTrue(window.undo())
+            self.assertEqual(window.puzzle.saveState(), before)
+        finally:
+            window.close()
+            window.deleteLater()
+            self.app.processEvents()
 
-    def test_futoshiki(self):
-        self._smoke("futoshikiMain", "futoshiki.txt")
+    def test_closing_during_a_solve_stops_it(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        window.settings.setAllowGuessing(True)
+        window.loadPuzzle("hardSudoku.txt")
+        window.ui.solvePushButton.click()
+        job = window.solveJob
+        assert job is not None
+        window.close()
+        self.assertIsNone(window.solveJob)
+        self.assertFalse(job.isRunning())
+        window.deleteLater()
+        self.app.processEvents()
+
+    def test_hint_button(self):
+        import sudokuMain
+
+        window = sudokuMain.MainWindow()
+        try:
+            window.loadPuzzle("easySudoku.txt")
+            assert window.puzzle is not None
+            before = window.puzzle.saveState()
+            window.ui.hintPushButton.click()
+            # the hint does not fill in the cell, but selects it and explains its value
+            self.assertEqual(window.puzzle.saveState(), before)
+            cell = window.selectedCell()
+            assert cell is not None
+            self.assertFalse(cell.hasValue())
+            text = window.selectionInfoLabel.text()
+            self.assertIn("Hint: cell", text)
+            self.assertIn(cell.getName(), text)
+        finally:
+            window.close()
+            window.deleteLater()
+            self.app.processEvents()
+
+    def test_cancelled_worker_reports_it(self):
+        from gui.solverworker import SolveWorker
+        from utility.puzzletypes import SUDOKU
+
+        puzzle = SUDOKU.parser("hardSudoku.txt")
+        worker = SolveWorker(
+            lambda: SUDOKU.parser("hardSudoku.txt"), puzzle.saveState(), allowGuessing=True
+        )
+        results = []
+        worker.cancelled.connect(lambda: results.append("cancelled"))
+        worker.finished.connect(lambda *_: results.append("finished"))
+        worker.cancel()
+        worker.run()
+        self.assertEqual(results, ["cancelled"])
 
 
 class SumbreroWindowTest(unittest.TestCase):
@@ -165,6 +248,7 @@ class SumbreroWindowTest(unittest.TestCase):
 
     def test_solve_button_fills_in_the_cells(self):
         self.window.solveButtonClicked()
+        self.window.waitForSolve()
         self.assertTrue(self.puzzle.isSolved())
         for cell in self.puzzle.getGrid().getCells():
             piece = self.window.puzzlePieces[cell]
@@ -280,6 +364,7 @@ class SelectionHighlightTest(unittest.TestCase):
 
         # solving refreshes the colours and the description of the selection
         self.window.solveButtonClicked()
+        self.window.waitForSolve()
         QtTest.QTest.qWait(400)
         self.assertIn("complete", label.text())
         for cell in group.getCells():
@@ -329,28 +414,30 @@ class SelectionHighlightTest(unittest.TestCase):
         def tooltip() -> str:
             return str(self.model.data(openIndex, QtCore.Qt.ItemDataRole.ToolTipRole))
 
-        self.assertTrue(self.window.showHintsAction.isChecked())
-        self.assertTrue(visibleHints())
-        self.assertIn("Candidates:", label.text())
-        self.assertIn("Candidates:", tooltip())
-
-        self.window.showHintsAction.setChecked(False)
-        self.assertFalse(self.window.settings.showHints)
+        # hidden by default
+        self.assertFalse(self.window.showHintsAction.isChecked())
         self.assertEqual(visibleHints(), [])
         self.assertNotIn("Candidates", label.text())
         self.assertIn("Open", label.text())
         self.assertNotIn("Candidates", tooltip())
 
         self.window.showHintsAction.setChecked(True)
+        self.assertTrue(self.window.settings.showHints)
         self.assertTrue(visibleHints())
         self.assertIn("Candidates:", label.text())
+        self.assertIn("Candidates:", tooltip())
+
+        self.window.showHintsAction.setChecked(False)
+        self.assertEqual(visibleHints(), [])
+        self.assertNotIn("Candidates", label.text())
 
     def test_hints_setting_applies_to_a_newly_loaded_puzzle(self):
-        self.window.settings.setShowHints(False)
-        self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
-        self.assertFalse(self.window.constraintModel.showHints)
-        for piece in self.window.puzzlePieces.values():
-            self.assertFalse(piece.hintsEnabled)
+        for show in (True, False):
+            self.window.settings.setShowHints(show)
+            self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
+            self.assertEqual(self.window.constraintModel.showHints, show)
+            for piece in self.window.puzzlePieces.values():
+                self.assertEqual(piece.hintsEnabled, show)
 
 
 class CellInputTest(unittest.TestCase):
@@ -386,6 +473,34 @@ class CellInputTest(unittest.TestCase):
         QtTest.QTest.keyClick(self.view, key)
         self.app.processEvents()
 
+    def test_undo_and_redo(self):
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        piece = self.window.puzzlePieces[cell]
+        self.assertFalse(self.window.undoAction.isEnabled())
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertTrue(self.window.undoAction.isEnabled())
+
+        QtTest.QTest.keySequence(self.view, QtGui.QKeySequence.StandardKey.Undo)
+        self.app.processEvents()
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(piece.valueTextItem.opacity(), 0)
+        self.assertFalse(self.window.undoAction.isEnabled())
+        self.assertTrue(self.window.redoAction.isEnabled())
+
+        self.window.redoAction.trigger()
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(piece.valueTextItem.toPlainText(), "4")
+
+        # a solve is one step: undo brings back the puzzle as it was before
+        assert self.window.puzzle is not None
+        before = self.window.puzzle.saveState()
+        self.window.ui.solvePushButton.click()
+        self.window.waitForSolve()
+        self.assertTrue(self.window.puzzle.isSolved())
+        self.window.undoAction.trigger()
+        self.assertEqual(self.window.puzzle.saveState(), before)
+
     def test_clicking_a_cell_selects_it(self):
         cell = self.grid.getCellFromSquareGrid(4, 2)
         self.click(cell)
@@ -405,7 +520,7 @@ class CellInputTest(unittest.TestCase):
         self.assertIsNone(self.window.selectedCell())
 
     def test_typing_enters_changes_and_clears_a_value(self):
-        from gui.puzzlerepresentation.valuerectangle import ENTERED_VALUE_COLOR
+        from gui.puzzlerepresentation.cellpiece import ENTERED_VALUE_COLOR
 
         cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
         self.click(cell)
@@ -436,10 +551,7 @@ class CellInputTest(unittest.TestCase):
         self.assertNotIn("is given", self.window.selectionInfoLabel.text())
 
     def test_a_mistake_is_shown_in_red_with_the_cells_it_clashes_with(self):
-        from gui.puzzlerepresentation.valuerectangle import (
-            ENTERED_VALUE_COLOR,
-            VIOLATION_COLOR,
-        )
+        from gui.puzzlerepresentation.cellpiece import ENTERED_VALUE_COLOR, VIOLATION_COLOR
 
         cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
         given = self.grid.getCellFromSquareGrid(1, 0)  # the 6 in the same row
@@ -509,12 +621,31 @@ class LauncherSmokeTest(unittest.TestCase):
     def test_smoke_test_flag(self):
         self.assertEqual(self.launcherModule.main(["--smoke-test"]), 0)
 
+    def test_undo_acts_on_the_current_tab(self):
+        self.assertFalse(self.launcher.undo())  # no tabs
+        sudoku = self.launcher.openPuzzle("sudoku")
+        other = self.launcher.openPuzzle("sudoku")
+        assert sudoku.puzzle is not None and other.puzzle is not None
+        before = sudoku.puzzle.saveState()
+        sudoku.ui.solvePushButton.click()
+        sudoku.waitForSolve()
+        self.launcher.tabs.setCurrentWidget(other)
+        self.assertFalse(self.launcher.undo())  # nothing happened in this tab
+        self.launcher.tabs.setCurrentWidget(sudoku)
+        self.launcher.activateWindow()
+        sudoku.ui.puzzleTreeView.setFocus()
+        QtTest.QTest.keySequence(sudoku.ui.puzzleTreeView, QtGui.QKeySequence.StandardKey.Undo)
+        self.app.processEvents()
+        self.assertEqual(sudoku.puzzle.saveState(), before)
+        self.assertTrue(self.launcher.redo())
+        self.assertTrue(sudoku.puzzle.isSolved())
+
     def test_start_page_lists_all_puzzles(self):
         import kakuroMain
 
         self.assertIs(self.launcher.stack.currentWidget(), self.launcher.startPage)
         buttons = self.launcher.startPage.findChildren(QtWidgets.QPushButton)
-        self.assertEqual(len(buttons), len(self.launcherModule.PUZZLES))
+        self.assertEqual(len(buttons), len(PUZZLE_TYPES))
 
         buttons[1].click()  # kakuro
         self.assertEqual(self.launcher.tabs.count(), 1)
@@ -522,7 +653,7 @@ class LauncherSmokeTest(unittest.TestCase):
         self.assertIsInstance(self.launcher.tabs.widget(0), kakuroMain.MainWindow)
 
     def test_open_and_close_tabs(self):
-        names = list(self.launcherModule.PUZZLES)
+        names = list(PUZZLE_TYPES)
         windows = [self.launcher.openPuzzle(name) for name in names]
         self.launcher.openPuzzle("sudoku")  # a second puzzle of the same type
         self.app.processEvents()
@@ -557,11 +688,13 @@ class LauncherSmokeTest(unittest.TestCase):
         self.assertTrue(sudoku.allowGuessingAction.isChecked())
         for window in (sudoku, futoshiki):
             window.solveButtonClicked()
+            window.waitForSolve()
             assert window.solver is not None
             self.assertTrue(window.solver.allowGuessing)
 
         self.launcher.allowGuessingAction.setChecked(False)
         sudoku.solveButtonClicked()
+        sudoku.waitForSolve()
         assert sudoku.solver is not None
         self.assertFalse(sudoku.solver.allowGuessing)
 
@@ -569,15 +702,19 @@ class LauncherSmokeTest(unittest.TestCase):
         sudoku = self.launcher.openPuzzle("sudoku")
         kakuro = self.launcher.openPuzzle("kakuro")  # its sum triangles have no hints
 
-        self.launcher.showHintsAction.setChecked(False)
-        for window in (sudoku, kakuro):
-            self.assertFalse(window.showHintsAction.isChecked())
-            self.assertFalse(window.constraintModel.showHints)
+        # hidden by default, in every tab
+        self.assertFalse(self.launcher.showHintsAction.isChecked())
         self.assertFalse(any(p.hintsEnabled for p in sudoku.puzzlePieces.values()))
 
-        sudoku.showHintsAction.setChecked(True)
-        self.assertTrue(self.launcher.showHintsAction.isChecked())
-        self.assertTrue(kakuro.constraintModel.showHints)
+        self.launcher.showHintsAction.setChecked(True)
+        for window in (sudoku, kakuro):
+            self.assertTrue(window.showHintsAction.isChecked())
+            self.assertTrue(window.constraintModel.showHints)
+        self.assertTrue(all(p.hintsEnabled for p in sudoku.puzzlePieces.values()))
+
+        sudoku.showHintsAction.setChecked(False)
+        self.assertFalse(self.launcher.showHintsAction.isChecked())
+        self.assertFalse(kakuro.constraintModel.showHints)
 
         # Ctrl+H works in a tab: only the launcher has the shortcut, so it is not ambiguous
         self.launcher.activateWindow()
@@ -587,16 +724,16 @@ class LauncherSmokeTest(unittest.TestCase):
             QtCore.Qt.Key.Key_H,
             QtCore.Qt.KeyboardModifier.ControlModifier,
         )
-        self.assertFalse(self.launcher.settings.showHints)
+        self.assertTrue(self.launcher.settings.showHints)
 
     def test_examples_are_marked_as_examples(self):
-        for name, (_label, windowClass) in self.launcherModule.PUZZLES.items():
-            self.assertIn(windowClass.defaultExample, windowClass.examples)
-            for example in windowClass.examples:
+        for name, puzzleType in PUZZLE_TYPES.items():
+            self.assertIs(self.launcherModule.windowClass(name).puzzleType, puzzleType)
+            for example in puzzleType.examples:
                 with self.subTest(puzzle=name, example=example):
                     window = self.launcher.openPuzzle(name, example=example)
                     index = self.launcher.tabs.indexOf(window)
-                    title = f"{windowClass.puzzleTypeName} example: {example}"
+                    title = f"{puzzleType.label} example: {example}"
                     self.assertEqual(self.launcher.tabs.tabText(index), title)
                     self.assertIn(title, window.windowTitle())
 
@@ -607,9 +744,9 @@ class LauncherSmokeTest(unittest.TestCase):
             assert isinstance(typeMenu, QtWidgets.QMenu)
             listed |= {(typeMenu.title(), action.text()) for action in typeMenu.actions()}
         expected = {
-            (label, example)
-            for label, windowClass in self.launcherModule.PUZZLES.values()
-            for example in windowClass.examples
+            (puzzleType.label, example)
+            for puzzleType in PUZZLE_TYPES.values()
+            for example in puzzleType.examples
         }
         self.assertEqual(listed, expected)
 

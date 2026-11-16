@@ -10,11 +10,10 @@ from PySide6 import QtCore, QtWidgets
 
 from constraints import TotalSumValueConstraint
 from gui.puzzlerepresentation.cluehexagon import ClueHexagon
-from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.puzzlerepresentation.valuehexagon import ValueHexagon
 from gui.windows.basicmainwindow import BasicMainWindow
-from parsers import parseSumbreroFile
 from parsers.sumbrero import LINE_DIRECTIONS, lineKind, neighbour
+from utility.puzzletypes import SUMBRERO
 
 
 def clueLayout(puzzle):
@@ -47,11 +46,7 @@ def framePositions(puzzle):
 
 
 class MainWindow(BasicMainWindow):
-    puzzleTypeName = "Sumbrero"
-    puzzleParser = staticmethod(parseSumbreroFile)
-    fileFilter = "Sumbrero Files (*.txt)"
-    examples = {"Simple": "simpleSumbrero.txt"}
-    defaultExample = "Simple"
+    puzzleType = SUMBRERO
 
     def hexScenePosition(self, position):
         """Scene coordinates of the hexagon at position"""
@@ -64,22 +59,12 @@ class MainWindow(BasicMainWindow):
         return QtCore.QPointF(x, y)
 
     def initializePuzzleRepresentation(self):
-        self.scene = QtWidgets.QGraphicsScene(self)
-
-        self.puzzlePieces = {}
-
+        self.newScene()
         self.hexSide = 100
-
-        self.selectedItems = set()
 
         for c in self.puzzle.getGrid().getCells():
             hexagon = ValueHexagon(c, self.hexSide, self.hexScenePosition(c.getPosition()))
-            self.scene.addItem(hexagon)
-            c.valueChanged.connect(self.cellValueChanged)
-            c.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
-            self.puzzlePieces[c] = hexagon
-            proxy = PuzzlePieceProxy(hexagon)
-            self.puzzlePieceProxies[c] = proxy
+            self.addCellPiece(c, hexagon)
 
         # black hexagons around the grid; the sum of a line goes in a wedge of the hexagon just
         # before the line's first cell, like the clue squares of a Kakuro

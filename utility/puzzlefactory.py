@@ -59,50 +59,6 @@ class PuzzleFactory:
         return sudoku
 
     @staticmethod
-    def createVerySimpleKakuro():
-        possibleValues = range(1, 10)
-        puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))
-
-        c1_1 = puzzle.grid.addCell(Position(1, 1))
-        c1_2 = puzzle.grid.addCell(Position(1, 2))
-        c2_1 = puzzle.grid.addCell(Position(2, 1))
-        c2_2 = puzzle.grid.addCell(Position(2, 2))
-
-        cg = puzzle.addConstraintGroup("Group 1")
-        cg.addConstraint(UniqueValueConstraint)
-        constraint = cg.addConstraint(TotalSumValueConstraint)
-        constraint.setTotalValue(4)
-
-        cg.addCell(c1_1)
-        cg.addCell(c1_2)
-
-        cg = puzzle.addConstraintGroup("Group 2")
-        cg.addConstraint(UniqueValueConstraint)
-        constraint = cg.addConstraint(TotalSumValueConstraint)
-        constraint.setTotalValue(4)
-
-        cg.addCell(c1_1)
-        cg.addCell(c2_1)
-
-        cg = puzzle.addConstraintGroup("Group 3")
-        cg.addConstraint(UniqueValueConstraint)
-        constraint = cg.addConstraint(TotalSumValueConstraint)
-        constraint.setTotalValue(3)
-
-        cg.addCell(c2_1)
-        cg.addCell(c2_2)
-
-        cg = puzzle.addConstraintGroup("Group 4")
-        cg.addConstraint(UniqueValueConstraint)
-        constraint = cg.addConstraint(TotalSumValueConstraint)
-        constraint.setTotalValue(3)
-
-        cg.addCell(c1_2)
-        cg.addCell(c2_2)
-
-        return puzzle
-
-    @staticmethod
     def createExampleKakuro():
         possibleValues = range(1, 11)
         puzzle = Puzzle("Very simple example Kakuro", set(possibleValues))

@@ -12,9 +12,6 @@ class ExactCoverConstraint(UniqueValueConstraint):
     def __init__(self, group, initialValues):
         super().__init__(group, initialValues)
 
-    #    def notify(self, cell):
-    #        pass
-
     def applyConstraint(self):
         values = set()
         for c in self.group.getCells():
@@ -36,15 +33,14 @@ class ExactCoverConstraint(UniqueValueConstraint):
         # iterate over all the cells and check if any one of the initial value can still be
         # entered
         cells = {}
-        for value in self.group.grid.getValues():
+        for value in self.group.getValues():
             cells[value] = set()
 
-        # print "searching!", values
         for c in self.group.getCells():
             for val in c.getPossibleValues():
                 cells[val].add(c)
 
-        for value in self.group.grid.getValues():
+        for value in self.group.getValues():
             # at least values for two cells must be eliminated to qualify for a naked set:
             if len(cells[value]) > len(self.group.getCells()) - 2:
                 continue
@@ -58,18 +54,12 @@ class ExactCoverConstraint(UniqueValueConstraint):
                 relatedValues -= set([value])
 
                 for otherValue in relatedValues:
-                    # print cells[otherValue] ==  cells[value]
                     if cells[otherValue] == cells[value]:
-                        # print relatedValues, otherValue
                         for nakedCell in cells[otherValue]:
-                            for removeValue in set(self.group.grid.getValues()) - set(
+                            for removeValue in set(self.group.getValues()) - set(
                                 [value, otherValue]
                             ):
                                 nakedCell.remove(removeValue)
-
-            # self.removeValueExceptForList([c], overlappingValues)
-
-        pass
 
     def getType(self):
         return "Exact cover constraint"
@@ -77,14 +67,21 @@ class ExactCoverConstraint(UniqueValueConstraint):
     def summary(self):
         return "each value once"
 
+    def explain(self, deduction):
+        placed = set(placedValues(self.group.getCells()))
+        if deduction.setsValue() or deduction.removed <= placed:
+            return super().explain(deduction)
+        removed = formatValues(deduction.removed)
+        return (
+            f"{self.group.getName()} has values that can only go in this cell and one other,"
+            f" so there is no room for {removed} ({self.summary()})"
+        )
+
     def describe(self, showHints=True):
-        missing = set(self.group.grid.getValues()) - set(placedValues(self.group.getCells()))
+        missing = set(self.group.getValues()) - set(placedValues(self.group.getCells()))
         if not missing:
             return "Every value appears exactly once; complete."
         return f"Every value appears exactly once; still missing: {formatValues(missing)}."
-
-    #    def getAllowedValuesForValueList(self, allowedValues, usedValues):
-    #        return allowedValues
 
     def __str__(self):
         return "ecc[" + ",".join([str(x) for x in self.values]) + "]"

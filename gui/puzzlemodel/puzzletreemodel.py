@@ -24,15 +24,15 @@ def describeCell(cell, showHints=True):
 
     With showHints False, the candidates of an open cell are not listed."""
     if cell.hasValue():
-        how = "deduced" if cell.isInferred() else "entered" if cell.isEntered() else "given"
+        source = cell.getSource()
+        how = source.value if source is not None else "given"
         state = f"Value: {cell.getValue()} ({how})"
     elif not showHints:
         state = "Open"
     else:
         candidates = ", ".join(str(v) for v in sorted(cell.getPossibleValues()))
         state = f"Candidates: {candidates}"
-    puzzle = cell.getGrid().getPuzzle()
-    groups = [g.getName() for g in puzzle.getConstraintGroups() if cell in g.getCells()]
+    groups = [g.getName() for g in cell.getConstraintGroups()]
     text = f"<b>Cell {html.escape(cell.getName())}</b><br>{state}"
     if groups:
         text += "<br>In groups: " + html.escape(", ".join(groups))
@@ -252,9 +252,7 @@ class CellProxyItem(ProxyItem):
         self.cell = cell
 
     def getName(self):
-        if self.cell.getName:
-            return self.cell.getName()
-        return self.tr("Cell")
+        return self.cell.getName()
 
     def getType(self):
         return self.tr("Cell")
@@ -281,9 +279,7 @@ class ReferencedCellProxyItem(ProxyItem):
         self.cell = cell
 
     def getName(self):
-        if self.cell.getName:
-            return self.cell.getName()
-        return self.tr("Cell")
+        return self.cell.getName()
 
     def getType(self):
         return self.tr("Cell")
@@ -310,9 +306,7 @@ class ConstraintGroupProxyItem(ProxyItem):
         self.constraintGroup = cg
 
     def getName(self):
-        if self.constraintGroup.getName:
-            return self.constraintGroup.getName()
-        return "<not set>"
+        return self.constraintGroup.getName()
 
     def getType(self):
         return self.tr("Constraint Group")

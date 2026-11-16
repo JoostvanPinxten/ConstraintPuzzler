@@ -75,11 +75,9 @@ def highlightRoles(item) -> dict:
     """Map the cells involved in a tree item to their HighlightRole."""
     if isinstance(item, (CellProxyItem, ReferencedCellProxyItem)):
         cell = item.cell
-        puzzle = cell.getGrid().getPuzzle()
         roles = {}
-        for group in puzzle.getConstraintGroups():
-            if cell in group.getCells():
-                roles.update(dict.fromkeys(group.getCells(), HighlightRole.PEER))
+        for group in cell.getConstraintGroups():
+            roles.update(dict.fromkeys(group.getCells(), HighlightRole.PEER))
         roles[cell] = HighlightRole.SELECTED
         return roles
 

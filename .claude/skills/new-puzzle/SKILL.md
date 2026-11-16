@@ -17,9 +17,13 @@ Add a new puzzle type: $ARGUMENTS
    wrapper that opens the file with `with open(...)`; export both from `parsers/__init__.py`. No PySide6 imports.
    Raise `parsers.PuzzleFileError` (see `parsers/kakuro.py`) for malformed lines. Add a small example puzzle file
    `<name>.txt` in the repo root and document its format in `doc/puzzle-files.md`.
-4. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleTypeName`, `fileFilter` and
-   `puzzleParser = staticmethod(parse<Name>File)`, and implements `initializePuzzleRepresentation()`.
+4. Register the type in `utility/puzzletypes.py`: a `PuzzleType` (name, label, parser, file filter, examples,
+   default example, `windowModule="<name>Main"`) added to `PUZZLE_TYPES`. That alone puts it in the launcher,
+   the GUI smoke tests and the PyInstaller bundle (examples and window module).
+   Then create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleType = <NAME>` and
+   implements `initializePuzzleRepresentation()`.
 5. If useful, add a factory method in `utility/puzzlefactory.py`.
-6. Tests: add parser tests in `parsers/tests/test_parsers.py`, a solver test that loads the example and checks the deductions, and a case to
-   `tests/test_gui_smoke.py` (`self._smoke("<name>Main", "<name>.txt")`).
+6. Tests: add parser tests in `parsers/tests/test_parsers.py` and a solver test that loads the example and checks
+   the deductions. The registry tests (`utility/tests/test_puzzletypes.py`) and the GUI smoke tests pick up
+   the new type automatically.
 7. Add the puzzle to the README list. Run the `/test` checks and fix anything that fails.

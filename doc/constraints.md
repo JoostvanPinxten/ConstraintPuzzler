@@ -17,7 +17,6 @@ it deduces, and how to use it. For the grid types and the puzzle file formats, s
 - [ExactCoverConstraint](#exactcoverconstraint)
 - [TotalSumValueConstraint](#totalsumvalueconstraint)
 - [CellGreaterThanCellConstraint](#cellgreaterthancellconstraint)
-- [NonogramConstraint (experimental)](#nonogramconstraint-experimental)
 - [How the puzzles combine constraints](#how-the-puzzles-combine-constraints)
 - [Writing your own constraint](#writing-your-own-constraint)
 
@@ -35,7 +34,8 @@ A cell starts with every puzzle value as a possibility. Solving means removing p
 - `cell.remove(value)` removes one possibility. If no possibility is left, the puzzle is
   contradictory.
 - `cell.setValue(value)` / `cell.inferValue(value)` fixes the value of the cell (a given vs. a
-  value the solver deduced). The other possibilities disappear.
+  value the solver deduced). The other possibilities disappear. The cell remembers where the
+  value came from (`cell.getSource()`, a `ValueSource`: given, entered, deduced or guessed).
 
 Whenever something impossible happens (removing the last possibility of a cell, removing the
 value a cell already has, setting a value that is no longer possible, a sum that does not add
@@ -90,7 +90,6 @@ that could still be correct.
 | `ExactCoverConstraint` | Every value appears exactly once in the group | Sudoku rows/columns/blocks, Futoshiki rows/columns | none |
 | `TotalSumValueConstraint` | The values in the group add up to a total | Kakuro clues, Sumbrero sums | `setTotalValue(n)` |
 | `CellGreaterThanCellConstraint` | One cell is smaller than another | Futoshiki `<` / `>` signs | `setLesserCell`, `setGreaterCell` |
-| `NonogramConstraint` | Runs of filled cells (experimental) | not used by a puzzle yet | `setAdjacencies([...])` |
 
 ## UniqueValueConstraint
 
@@ -211,22 +210,6 @@ constraint.setLesserCell(lesserCell)
 In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line `relativity`;
 `parsers.parseFutoshikiFile` creates these groups.
 
-## NonogramConstraint (experimental)
-
-`constraints/nonogramconstraint.py`
-
-**Rule:** for a nonogram row or column, the cells contain runs ("adjacencies") of filled cells
-of the given lengths, in order, separated by at least one empty cell. Cells use 1 for filled
-and 0 for empty.
-
-**Current deduction:** only the trivial case. When the runs plus one gap between each pair of
-runs exactly fill the line (e.g. runs `[3, 1]` in a line of 5 cells: `■■■□■`), every cell is
-set. Any other line is left alone.
-
-**Setup:** `constraint.setAdjacencies([3, 1])`. No puzzle type uses this constraint yet, and it
-does not implement `getAllowedValuesForValueList`, so it cannot be combined with a
-`TotalSumValueConstraint` in the same group.
-
 ## How the puzzles combine constraints
 
 | Puzzle | Groups and constraints |
@@ -252,7 +235,8 @@ The `/new-constraint` Claude Code skill scaffolds a new constraint with tests. B
 |---|---|---|
 | `__init__(self, group, initialValues)` | `group.addConstraint(YourConstraint)` | Call `super().__init__`, initialise your own settings. |
 | `notify(self, cell)` | A cell in the group gets a value | React to the new value, or `pass`. |
-| `applyConstraint(self)` | Every solver pass | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. |
+| `applyConstraint(self)` | A solver pass in which a cell of the group changed (the first pass: always) | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. Only look at the cells of the group: the solver re-applies a constraint only when one of those cells changed. |
+| `explain(self, deduction)` | A step or hint is explained | Optional: say in words why your rule removed `deduction.removed` or set `deduction.value`. The default names the group and `summary()`. |
 | `getAllowedValuesForValueList(self, allowedValues, usedValues)` | `TotalSumValueConstraint` builds its combinations | Return the values still allowed given `usedValues`; return `allowedValues` unchanged if your rule does not limit combinations. |
 | `getType(self)` | Tree view | Return a readable name. |
 

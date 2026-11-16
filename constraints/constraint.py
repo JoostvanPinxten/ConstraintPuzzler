@@ -32,8 +32,18 @@ class Constraint:
     def notify(self, cell):
         raise NotImplementedError
 
+    def getAllowedValuesForValueList(self, allowedValues, usedValues):
+        """Narrow allowedValues, given that usedValues are already used in the group.
+
+        Used by ConstraintGroup.valuesAllowedByGroup; by default a rule allows everything."""
+        return allowedValues
+
     def getType(self):
         return type(self).__name__
+
+    def explain(self, deduction):
+        """Why this constraint made a change (a structure.deduction.Deduction), in words."""
+        return f"{self.group.getName()} ({self.summary()})"
 
     def summary(self):
         """A short description of the rule, e.g. "sum = 17", used as its name in the GUI."""

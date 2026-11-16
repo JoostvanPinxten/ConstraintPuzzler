@@ -7,7 +7,6 @@ Created on 26 jan. 2013
 import html
 import os
 import platform
-from collections.abc import Callable
 
 import PySide6
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -23,12 +22,16 @@ from gui.puzzlemodel.puzzletreemodel import (
     ReferencedCellProxyItem,
     buildPuzzleTree,
 )
+from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.settings import PuzzleSettings, addShowHintsAction
+from gui.solverworker import SolveJob, SolveWorker
 from gui.ui import mainWindowUi
 from solver.Solver import Solver
-from structure.entries import EntryError, UserEntries
+from structure.entries import EntryError
 from structure.errors import ContradictionError
+from structure.game import Game
 from structure.puzzle import Puzzle
+from utility.puzzletypes import PuzzleType
 from utility.resources import resourcePath
 from utility.version import APP_NAME, getVersion
 
@@ -45,17 +48,9 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #    MaxRecentFiles = 5
     #    windowList = []
 
-    acceptedFileExtensios = [(".puzzle", "Generic constraint puzzle format")]
-
-    # Set by subclasses: shown in the File menu and the open-file dialog
-    puzzleTypeName = "Puzzle"
-    fileFilter = "Puzzle Files (*.txt)"
-    # Reads a puzzle file into a Puzzle; subclasses set it to one of the `parsers` functions
-    puzzleParser: Callable[[str], Puzzle] | None = None
-    # Set by subclasses: the bundled example puzzles (label -> file name, in menu order) and
-    # the label of the example that is opened when no file is given.
-    examples: dict[str, str] = {}
-    defaultExample: str | None = None
+    # Set by subclasses: the registry entry (utility.puzzletypes) with the type's label,
+    # parser, file filter and bundled examples
+    puzzleType: PuzzleType
 
     # Set by subclasses in initializePuzzleRepresentation()
     scene: QtWidgets.QGraphicsScene
@@ -98,18 +93,20 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
         self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
+        self.ui.hintPushButton.clicked.connect(self.hintButtonClicked)
+        # the running background solve, if any (see solveButtonClicked)
+        self.solveJob: SolveJob | None = None
         # the running fade of the cell highlight, if any (kept so it is not garbage collected)
         self.highlightAnimation: QtCore.QParallelAnimationGroup | None = None
 
         self.puzzle = None
         self.solver = None
 
-        self.createActions()
         self.createMenus()
+        self.createEditMenu()
         self.createViewMenu()
         self.createSolverMenu()
         self.createHelpMenu()
-        self.createStatusBar()
         self.createSelectionInfo()
         self.createCellInput()
         self.settings.showHintsChanged.connect(self.applyShowHints)
@@ -128,21 +125,23 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     #        self.resize(800, 600)
 
     def loadExample(self, label: str | None = None):
-        """Load a bundled example puzzle (``defaultExample`` when no label is given)."""
+        """Load a bundled example puzzle (the type's default example when no label is given)."""
+        puzzleType = self.puzzleType
         if label is None:
-            label = self.defaultExample
-        if label is None or label not in self.examples:
-            raise ValueError(f"{self.puzzleTypeName} has no example {label!r}")
+            label = puzzleType.defaultExample
+        if label is None or label not in puzzleType.examples:
+            raise ValueError(f"{puzzleType.label} has no example {label!r}")
         self.loadPuzzle(
-            resourcePath(self.examples[label]), title=f"{self.puzzleTypeName} example: {label}"
+            resourcePath(puzzleType.examples[label]), title=f"{puzzleType.label} example: {label}"
         )
 
     def loadPuzzle(self, filename, title: str | None = None):
         """Load a puzzle file. ``title`` describes it (default: puzzle type and file name)."""
+        self.stopSolving()
         self.puzzle, self.solver = self.parsePuzzle(filename)
         self.puzzleFile = filename
         if title is None:
-            title = f"{self.puzzleTypeName} - {os.path.basename(filename)}"
+            title = f"{self.puzzleType.label} - {os.path.basename(filename)}"
         self.puzzleTitle = title
         self.setWindowTitle(f"{APP_NAME} {getVersion()} - {title}")
 
@@ -162,7 +161,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.initializePuzzleRepresentation()
         self.applyShowHints(self.settings.showHints)
         self.highlightRoles = {}
-        self.userEntries = UserEntries(self.puzzle)
+        self.game = Game(self.puzzle)
         self.inputMessage = None
         self.violations = set()
         # to find the cell under the mouse, and the tree row of a cell
@@ -179,6 +178,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 self.cellIndexes[item.cell] = index
         self.refreshCellStyles()
         self.updateSelectionInfo()
+        self.updateUndoActions()
         # The puzzle is drawn in black on a transparent background, so with a dark palette it
         # would be black on black. Give the puzzle a fixed white background regardless of theme.
         self.scene.setBackgroundBrush(QtGui.QBrush(QtGui.QColorConstants.White))
@@ -193,35 +193,67 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.puzzleTreeView.resizeColumnToContents(0)
 
     def parsePuzzle(self, filename) -> tuple[Puzzle, Solver]:
-        """Reads filename with puzzleParser and returns the puzzle with a solver for it."""
-        parser = type(self).puzzleParser
-        if parser is None:
-            raise NotImplementedError(
-                "Set puzzleParser to enable loading of puzzles through the main menu"
-            )
-        puzzle = parser(filename)
+        """Reads filename with the type's parser and returns the puzzle with a solver for it."""
+        puzzle = self.puzzleType.parser(filename)
         return puzzle, Solver(puzzle)
-
-    def createActions(self):
-        pass
 
     def createMenus(self):
         fileMenu = self.menuBar().addMenu("File")
-        openAction = fileMenu.addAction(f"Open {self.puzzleTypeName}...")
+        openAction = fileMenu.addAction(f"Open {self.puzzleType.label}...")
         openAction.setShortcut(QtGui.QKeySequence.StandardKey.Open)
         openAction.triggered.connect(self.openPuzzleDialog)
-        if self.examples:
+        if self.puzzleType.examples:
             examplesMenu = fileMenu.addMenu("Examples")
-            for label in self.examples:
+            for label in self.puzzleType.examples:
                 action = examplesMenu.addAction(label)
                 action.triggered.connect(lambda _checked=False, lbl=label: self.loadExample(lbl))
 
     def openPuzzleDialog(self):
         fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(
-            self, f"Open {self.puzzleTypeName}", "", self.fileFilter
+            self, f"Open {self.puzzleType.label}", "", self.puzzleType.fileFilter
         )
         if fileName:
             self.loadPuzzle(fileName)
+
+    def createEditMenu(self):
+        editMenu = self.menuBar().addMenu("Edit")
+        self.undoAction = editMenu.addAction("Undo")
+        self.undoAction.triggered.connect(self.undo)
+        self.redoAction = editMenu.addAction("Redo")
+        self.redoAction.triggered.connect(self.redo)
+        # an embedded window's launcher has the shortcuts
+        if not self.embedded:
+            self.undoAction.setShortcut(QtGui.QKeySequence.StandardKey.Undo)
+            self.redoAction.setShortcut(QtGui.QKeySequence.StandardKey.Redo)
+        self.updateUndoActions()
+
+    def updateUndoActions(self):
+        game = getattr(self, "game", None)
+        idle = getattr(self, "solveJob", None) is None
+        self.undoAction.setEnabled(idle and game is not None and game.canUndo())
+        self.redoAction.setEnabled(idle and game is not None and game.canRedo())
+
+    def undo(self) -> bool:
+        """Undo the last change to the puzzle (an entry or a solver action)."""
+        if self.game is None or self.solveJob is not None or not self.game.undo():
+            return False
+        self.inputMessage = None
+        self.puzzleChanged()
+        return True
+
+    def redo(self) -> bool:
+        if self.game is None or self.solveJob is not None or not self.game.redo():
+            return False
+        self.inputMessage = None
+        self.puzzleChanged()
+        return True
+
+    def puzzleChanged(self):
+        """Redraw after values changed: cell colours, highlight, description and undo state."""
+        self.refreshCellStyles()
+        self.updateHighlight()
+        self.updateSelectionInfo()
+        self.updateUndoActions()
 
     def createViewMenu(self):
         viewMenu = self.menuBar().addMenu("View")
@@ -269,13 +301,11 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def showAbout(self):
         QtWidgets.QMessageBox.about(self, f"About {APP_NAME}", self.aboutText())
 
-    def createStatusBar(self):
-        pass
-
     def showSelectionInPuzzleView(self, selectedItems, deselectedItems):
         selectionChanged = False
         # a message about entering a value belongs to the previous selection
         self.inputMessage = None
+        self.stepMessage = None
 
         # update the selected cells:
         for itemRange in selectedItems:
@@ -397,6 +427,8 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             parts.append(f'<span style="color:#c00000">{html.escape(note)}</span>')
         if self.inputMessage:
             parts.append(f'<span style="color:#c00000">{html.escape(self.inputMessage)}</span>')
+        if self.stepMessage:
+            parts.append(f"<i>{html.escape(self.stepMessage)}</i>")
         legend = legendHtml(self.highlightRoles.values())
         if legend:
             parts.append(legend)
@@ -404,8 +436,10 @@ class BasicMainWindow(QtWidgets.QMainWindow):
 
     def createCellInput(self):
         """Clicking a cell selects it; typing a number enters it in the selected cell."""
-        self.userEntries: UserEntries | None = None
+        self.game: Game | None = None
         self.inputMessage: str | None = None
+        # explains the value the last solver step filled in (shown until the selection changes)
+        self.stepMessage: str | None = None
         # the cells whose shown value breaks a rule (drawn in red)
         self.violations = set()
         self.pieceCells = {}
@@ -470,84 +504,170 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def handleCellKey(self, event) -> bool:
         """Enter (a number) or clear (Delete, Backspace) the value of the selected cell."""
         cell = self.selectedCell()
-        puzzle = self.puzzle
-        if cell is None or self.userEntries is None or puzzle is None:
+        game = self.game
+        if cell is None or game is None:
             return False
         text = event.text()
         clearKeys = (QtCore.Qt.Key.Key_Delete, QtCore.Qt.Key.Key_Backspace)
+        if self.solveJob is not None and (event.key() in clearKeys or text.isdigit()):
+            self.inputMessage = "The solver is busy; wait for it or cancel it first."
+            self.updateSelectionInfo()
+            return True
         try:
-            if event.key() in clearKeys or (text == "0" and 0 not in puzzle.getValues()):
-                self.userEntries.clear(cell)
+            if event.key() in clearKeys or (text == "0" and 0 not in game.puzzle.getValues()):
+                game.clear(cell)
             elif len(text) == 1 and text.isdigit():
-                self.userEntries.enter(cell, int(text))
+                game.enter(cell, int(text))
             else:
                 return False
             self.inputMessage = None
         except EntryError as e:
             self.inputMessage = str(e)
         self.refreshCellStyles()
-        if puzzle.isSolved() and not self.violations:
+        if game.isSolved(self.violations):
             self.inputMessage = "Solved!"
         self.updateHighlight()
         self.updateSelectionInfo()
+        self.updateUndoActions()
         return True
 
     def violationNote(self, cell):
         """Explain why the value of a cell is drawn in red (None when it is not)."""
-        if self.userEntries is None or cell not in self.violations or self.puzzle is None:
+        if self.game is None:
             return None
-        value = self.userEntries.valueOf(cell)
-        clashes = set()
-        for group in self.puzzle.getConstraintGroups():
-            if cell in group.getCells():
-                clashes |= self.violations & set(group.getCells())
-        clashes.discard(cell)
-        if clashes:
-            names = ", ".join(sorted(c.getName() for c in clashes))
-            return f"{value} breaks a rule together with cell(s) {names}."
-        return f"{value} does not fit: it leaves no possible value for another cell."
+        return self.game.violationNote(cell, self.violations)
 
     def refreshPiece(self, cell):
         """Redraw a cell, showing a mistake typed in it and drawing broken rules in red."""
         piece = self.puzzlePieces[cell]
         piece.updateRepresentation()
-        if self.userEntries is None:
+        if self.game is None:
             return
-        if self.userEntries.isMistake(cell):
-            piece.showMistake(self.userEntries.valueOf(cell))
+        if self.game.isMistake(cell):
+            piece.showMistake(self.game.valueOf(cell))
         elif cell in self.violations and cell.hasValue():
             piece.markViolation()
 
     def refreshCellStyles(self):
         """Find the cells that break a rule and redraw all cells."""
-        if self.userEntries is None:
+        if self.game is None:
             return
-        self.violations = self.userEntries.violations()
+        self.violations = self.game.violations()
         for cell in self.puzzlePieceProxies:
             self.refreshPiece(cell)
 
     def solveButtonClicked(self):
-        if self.solver is not None:
-            self.solver.allowGuessing = self.settings.allowGuessing
-            try:
-                self.solver.solve()
-            except ContradictionError as e:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Puzzle cannot be solved",
-                    "The solver ran into a contradiction:\n\n" + str(e),
-                )
-            # cells may have been solved: refresh their colours and the description
-            self.refreshCellStyles()
-            self.updateHighlight()
-            self.updateSelectionInfo()
+        """Solve in a background thread; while it runs, the button cancels it."""
+        if self.solveJob is not None:
+            self.solveJob.cancel()
+            self.ui.solvePushButton.setEnabled(False)  # until the solver has stopped
+            return
+        if self.solver is None or self.game is None or self.puzzleFile is None:
+            return
+        self.solver.allowGuessing = self.settings.allowGuessing
+        parser, path = self.puzzleType.parser, self.puzzleFile
+        worker = SolveWorker(
+            lambda: parser(path), self.game.puzzle.saveState(), self.settings.allowGuessing
+        )
+        worker.finished.connect(self.solveFinished)
+        worker.failed.connect(self.solveFailed)
+        worker.cancelled.connect(self.solveCancelled)
+        job = SolveJob(worker, self)
+        job.done.connect(self.solveJobDone)
+        self.solveJob = job
+        self.setSolving(True)
+        job.start()
+
+    def setSolving(self, solving: bool):
+        self.ui.solvePushButton.setText("Cancel" if solving else "Solve")
+        self.ui.solvePushButton.setEnabled(True)
+        self.ui.solveStepPushButton.setEnabled(not solving)
+        self.ui.hintPushButton.setEnabled(not solving)
+        self.updateUndoActions()
+
+    def solveFinished(self, state, solved: bool):
+        if self.game is None:
+            return
+        self.game.applySolution(state)
+        self.inputMessage = None
+        self.stepMessage = None if solved else "The solver got stuck; try Allow guessing."
+        # cells may have been solved: refresh their colours and the description
+        self.puzzleChanged()
+
+    def solveFailed(self, message: str):
+        QtWidgets.QMessageBox.warning(
+            self,
+            "Puzzle cannot be solved",
+            "The solver ran into a contradiction:\n\n" + message,
+        )
+
+    def solveCancelled(self):
+        self.stepMessage = "Solving was cancelled."
+        self.updateSelectionInfo()
+
+    def solveJobDone(self):
+        job = self.solveJob
+        self.solveJob = None
+        if job is not None:
+            job.deleteLater()
+        self.setSolving(False)
+
+    def stopSolving(self):
+        """Cancel a running solve and wait until its thread has stopped."""
+        job = self.solveJob
+        if job is None:
+            return
+        job.cancel()
+        job.wait()
+        # deliver the worker's queued signals, which clears self.solveJob
+        self.waitForSolve()
+
+    def waitForSolve(self, timeout: int = 30000) -> bool:
+        """Process events until a running solve has finished (e.g. in tests). Returns whether
+        it finished within `timeout` milliseconds."""
+        timer = QtCore.QElapsedTimer()
+        timer.start()
+        while self.solveJob is not None:
+            if timer.elapsed() > timeout:
+                return False
+            QtCore.QCoreApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.AllEvents, 50)
+        return True
+
+    def closeEvent(self, event):
+        self.stopSolving()
+        super().closeEvent(event)
+
+    def hintButtonClicked(self):
+        """Show a cell whose value follows from the constraints, and why, without filling it."""
+        if self.solver is None or self.game is None or self.solveJob is not None:
+            return
+        try:
+            hint = self.solver.hint()
+        except ContradictionError as e:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Puzzle cannot be solved",
+                "The solver ran into a contradiction:\n\n" + str(e),
+            )
+            return
+        if hint is None:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No hint",
+                "No value follows from a single round of the rules. Use Solve single step to"
+                " narrow down the candidates, or Solve.",
+            )
+            return
+        self.selectCell(hint.cell)
+        self.stepMessage = "Hint: " + hint.describe()
+        self.updateSelectionInfo()
 
     def solveStepButtonClicked(self):
         """Fill in one deducible cell, so the solver can be followed step by step."""
-        if self.solver is None or self.puzzle is None or self.puzzle.isSolved():
+        if self.solver is None or self.game is None or self.game.puzzle.isSolved():
             return
         try:
-            changed = self.solver.solveStep()
+            changed = self.game.solveStep(self.solver)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -556,9 +676,13 @@ class BasicMainWindow(QtWidgets.QMainWindow):
             )
             return
         # a cell may have been solved: refresh its colour and the description
-        self.refreshCellStyles()
-        self.updateHighlight()
-        self.updateSelectionInfo()
+        self.puzzleChanged()
+        step = self.solver.lastStep
+        if step is not None:
+            # select the filled cell and explain why it has this value
+            self.selectCell(step.cell)
+            self.stepMessage = "Solver step: " + step.describe()
+            self.updateSelectionInfo()
         if not changed:
             QtWidgets.QMessageBox.information(
                 self,
@@ -571,23 +695,27 @@ class BasicMainWindow(QtWidgets.QMainWindow):
                 ),
             )
 
-    def undo(self):
-        pass
-
-    def redo(self):
-        pass
-
     def cellPossibleValuesChanged(self, cell):
         self.refreshPiece(cell)
 
     def initializePuzzleRepresentation(self):
+        """Draw the puzzle: start with newScene(), then addCellPiece() for every cell."""
         raise NotImplementedError
 
-    def updatePuzzleRepresentation(self):
-        pass
+    def newScene(self):
+        """Start drawing a puzzle on a new, empty scene."""
+        self.scene = QtWidgets.QGraphicsScene(self)
+        self.puzzlePieces = {}
+        self.selectedItems = set()
 
-    def cellHintValuesChanged(self, cell, value):
-        pass
+    def addCellPiece(self, cell, piece):
+        """Show a cell with `piece` (e.g. a ValueRectangle): add it to the scene, redraw it
+        when the cell changes, and make it selectable and highlightable."""
+        self.scene.addItem(piece)
+        cell.valueChanged.connect(self.cellValueChanged)
+        cell.possibleValuesChanged.connect(self.cellPossibleValuesChanged)
+        self.puzzlePieces[cell] = piece
+        self.puzzlePieceProxies[cell] = PuzzlePieceProxy(piece)
 
     def cellValueChanged(self, cell):
         self.refreshPiece(cell)

@@ -4,8 +4,19 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+from enum import Enum
+
 from structure.errors import ContradictionError
 from structure.signal import Signal
+
+
+class ValueSource(Enum):
+    """Where the value of a cell came from."""
+
+    GIVEN = "given"  # part of the puzzle as it was loaded
+    ENTERED = "entered"  # typed in by the user
+    DEDUCED = "deduced"  # deduced by the solver from the rules
+    GUESSED = "guessed"  # tried by the solver while backtracking
 
 
 class Cell:
@@ -14,16 +25,16 @@ class Cell:
         self.valueChanged = Signal()
         self.possibleValuesChanged = Signal()
         self.initialValues = set(initialValues)
+        # the constraint groups this cell is in (filled by ConstraintGroup.addCell)
+        self.constraintGroups = []
         self.reset()
         self.grid = grid
 
     def reset(self):
-        self.constraintGroups = []
         self.values = set(self.initialValues)
         self.value = None
-        self.inferred = False
-        # the value was typed in by the user (not given by the puzzle, not deduced)
-        self.entered = False
+        # where the value came from; None while the cell has no value
+        self.source: ValueSource | None = None
 
     def getValue(self):
         return self.value
@@ -32,33 +43,31 @@ class Cell:
         return self.getValue() is not None
 
     def inferValue(self, value):
-        self.setValue(value, True)
+        """Set a value the solver deduced."""
+        self.setValue(value, ValueSource.DEDUCED)
 
-    def setValue(self, value, isInferred=False, isEntered=False):
+    def guessValue(self, value):
+        """Set a value the solver tries while backtracking."""
+        self.setValue(value, ValueSource.GUESSED)
+
+    def setValue(self, value, source=ValueSource.GIVEN):
         if value not in self.values:
             raise ContradictionError(
                 "value " + str(value) + " not in my values: " + str(self.values)
             )
 
-        self.inferred = isInferred
-        self.entered = isEntered
+        self.source = source
 
         self.value = value
         self.values = {value}
+        log = self._deductionLog()
+        if log is not None:
+            log.recordValue(self, value, source)
 
         self.valueChanged.emit(self)
-        # for cg in self.constraintGroups:
-        #    cg.notify(self, value)
 
     def getPossibleValues(self):
-        # if(self.value):
-        #    return [self.value]
-
-        # start with all the possible values
-        values = self.values
-
-        # let each constraint group say what values are still allowed?
-        return set(values)
+        return set(self.values)
 
     def remove(self, value):
         # make sure the set value is not the value that needs to be removed
@@ -69,6 +78,9 @@ class Cell:
             return  # redundant remove
 
         self.values.remove(value)
+        log = self._deductionLog()
+        if log is not None:
+            log.recordRemoval(self, value)
         if len(self.values) == 0:
             # the puzzle state is contradictory: no value is left for this cell
             raise ContradictionError(
@@ -77,8 +89,11 @@ class Cell:
         self.possibleValuesChanged.emit(self)
 
     def addConstraintGroup(self, group):
-        self.constraintGroups.append(group)
         group.addCell(self)
+
+    def getConstraintGroups(self):
+        """The constraint groups this cell is in."""
+        return list(self.constraintGroups)
 
     def __str__(self):
         val = self.getValue()
@@ -91,29 +106,40 @@ class Cell:
     def isFixed(self):
         return self.value is not None
 
+    def getSource(self):
+        """Where the value came from (a ValueSource), or None without a value."""
+        return self.source
+
     def isInferred(self):
-        return self.inferred
+        """The value was filled in by the solver (deduced or guessed)."""
+        return self.source in (ValueSource.DEDUCED, ValueSource.GUESSED)
+
+    def isGuessed(self):
+        """The value was tried by the solver while backtracking."""
+        return self.source is ValueSource.GUESSED
 
     def isEntered(self):
         """The value was typed in by the user."""
-        return self.entered
+        return self.source is ValueSource.ENTERED
 
     def isGiven(self):
         """The value is part of the puzzle as it was loaded."""
-        return self.hasValue() and not self.inferred and not self.entered
+        return self.source is ValueSource.GIVEN
 
     def getGrid(self):
         return self.grid
+
+    def _deductionLog(self):
+        """The log that records changes to this cell, if the puzzle is recording."""
+        puzzle = self.grid.getPuzzle() if self.grid is not None else None
+        return getattr(puzzle, "deductionLog", None)
 
     def getName(self):
         return "cell " + str(self.grid.cells.index(self) + 1)
 
     def checkForSinglePossibility(self):
         if self.value is None and len(self.values) == 1:
-            # print self.values
-            val = next(iter(self.values))
-            #            #print "single value left: ", val
-            self.inferValue(val)
+            self.inferValue(next(iter(self.values)))
 
 
 class PositionedCell(Cell):

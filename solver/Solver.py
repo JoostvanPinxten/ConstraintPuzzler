@@ -6,40 +6,98 @@ Created on 28 dec. 2012
 
 import random
 
+from structure.cell import ValueSource
+from structure.deduction import DeductionLog
 from structure.errors import ContradictionError
 
 
+class SolveCancelled(Exception):
+    """solve() was stopped by its shouldStop callback; the puzzle is restored."""
+
+
 class Solver:
+    """Solves a puzzle by applying its constraints until nothing changes, and, if allowed,
+    by guessing (depth-first, with backtracking) when deduction gets stuck.
+
+    Every change is recorded as a Deduction (structure.deduction) in `log`, with the
+    constraint that made it. Propagation only re-applies the constraint groups of the cells
+    that changed in the previous pass."""
+
     def __init__(self, puzzle, allowGuessing=False):
         self.puzzle = puzzle
         # when deduction gets stuck, try values (depth-first, with backtracking)
         self.allowGuessing = allowGuessing
         # picks the cell that solveStep() fills in
         self.random = random.Random()
+        # the changes of the last solve() / propagate() / solveStep()
+        self.log = DeductionLog()
+        # the value filled in by the last solveStep() (a Deduction), if any
+        self.lastStep = None
+        # set during solve(): returns True when the caller wants the solver to stop
+        self.shouldStop = None
 
-    def step(self):
-        """A single deduction pass over all cells and constraint groups"""
-        for cell in self.puzzle.getGrid().getCells():
+    def _checkStop(self):
+        if self.shouldStop is not None and self.shouldStop():
+            raise SolveCancelled("solving was cancelled")
+
+    def step(self, groups=None, cells=None):
+        """A single deduction pass over the given cells and constraint groups (default: all)."""
+        if cells is None:
+            cells = self.puzzle.getGrid().getCells()
+        if groups is None:
+            groups = self.puzzle.getConstraintGroups()
+        for cell in cells:
             cell.checkForSinglePossibility()
-        for cg in self.puzzle.getConstraintGroups():
+        for cg in groups:
             cg.applyConstraints()
+
+    def _record(self):
+        """Record the changes made inside the block in the solver's log (a fresh log, unless
+        the puzzle is already recording into it)."""
+        if self.puzzle.deductionLog is not self.log:
+            self.log = DeductionLog()
+        return self.puzzle.recording(self.log)
+
+    def _deducedValues(self, start=0):
+        """The values deduced (not guessed) since position `start` of the log."""
+        return [
+            d for d in self.log.since(start) if d.setsValue() and d.source is ValueSource.DEDUCED
+        ]
+
+    def hint(self):
+        """The next value the rules determine (a Deduction with its reason), without changing
+        the puzzle; None when a deduction pass does not determine any value. Raises
+        ContradictionError when the pass shows that the puzzle has no solution."""
+        state = self.puzzle.saveState()
+        try:
+            with self._record():
+                self.step()
+            values = self._deducedValues()
+        finally:
+            self.puzzle.restoreState(state)
+        return self.random.choice(values) if values else None
 
     def solveStep(self):
         """Fill in a single cell, e.g. to follow the solver step by step (no guessing).
         A deduction pass is tried; if it determines the values of one or more cells, the puzzle
-        is reset and only one of those cells, chosen at random, gets its value. If the pass only
-        narrows down possible values, that narrowing is kept, so the next step can progress.
+        is reset and only one of those cells, chosen at random, gets its value (lastStep tells
+        which, and why). If the pass only narrows down possible values, that narrowing is kept,
+        so the next step can progress.
         Returns whether the puzzle changed. Raises ContradictionError if the pass detects that
         the puzzle has no solution; the puzzle is then restored to the state it had before."""
         state = self.puzzle.saveState()
-        openCells = self.puzzle.getOpenCells()
+        self.lastStep = None
         try:
-            self.step()
-            solvedCells = [(cell, cell.getValue()) for cell in openCells if cell.hasValue()]
-            if solvedCells:
-                self.puzzle.restoreState(state)
-                cell, value = self.random.choice(solvedCells)
-                cell.inferValue(value)
+            with self._record():
+                self.step()
+                values = self._deducedValues()
+                if values:
+                    self.puzzle.restoreState(state)
+                    chosen = self.random.choice(values)
+                    self.log.truncate(0)
+                    with self.puzzle.causedBy(chosen.cause):
+                        chosen.cell.inferValue(chosen.value)
+                    self.lastStep = self.log.deductions[0]
         except ContradictionError:
             self.puzzle.restoreState(state)
             raise
@@ -47,30 +105,81 @@ class Solver:
 
     def propagate(self, state=None):
         """Repeat deduction passes until a pass no longer changes anything.
-        state: the current puzzle state, if the caller already has a snapshot of it"""
-        if state is None:
-            state = self.puzzle.saveState()
-        while True:
-            self.step()
-            newState = self.puzzle.saveState()
-            if newState == state:
-                return
-            state = newState
 
-    def solve(self):
+        The first pass applies every constraint; later passes only the constraint groups of
+        the cells that changed. (state is accepted for compatibility and not needed.)"""
+        with self._record():
+            groups = cells = None  # everything
+            while True:
+                self._checkStop()
+                start = len(self.log)
+                self.step(groups, cells)
+                cells = self.log.changedCells(start)
+                if not cells:
+                    return
+                groups = {g for cell in cells for g in cell.getConstraintGroups()}
+                # keep the puzzle's order, so the passes are deterministic
+                groups = [g for g in self.puzzle.getConstraintGroups() if g in groups]
+
+    def solve(self, shouldStop=None):
         """Deduce as much as possible; if allowed, guess when deduction gets stuck.
         Returns whether the puzzle is solved. Raises ContradictionError if the
         puzzle has no solution; the puzzle is then restored to the state it had
-        before solve() was called, instead of being left half-updated."""
+        before solve() was called, instead of being left half-updated.
+
+        shouldStop: an optional callable, checked between passes and guesses (e.g. from
+        another thread); when it returns True, the puzzle is restored and SolveCancelled
+        is raised."""
         initialState = self.puzzle.saveState()
+        self.shouldStop = shouldStop
         try:
-            self.propagate(initialState)
-            if self.allowGuessing and not self.puzzle.isSolved() and not self._search():
-                raise ContradictionError("No solution found, all guesses lead to a contradiction")
-        except ContradictionError:
+            with self._record():
+                self.propagate()
+                if self.allowGuessing and not self.puzzle.isSolved() and not self._search():
+                    raise ContradictionError(
+                        "No solution found, all guesses lead to a contradiction"
+                    )
+        except (ContradictionError, SolveCancelled):
             self.puzzle.restoreState(initialState)
             raise
+        finally:
+            self.shouldStop = None
         return self.puzzle.isSolved()
+
+    def countSolutions(self, limit=2):
+        """The number of solutions, counting up to `limit` (with guessing), e.g. to check that
+        a puzzle has exactly one. The puzzle is left as it was."""
+        initialState = self.puzzle.saveState()
+        try:
+            with self._record():
+                try:
+                    self.propagate()
+                except ContradictionError:
+                    return 0
+                return self._count(limit)
+        finally:
+            self.puzzle.restoreState(initialState)
+
+    def _count(self, limit):
+        openCells = self.puzzle.getOpenCells()
+        if not openCells:
+            return 1
+        cell = min(openCells, key=lambda c: len(c.getPossibleValues()))
+        found = 0
+        for value in sorted(cell.getPossibleValues()):
+            state = self.puzzle.saveState()
+            mark = len(self.log)
+            try:
+                cell.guessValue(value)
+                self.propagate()
+                found += self._count(limit - found)
+            except ContradictionError:
+                pass
+            self.puzzle.restoreState(state)
+            self.log.truncate(mark)
+            if found >= limit:
+                break
+        return found
 
     def _search(self):
         openCells = self.puzzle.getOpenCells()
@@ -80,15 +189,19 @@ class Solver:
         # guess on the most constrained cell first
         cell = min(openCells, key=lambda c: len(c.getPossibleValues()))
         for value in sorted(cell.getPossibleValues()):
+            self._checkStop()
             state = self.puzzle.saveState()
+            mark = len(self.log)
             try:
-                cell.inferValue(value)
-                self.propagate()  # the state changed by the guess, so a new snapshot is needed
+                cell.guessValue(value)
+                self.propagate()
                 if self._search():
                     return True
             except ContradictionError:
                 pass
             self.puzzle.restoreState(state)
+            # the deductions after the guess were undone with it
+            self.log.truncate(mark)
         return False
 
     def __str__(self):
