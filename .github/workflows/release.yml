@@ -1,7 +1,7 @@
 name: Release
 
 # Push a tag vX.Y.Z (matching [project].version in pyproject.toml) to build standalone executables
-# for Windows, Linux and macOS and publish them as a GitHub Release.
+# for Windows, Linux and macOS plus an Android APK, and publish them as a GitHub Release.
 # Run it manually (workflow_dispatch) for a dry run: it builds and uploads workflow artifacts only.
 on:
   push:
@@ -88,9 +88,54 @@ jobs:
           path: ${{ steps.archive.outputs.file }}
           if-no-files-found: error
 
+  android:
+    # Debug-signed APK for arm64 phones, built with pyside6-android-deploy (buildozer +
+    # python-for-android). See android/build_apk.sh.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install python-for-android host packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libltdl-dev pkg-config cmake             zlib1g-dev libncurses-dev libffi-dev libssl-dev zip unzip
+      - name: Check the tag matches the version
+        run: |
+          VERSION=$(uv version --short)
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pyproject.toml version $VERSION"
+            exit 1
+          fi
+      - uses: actions/cache@v4
+        with:
+          # Android NDK, SDK and Gradle downloads.
+          path: |
+            ~/.pyside6_android_deploy
+            ~/.buildozer
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: android-${{ hashFiles('uv.lock', 'android/build_apk.sh') }}
+          restore-keys: android-
+      - name: Build APK
+        run: android/build_apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*.apk
+          if-no-files-found: error
+
   release:
     if: github.ref_type == 'tag'
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write

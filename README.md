@@ -17,10 +17,11 @@ Usage instructions
 =================
 
 ## Download
-Standalone builds for Windows, Linux and macOS are attached to every [GitHub Release](https://github.com/JoostvanPinxten/ConstraintPuzzler/releases); no Python installation is needed. Download the archive for your platform, unpack it and start `ConstraintPuzzler` (`ConstraintPuzzler.exe` on Windows, `ConstraintPuzzler.app` on macOS). A dialog asks which puzzle to open; *Help > About* shows the version.
+Standalone builds for Windows, Linux, macOS and Android are attached to every [GitHub Release](https://github.com/JoostvanPinxten/ConstraintPuzzler/releases); no Python installation is needed. Download the archive for your platform, unpack it and start `ConstraintPuzzler` (`ConstraintPuzzler.exe` on Windows, `ConstraintPuzzler.app` on macOS). A dialog asks which puzzle to open; *Help > About* shows the version.
 
 - **macOS**: the app is not signed, so the first time right-click it and choose *Open*.
 - **Linux**: Qt needs the usual X11/Wayland libraries; on Debian/Ubuntu you may have to `sudo apt install libxcb-cursor0`.
+- **Android**: install `ConstraintPuzzler-<version>-android-arm64.apk` (for 64-bit ARM phones and tablets). It is debug-signed and not on the Play Store, so allow installing apps from unknown sources. The interface is the desktop one, so it works best on a tablet or in landscape.
 
 ## Running from source
 
