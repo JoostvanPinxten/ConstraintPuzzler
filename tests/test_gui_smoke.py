@@ -414,28 +414,30 @@ class SelectionHighlightTest(unittest.TestCase):
         def tooltip() -> str:
             return str(self.model.data(openIndex, QtCore.Qt.ItemDataRole.ToolTipRole))
 
-        self.assertTrue(self.window.showHintsAction.isChecked())
-        self.assertTrue(visibleHints())
-        self.assertIn("Candidates:", label.text())
-        self.assertIn("Candidates:", tooltip())
-
-        self.window.showHintsAction.setChecked(False)
-        self.assertFalse(self.window.settings.showHints)
+        # hidden by default
+        self.assertFalse(self.window.showHintsAction.isChecked())
         self.assertEqual(visibleHints(), [])
         self.assertNotIn("Candidates", label.text())
         self.assertIn("Open", label.text())
         self.assertNotIn("Candidates", tooltip())
 
         self.window.showHintsAction.setChecked(True)
+        self.assertTrue(self.window.settings.showHints)
         self.assertTrue(visibleHints())
         self.assertIn("Candidates:", label.text())
+        self.assertIn("Candidates:", tooltip())
+
+        self.window.showHintsAction.setChecked(False)
+        self.assertEqual(visibleHints(), [])
+        self.assertNotIn("Candidates", label.text())
 
     def test_hints_setting_applies_to_a_newly_loaded_puzzle(self):
-        self.window.settings.setShowHints(False)
-        self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
-        self.assertFalse(self.window.constraintModel.showHints)
-        for piece in self.window.puzzlePieces.values():
-            self.assertFalse(piece.hintsEnabled)
+        for show in (True, False):
+            self.window.settings.setShowHints(show)
+            self.window.loadPuzzle(str(REPO_ROOT / "easySudoku.txt"))
+            self.assertEqual(self.window.constraintModel.showHints, show)
+            for piece in self.window.puzzlePieces.values():
+                self.assertEqual(piece.hintsEnabled, show)
 
 
 class CellInputTest(unittest.TestCase):
@@ -700,15 +702,19 @@ class LauncherSmokeTest(unittest.TestCase):
         sudoku = self.launcher.openPuzzle("sudoku")
         kakuro = self.launcher.openPuzzle("kakuro")  # its sum triangles have no hints
 
-        self.launcher.showHintsAction.setChecked(False)
-        for window in (sudoku, kakuro):
-            self.assertFalse(window.showHintsAction.isChecked())
-            self.assertFalse(window.constraintModel.showHints)
+        # hidden by default, in every tab
+        self.assertFalse(self.launcher.showHintsAction.isChecked())
         self.assertFalse(any(p.hintsEnabled for p in sudoku.puzzlePieces.values()))
 
-        sudoku.showHintsAction.setChecked(True)
-        self.assertTrue(self.launcher.showHintsAction.isChecked())
-        self.assertTrue(kakuro.constraintModel.showHints)
+        self.launcher.showHintsAction.setChecked(True)
+        for window in (sudoku, kakuro):
+            self.assertTrue(window.showHintsAction.isChecked())
+            self.assertTrue(window.constraintModel.showHints)
+        self.assertTrue(all(p.hintsEnabled for p in sudoku.puzzlePieces.values()))
+
+        sudoku.showHintsAction.setChecked(False)
+        self.assertFalse(self.launcher.showHintsAction.isChecked())
+        self.assertFalse(kakuro.constraintModel.showHints)
 
         # Ctrl+H works in a tab: only the launcher has the shortcut, so it is not ambiguous
         self.launcher.activateWindow()
@@ -718,7 +724,7 @@ class LauncherSmokeTest(unittest.TestCase):
             QtCore.Qt.Key.Key_H,
             QtCore.Qt.KeyboardModifier.ControlModifier,
         )
-        self.assertFalse(self.launcher.settings.showHints)
+        self.assertTrue(self.launcher.settings.showHints)
 
     def test_examples_are_marked_as_examples(self):
         for name, puzzleType in PUZZLE_TYPES.items():

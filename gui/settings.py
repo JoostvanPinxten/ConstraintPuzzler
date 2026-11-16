@@ -13,7 +13,8 @@ class PuzzleSettings(QtCore.QObject):
     def __init__(self, parent: QtCore.QObject | None = None):
         super().__init__(parent)
         self._allowGuessing = False
-        self._showHints = True
+        # off by default: the candidates give away much of the solution
+        self._showHints = False
 
     @property
     def allowGuessing(self) -> bool:
