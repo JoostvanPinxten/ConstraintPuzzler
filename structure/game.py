@@ -21,7 +21,7 @@ from structure.entries import UserEntries
 
 if TYPE_CHECKING:
     # for the annotations only: at run time, this module does not import the solver
-    from solver.Solver import Solver
+    from solver.solver import Solver
     from structure.cell import Cell
     from structure.puzzle import Puzzle
     from structure.types import PuzzleState, Value

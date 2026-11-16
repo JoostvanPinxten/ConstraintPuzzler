@@ -1,9 +1,3 @@
-"""
-Created on Sat Dec 22 22:25:33 2012
-
-@author: Juice
-"""
-
 from PySide6 import QtCore, QtWidgets
 
 from constraints import TotalSumValueConstraint

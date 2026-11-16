@@ -3,7 +3,7 @@
 import unittest
 
 from parsers.sudoku import parseSudokuLines
-from solver.Solver import SolveCancelled, Solver
+from solver.solver import SolveCancelled, Solver
 from structure.cell import ValueSource
 from structure.errors import ContradictionError
 from structure.tests.test_entries import EASY

@@ -50,9 +50,17 @@ Start one of the GUIs with its example puzzle:
 | `uv run python kakuroMain.py` | Kakuro, loads `mediumKakuro.txt` |
 | `uv run python sumbreroMain.py` | Sumbrero, loads `simpleSumbrero.txt` |
 
-Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck (in the launcher this setting applies to all open tabs). If the puzzle turns out to be contradictory, a message explains why.
+Press **Solve** to let the solver deduce as much as it can; it keeps applying the constraints until nothing changes anymore. Solving runs in the background: while it runs the button reads **Cancel**, so you can stop it. Some puzzles (e.g. `hardSudoku.txt`) cannot be solved by deduction alone: enable *Solver > Allow guessing (backtracking)* to let the solver try values when it gets stuck (in the launcher this setting applies to all open tabs). If the puzzle turns out to be contradictory, a message explains why.
 
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the panel below the tree explains the selection.
+
+To follow the solver instead of letting it finish the puzzle:
+- **Hint** points out a cell whose value follows from the rules and explains why, without filling it in.
+- **Solve single step** fills in one such cell and explains the deduction, for example "these three cells can only hold 1, 2 and 3 between them, so no other cell in the row can".
+
+The candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Use *View > Show hints* (Ctrl+H) to show them in the cells and in the explanations.
+
+Every change is undoable, including a Solve: use *Edit > Undo* and *Edit > Redo* (Ctrl+Z / Ctrl+Y, or Ctrl+Shift+Z depending on the platform).
 
 Click a cell to select it, then type a number to enter it (given cells cannot be changed). Typed values are shown in green; Delete or Backspace clears them. You can also make mistakes: a value that breaks a rule is drawn in red, together with the cells it clashes with (e.g. the other 6 in the row), and the panel below the tree explains the clash. Mistakes are kept out of the puzzle model, so **Solve** only uses the values that fit.
 

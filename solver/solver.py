@@ -1,9 +1,3 @@
-"""
-Created on 28 dec. 2012
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 import random

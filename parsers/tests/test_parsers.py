@@ -26,7 +26,7 @@ from parsers.sumbrero import (
     descendingRow,
     neighbour,
 )
-from solver.Solver import Solver
+from solver.solver import Solver
 from structure.position import Position
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
