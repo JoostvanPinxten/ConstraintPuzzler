@@ -95,6 +95,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="checkPushButton">
+            <property name="toolTip">
+             <string>Compare the filled-in values and notes with the solution</string>
+            </property>
+            <property name="text">
+             <string>Check</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="solveStepPushButton">
             <property name="toolTip">
              <string>Fill in one cell whose value follows from the constraints</string>

@@ -15,6 +15,7 @@ The solver is passed in, so this module does not depend on the solver package.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from structure.entries import EntryError, UserEntries
@@ -33,6 +34,36 @@ type Snapshot = tuple[
 ]
 
 
+@dataclass
+class CheckResult:
+    """What Game.check() found by comparing the shown values and notes with the solution."""
+
+    # the cells (not given) that show a value
+    checked: int = 0
+    # the cells that show a value that is not the solution's
+    wrongValues: set[Cell] = field(default_factory=set)
+    # the open cells whose notes leave out the solution's value
+    wrongNotes: set[Cell] = field(default_factory=set)
+
+    def isAllCorrect(self) -> bool:
+        return not self.wrongValues and not self.wrongNotes
+
+    def summary(self) -> str:
+        """The result in words, e.g. "2 of 23 filled-in cells are wrong."."""
+        if self.checked == 0 and not self.wrongNotes:
+            return "Nothing is filled in yet; every note so far fits the solution."
+        parts = []
+        if self.wrongValues:
+            parts.append(f"{len(self.wrongValues)} of {self.checked} filled-in cells are wrong")
+        elif self.checked:
+            parts.append(f"All {self.checked} filled-in cells are correct so far")
+        if self.wrongNotes:
+            count = len(self.wrongNotes)
+            cells = "cell rules" if count == 1 else "cells rule"
+            parts.append(f"the notes of {count} {cells} out the correct value")
+        return ", and ".join(parts) + "."
+
+
 class Game:
     def __init__(self, puzzle: Puzzle, maxHistory: int = 1000) -> None:
         self.puzzle = puzzle
@@ -42,6 +73,10 @@ class Game:
         self.undoStack: list[Snapshot] = []
         self.redoStack: list[Snapshot] = []
         self.maxHistory = maxHistory
+        # the puzzle's solution (a PuzzleState), once found (see check), and whether it is the
+        # only one; it depends on the given values only, so it is found once per game
+        self.solution: PuzzleState | None = None
+        self.solutionIsUnique = False
 
     # --- history --------------------------------------------------------------------------
 
@@ -155,6 +190,26 @@ class Game:
         return self.perform(lambda: solver.solveStep(preferred))
 
     # --- queries --------------------------------------------------------------------------
+
+    def check(self, solution: PuzzleState) -> CheckResult:
+        """Compare the values shown in the cells that are not given (entries, mistakes and the
+        solver's values, which may follow from a wrong entry) and the notes of the open cells
+        with a solution of the puzzle (Solver.findSolution)."""
+        result = CheckResult()
+        solutionCells, _ = solution
+        for cell, (_, solutionValue, _) in zip(
+            self.puzzle.getGrid().getCells(), solutionCells, strict=True
+        ):
+            if cell.isGiven():
+                continue
+            value = self.valueOf(cell)
+            if value is not None:
+                result.checked += 1
+                if value != solutionValue:
+                    result.wrongValues.add(cell)
+            elif cell in self.notes and solutionValue not in self.notes[cell]:
+                result.wrongNotes.add(cell)
+        return result
 
     def notesOf(self, cell: Cell) -> frozenset[Value]:
         """The values the user noted in a cell (empty when there are none)."""

@@ -105,6 +105,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
         self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
         self.ui.hintPushButton.clicked.connect(self.hintButtonClicked)
+        self.ui.checkPushButton.clicked.connect(self.checkButtonClicked)
         self.ui.notesPushButton.toggled.connect(lambda _checked: self.updateSelectionInfo())
         # the running background solve, if any (see solveButtonClicked)
         self.solveJob: SolveJob | None = None
@@ -583,14 +584,19 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         try:
             if isDigit and (ctrl or self.ui.notesPushButton.isChecked()):
                 game.toggleNote(cell, digit)
+                # the notes of this cell changed, so its Check mark is outdated
+                self.checkMarks.discard(cell)
             elif ctrl:
                 return False  # leave e.g. Ctrl+Z to the shortcuts
-            elif event.key() in clearKeys or (digit == 0 and 0 not in game.puzzle.getValues()):
-                game.clear(cell)
-            elif isDigit:
-                game.enter(cell, digit)
             else:
-                return False
+                if event.key() in clearKeys or (digit == 0 and 0 not in game.puzzle.getValues()):
+                    game.clear(cell)
+                elif isDigit:
+                    game.enter(cell, digit)
+                else:
+                    return False
+                # a hint or Check marks belong to the puzzle as it was
+                self.resetGuidance()
             self.inputMessage = None
         except EntryError as e:
             self.inputMessage = str(e)
@@ -659,6 +665,7 @@ class BasicMainWindow(QtWidgets.QMainWindow):
         self.ui.solvePushButton.setEnabled(True)
         self.ui.solveStepPushButton.setEnabled(not solving)
         self.ui.hintPushButton.setEnabled(not solving)
+        self.ui.checkPushButton.setEnabled(not solving)
         self.updateUndoActions()
 
     def solveFinished(self, state: PuzzleState, solved: bool) -> None:
@@ -712,6 +719,70 @@ class BasicMainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.stopSolving()
         super().closeEvent(event)
+
+    def checkButtonClicked(self) -> None:
+        """Compare the filled-in values and notes with the solution. The solution is found once
+        per puzzle, in the background (like Solve), from the given values only."""
+        game = self.game
+        if game is None or self.solveJob is not None or self.puzzleFile is None:
+            return
+        if game.solution is not None:
+            self.showCheckResult()
+            return
+        parser, path = self.puzzleType.parser, self.puzzleFile
+        worker = SolveWorker(
+            lambda: parser(path), game.entries.initialState, True, findSolution=True
+        )
+        worker.finished.connect(self.solutionFound)
+        worker.failed.connect(self.solveFailed)
+        worker.cancelled.connect(self.solveCancelled)
+        job = SolveJob(worker, self)
+        job.done.connect(self.solveJobDone)
+        self.solveJob = job
+        self.setSolving(True)
+        job.start()
+
+    def solutionFound(self, solution: PuzzleState, unique: bool) -> None:
+        if self.game is None:
+            return
+        self.game.solution = solution
+        self.game.solutionIsUnique = unique
+        # report once the job is done, so the buttons are enabled again behind the dialog
+        QtCore.QTimer.singleShot(0, self.showCheckResult)
+
+    def showCheckResult(self) -> None:
+        game = self.game
+        if game is None or game.solution is None:
+            return
+        if not game.solutionIsUnique:
+            self.informCheck(
+                "This puzzle has more than one solution, so the values cannot be checked"
+                " against the solution; only values that break a rule are shown (in red)."
+            )
+            return
+        result = game.check(game.solution)
+        if result.isAllCorrect():
+            self.informCheck(result.summary())
+            return
+        if self.askShowCheckMarks(result.summary()):
+            self.checkMarks = result.wrongValues | result.wrongNotes
+            self.stepMessage = "Check: the cells marked in red are wrong."
+            self.updateHighlight()
+            self.updateSelectionInfo()
+
+    def informCheck(self, text: str) -> None:
+        QtWidgets.QMessageBox.information(self, "Check", text)
+
+    def askShowCheckMarks(self, summary: str) -> bool:
+        """Report what Check found and ask whether to mark the wrong cells."""
+        box = QtWidgets.QMessageBox(self)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Information)
+        box.setWindowTitle("Check")
+        box.setText(summary)
+        showButton = box.addButton("Show them", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(QtWidgets.QMessageBox.StandardButton.Close)
+        box.exec()
+        return box.clickedButton() is showButton
 
     def hintButtonClicked(self) -> None:
         """Reveal a value that follows from the constraints, a bit more on every click: first

@@ -203,6 +203,51 @@ class CountSolutionsTest(unittest.TestCase):
         self.assertEqual(Solver(puzzle).countSolutions(), 0)
 
 
+class FindSolutionTest(unittest.TestCase):
+    def testUniqueSolution(self):
+        puzzle = parseSudokuLines(EASY)
+        state = puzzle.saveState()
+        solver = Solver(puzzle)
+        solution, unique = solver.findSolution()
+        self.assertTrue(unique)
+        self.assertEqual(puzzle.saveState(), state)
+        self.assertFalse(solver.allowGuessing)
+        solved = parseSudokuLines(EASY)
+        Solver(solved).solve()
+        self.assertEqual(solution[0], solved.saveState()[0])
+
+    def testHardPuzzleNeedsGuessing(self):
+        puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))
+        solution, unique = Solver(puzzle).findSolution()
+        self.assertTrue(unique)
+        self.assertTrue(all(value is not None for _, value, _ in solution[0]))
+
+    def testSeveralSolutions(self):
+        puzzle = parseSudokuLines(["- - - - - - - - -"] * 9)
+        solution, unique = Solver(puzzle).findSolution()
+        self.assertFalse(unique)
+        self.assertTrue(all(value is not None for _, value, _ in solution[0]))
+
+    def testNoSolution(self):
+        lines = list(EASY)
+        lines[8] = "- - 6 5 3 2 - - -"  # a 6 in the bottom row, which another 6 needs
+        puzzle = parseSudokuLines(lines)
+        self.assertEqual(Solver(puzzle).countSolutions(), 0)
+        state = puzzle.saveState()
+        with self.assertRaises(ContradictionError):
+            Solver(puzzle).findSolution()
+        self.assertEqual(puzzle.saveState(), state)
+
+    def testCancelRestoresThePuzzle(self):
+        puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))
+        state = puzzle.saveState()
+        solver = Solver(puzzle)
+        with self.assertRaises(SolveCancelled):
+            solver.findSolution(shouldStop=lambda: True)
+        self.assertEqual(puzzle.saveState(), state)
+        self.assertIsNone(solver.shouldStop)
+
+
 class CancelTest(unittest.TestCase):
     def testStopRestoresThePuzzle(self):
         puzzle = PUZZLE_TYPES["sudoku"].parser(resourcePath("hardSudoku.txt"))

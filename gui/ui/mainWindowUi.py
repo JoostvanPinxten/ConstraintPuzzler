@@ -82,6 +82,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.hintPushButton)
 
+        self.checkPushButton = QPushButton(self.solverGroupBox)
+        self.checkPushButton.setObjectName(u"checkPushButton")
+
+        self.verticalLayout_3.addWidget(self.checkPushButton)
+
         self.solveStepPushButton = QPushButton(self.solverGroupBox)
         self.solveStepPushButton.setObjectName(u"solveStepPushButton")
 
@@ -118,6 +123,10 @@ class Ui_MainWindow(object):
         self.hintPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Show where to look; click again for the cell, and again for its value and why (nothing is filled in)", None))
 #endif // QT_CONFIG(tooltip)
         self.hintPushButton.setText(QCoreApplication.translate("MainWindow", u"Hint", None))
+#if QT_CONFIG(tooltip)
+        self.checkPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Compare the filled-in values and notes with the solution", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkPushButton.setText(QCoreApplication.translate("MainWindow", u"Check", None))
 #if QT_CONFIG(tooltip)
         self.solveStepPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Fill in one cell whose value follows from the constraints", None))
 #endif // QT_CONFIG(tooltip)

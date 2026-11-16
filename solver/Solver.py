@@ -193,6 +193,28 @@ class Solver:
         finally:
             self.puzzle.restoreState(initialState)
 
+    def findSolution(
+        self, shouldStop: Callable[[], bool] | None = None
+    ) -> tuple[PuzzleState, bool]:
+        """The solved state of the puzzle (found with guessing, whatever allowGuessing says),
+        and whether it is the only solution, e.g. to check a user's entries against. The puzzle
+        is left as it was. Raises ContradictionError when there is no solution, and
+        SolveCancelled when shouldStop() returns True."""
+        initialState = self.puzzle.saveState()
+        allowGuessing = self.allowGuessing
+        try:
+            self.shouldStop = shouldStop
+            count = self.countSolutions(limit=2)
+            if count == 0:
+                raise ContradictionError("The puzzle has no solution")
+            self.allowGuessing = True
+            self.solve(shouldStop)
+            return self.puzzle.saveState(), count == 1
+        finally:
+            self.allowGuessing = allowGuessing
+            self.shouldStop = None
+            self.puzzle.restoreState(initialState)
+
     def _count(self, limit: int) -> int:
         openCells = self.puzzle.getOpenCells()
         if not openCells:
@@ -200,6 +222,7 @@ class Solver:
         cell = min(openCells, key=lambda c: len(c.getPossibleValues()))
         found = 0
         for value in sorted(cell.getPossibleValues()):
+            self._checkStop()
             state = self.puzzle.saveState()
             mark = len(self.log)
             try:

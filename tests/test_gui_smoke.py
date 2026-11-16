@@ -668,6 +668,48 @@ class CellInputTest(unittest.TestCase):
         self.assertEqual(self.visibleSmallValues(cell), {4: CANDIDATE_COLOR, 7: NOTE_COLOR})
         self.window.settings.setShowHints(False)
 
+    def test_check_marks_wrong_cells(self):
+        from gui.highlighting import HighlightRole
+
+        window = self.window
+        game = window.game
+        assert game is not None
+        reports = []
+        window.askShowCheckMarks = lambda summary: reports.append(summary) or True
+        window.informCheck = lambda text: reports.append(text)
+
+        # the solution of the top-left cell (candidates 4 and 7), from a solved copy
+        solved = window.parsePuzzle(str(REPO_ROOT / "easySudoku.txt"))[1]
+        solved.solve()
+        right = solved.puzzle.grid.getCellFromSquareGrid(0, 0).getValue()
+        assert right is not None
+        wrong = 11 - right
+        cell = self.grid.getCellFromSquareGrid(0, 0)
+        self.click(cell)
+        self.type(getattr(QtCore.Qt.Key, f"Key_{wrong}"))
+
+        window.ui.checkPushButton.click()
+        self.assertTrue(window.waitForSolve())
+        for _ in range(20):
+            if reports:
+                break
+            self.app.processEvents()
+        self.assertEqual(len(reports), 1)
+        self.assertIn("1 of 1 filled-in cells are wrong", reports[0])
+        self.assertEqual(window.checkMarks, {cell})
+        self.assertEqual(window.highlightRoles[cell], HighlightRole.SELECTED)  # still selected
+        self.click(self.grid.getCellFromSquareGrid(4, 4))
+        self.assertEqual(window.highlightRoles[cell], HighlightRole.WRONG)
+        self.assertTrue(window.ui.checkPushButton.isEnabled())
+
+        # fixing the value removes the mark; a second Check uses the solution it found
+        self.click(cell)
+        self.type(getattr(QtCore.Qt.Key, f"Key_{right}"))
+        self.assertEqual(window.checkMarks, set())
+        window.ui.checkPushButton.click()
+        self.assertIsNone(window.solveJob)
+        self.assertIn("All 1 filled-in cells are correct", reports[-1])
+
     def test_typing_in_the_tree_enters_a_value_too(self):
         cell = self.grid.getCellFromSquareGrid(0, 0)
         self.window.selectCell(cell)
