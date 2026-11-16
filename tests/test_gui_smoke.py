@@ -134,21 +134,48 @@ class GuiSmokeTest(unittest.TestCase):
 
     def test_hint_button(self):
         import sudokuMain
+        from gui.highlighting import HighlightRole
 
         window = sudokuMain.MainWindow()
         try:
             window.loadPuzzle("easySudoku.txt")
             assert window.puzzle is not None
             before = window.puzzle.saveState()
-            window.ui.hintPushButton.click()
-            # the hint does not fill in the cell, but selects it and explains its value
-            self.assertEqual(window.puzzle.saveState(), before)
-            cell = window.selectedCell()
-            assert cell is not None
-            self.assertFalse(cell.hasValue())
+            button = window.ui.hintPushButton
+
+            # 1st click: where to look; no cell is selected yet
+            button.click()
+            hint = window.hintSession.deduction
+            assert hint is not None
+            self.assertIsNone(window.selectedCell())
+            region = window.hintSession.regionCells()
+            self.assertIn(hint.cell, region)
+            self.assertEqual(window.hintRegion, region)
+            self.assertTrue(all(window.highlightRoles[c] >= HighlightRole.HINT for c in region))
+            self.assertIn("Hint: ", window.selectionInfoLabel.text())
+            self.assertNotIn(f"cell {hint.cell.getName()}", window.selectionInfoLabel.text())
+            self.assertEqual(button.text(), "Hint: which cell?")
+
+            # 2nd click: the cell
+            button.click()
+            self.assertIs(window.hintSession.deduction, hint)
+            self.assertIs(window.selectedCell(), hint.cell)
+            self.assertIn(f"Look at cell {hint.cell.getName()}", window.selectionInfoLabel.text())
+            self.assertEqual(button.text(), "Hint: show value")
+
+            # 3rd click: the value and why; nothing is filled in
+            button.click()
             text = window.selectionInfoLabel.text()
-            self.assertIn("Hint: cell", text)
-            self.assertIn(cell.getName(), text)
+            self.assertIn(f"Hint: cell {hint.cell.getName()} is {hint.value}", text)
+            self.assertEqual(window.puzzle.saveState(), before)
+            self.assertFalse(hint.cell.hasValue())
+            self.assertEqual(button.text(), "Hint")
+
+            # Solve single step fills in the hinted cell, and the hint is over
+            window.ui.solveStepPushButton.click()
+            self.assertEqual(hint.cell.getValue(), hint.value)
+            self.assertIsNone(window.hintSession.deduction)
+            self.assertEqual(window.hintRegion, set())
         finally:
             window.close()
             window.deleteLater()
@@ -583,6 +610,105 @@ class CellInputTest(unittest.TestCase):
         self.type(QtCore.Qt.Key.Key_Delete)
         self.assertEqual(piece.valueTextItem.opacity(), 0)
         self.assertEqual(givenPiece.valueTextItem.defaultTextColor(), givenColor)
+
+    def visibleSmallValues(self, cell):
+        piece = self.window.puzzlePieces[cell]
+        return {
+            v: item.defaultTextColor()
+            for v, item in piece.hintValueItemMap.items()
+            if item.opacity() > 0
+        }
+
+    def test_notes_mode_toggles_notes(self):
+        from gui.puzzlerepresentation.cellpiece import NOTE_COLOR
+
+        game = self.window.game
+        assert game is not None
+        cell = self.grid.getCellFromSquareGrid(0, 0)
+        self.window.settings.setShowHints(False)
+        self.click(cell)
+        self.type(QtCore.Qt.Key.Key_N)
+        self.assertTrue(self.window.ui.notesPushButton.isChecked())
+        self.assertIn("Notes mode", self.window.selectionInfoLabel.text())
+        self.type(QtCore.Qt.Key.Key_4)
+        self.type(QtCore.Qt.Key.Key_9)
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(game.notesOf(cell), {4, 9})
+        self.assertEqual(self.visibleSmallValues(cell), {4: NOTE_COLOR, 9: NOTE_COLOR})
+        self.type(QtCore.Qt.Key.Key_9)
+        self.assertEqual(self.visibleSmallValues(cell), {4: NOTE_COLOR})
+
+        # undo brings the note back
+        self.window.undoAction.trigger()
+        self.assertEqual(game.notesOf(cell), {4, 9})
+        self.assertIn(9, self.visibleSmallValues(cell))
+
+        # N again: numbers are entered as values
+        self.type(QtCore.Qt.Key.Key_N)
+        self.assertFalse(self.window.ui.notesPushButton.isChecked())
+        self.type(QtCore.Qt.Key.Key_4)
+        self.assertEqual(cell.getValue(), 4)
+        self.assertEqual(self.visibleSmallValues(cell), {})
+
+    def test_ctrl_number_toggles_a_note(self):
+        from gui.puzzlerepresentation.cellpiece import CANDIDATE_COLOR, NOTE_COLOR
+
+        game = self.window.game
+        assert game is not None
+        cell = self.grid.getCellFromSquareGrid(0, 0)  # candidates 4 and 7
+        self.click(cell)
+        QtTest.QTest.keyClick(
+            self.view, QtCore.Qt.Key.Key_7, QtCore.Qt.KeyboardModifier.ControlModifier
+        )
+        self.app.processEvents()
+        self.assertIsNone(cell.getValue())
+        self.assertEqual(game.notesOf(cell), {7})
+        # with Show hints, the solver's other candidates are shown in grey next to the note
+        self.window.settings.setShowHints(True)
+        self.assertEqual(self.visibleSmallValues(cell), {4: CANDIDATE_COLOR, 7: NOTE_COLOR})
+        self.window.settings.setShowHints(False)
+
+    def test_check_marks_wrong_cells(self):
+        from gui.highlighting import HighlightRole
+
+        window = self.window
+        game = window.game
+        assert game is not None
+        reports = []
+        window.askShowCheckMarks = lambda summary: reports.append(summary) or True
+        window.informCheck = lambda text: reports.append(text)
+
+        # the solution of the top-left cell (candidates 4 and 7), from a solved copy
+        solved = window.parsePuzzle(str(REPO_ROOT / "easySudoku.txt"))[1]
+        solved.solve()
+        right = solved.puzzle.grid.getCellFromSquareGrid(0, 0).getValue()
+        assert right is not None
+        wrong = 11 - right
+        cell = self.grid.getCellFromSquareGrid(0, 0)
+        self.click(cell)
+        self.type(getattr(QtCore.Qt.Key, f"Key_{wrong}"))
+
+        window.ui.checkPushButton.click()
+        self.assertTrue(window.waitForSolve())
+        for _ in range(20):
+            if reports:
+                break
+            self.app.processEvents()
+        self.assertEqual(len(reports), 1)
+        self.assertIn("1 of 1 filled-in cells are wrong", reports[0])
+        self.assertEqual(window.checkMarks, {cell})
+        self.assertEqual(window.highlightRoles[cell], HighlightRole.SELECTED)  # still selected
+        self.click(self.grid.getCellFromSquareGrid(4, 4))
+        self.assertEqual(window.highlightRoles[cell], HighlightRole.WRONG)
+        self.assertTrue(window.ui.checkPushButton.isEnabled())
+
+        # fixing the value removes the mark; a second Check uses the solution it found
+        self.click(cell)
+        self.type(getattr(QtCore.Qt.Key, f"Key_{right}"))
+        self.assertEqual(window.checkMarks, set())
+        window.ui.checkPushButton.click()
+        self.assertIsNone(window.solveJob)
+        self.assertIn("All 1 filled-in cells are correct", reports[-1])
 
     def test_typing_in_the_tree_enters_a_value_too(self):
         cell = self.grid.getCellFromSquareGrid(0, 0)

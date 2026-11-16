@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class UniqueValueConstraint(Constraint):
+    difficulty = 2  # a value that fits only one cell of the group
+
     def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
 

@@ -21,6 +21,7 @@ from gui.puzzlerepresentation.puzzlepiece import PuzzlePieceProxy
 from gui.settings import PuzzleSettings, addShowHintsAction
 from gui.ui import mainWindowUi
 from gui.windows.solvingwindow import SolvingWindow
+from solver.hints import HintSession
 from solver.solver import Solver
 from structure.game import Game
 from structure.puzzle import Puzzle
@@ -72,10 +73,16 @@ class BasicMainWindow(SolvingWindow):
         self.ui.solvePushButton.clicked.connect(self.solveButtonClicked)
         self.ui.solveStepPushButton.clicked.connect(self.solveStepButtonClicked)
         self.ui.hintPushButton.clicked.connect(self.hintButtonClicked)
+        self.ui.checkPushButton.clicked.connect(self.checkButtonClicked)
+        self.ui.notesPushButton.toggled.connect(lambda _checked: self.updateSelectionInfo())
         self.solveJob = None
         self.highlightAnimation = None
         self.puzzle = None
         self.solver = None
+        self.stepMessage = None
+        self.hintSession = HintSession()
+        self.hintRegion = set()
+        self.checkMarks = set()
 
         self.createMenus()
         self.createEditMenu()
@@ -134,6 +141,7 @@ class BasicMainWindow(SolvingWindow):
         self.highlightRoles = {}
         self.game = Game(self.puzzle)
         self.inputMessage = None
+        self.resetGuidance()
         self.violations = set()
         # to find the cell under the mouse, and the tree row of a cell
         self.pieceCells = {
@@ -218,13 +226,6 @@ class BasicMainWindow(SolvingWindow):
         self.inputMessage = None
         self.puzzleChanged()
         return True
-
-    def puzzleChanged(self) -> None:
-        """Redraw after values changed: cell colours, highlight, description and undo state."""
-        self.refreshCellStyles()
-        self.updateHighlight()
-        self.updateSelectionInfo()
-        self.updateUndoActions()
 
     def createViewMenu(self) -> None:
         viewMenu = self.menuBar().addMenu("View")

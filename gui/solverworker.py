@@ -23,21 +23,29 @@ if TYPE_CHECKING:
 
 
 class SolveWorker(QtCore.QObject):
-    # the solved (or as far as possible deduced) state, and whether the puzzle is solved
+    # the solved (or as far as possible deduced) state, and whether the puzzle is solved;
+    # with findSolution: the solution, and whether it is the only one
     finished = QtCore.Signal(object, bool)
     # the puzzle cannot be solved: the reason
     failed = QtCore.Signal(str)
     cancelled = QtCore.Signal()
 
     def __init__(
-        self, makePuzzle: Callable[[], Puzzle], state: PuzzleState, allowGuessing: bool
+        self,
+        makePuzzle: Callable[[], Puzzle],
+        state: PuzzleState,
+        allowGuessing: bool,
+        findSolution: bool = False,
     ) -> None:
         """makePuzzle(): a new, independent puzzle with the same structure as the shown one;
-        state: the shown puzzle's saveState()."""
+        state: the shown puzzle's saveState().
+        findSolution: find the solution with Solver.findSolution instead of solving; finished
+        then reports the solved state and whether the solution is unique."""
         super().__init__()
         self.makePuzzle = makePuzzle
         self.state = state
         self.allowGuessing = allowGuessing
+        self.findSolution = findSolution
         self._stop = threading.Event()
 
     def cancel(self) -> None:
@@ -50,6 +58,10 @@ class SolveWorker(QtCore.QObject):
             puzzle = self.makePuzzle()
             puzzle.restoreState(self.state)
             solver = Solver(puzzle, allowGuessing=self.allowGuessing)
+            if self.findSolution:
+                solution, unique = solver.findSolution(shouldStop=self._stop.is_set)
+                self.finished.emit(solution, unique)
+                return
             solved = solver.solve(shouldStop=self._stop.is_set)
         except SolveCancelled:
             self.cancelled.emit()

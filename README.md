@@ -55,10 +55,13 @@ Press **Solve** to let the solver deduce as much as it can; it keeps applying th
 Selecting a constraint group, constraint or cell in the tree view highlights the corresponding cells in the puzzle, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the panel below the tree explains the selection.
 
 To follow the solver instead of letting it finish the puzzle:
-- **Hint** points out a cell whose value follows from the rules and explains why, without filling it in.
-- **Solve single step** fills in one such cell and explains the deduction, for example "these three cells can only hold 1, 2 and 3 between them, so no other cell in the row can".
+- **Hint** reveals a value that follows from the rules, a bit more on every click: first where to look, then the cell, then the value and why. Nothing is filled in.
+- **Solve single step** fills in one such cell (the hinted one, if a hint is showing) and explains the deduction, for example "these three cells can only hold 1, 2 and 3 between them, so no other cell in the row can".
+- **Check** compares your values and notes with the solution and offers to mark the wrong cells.
 
-The candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Use *View > Show hints* (Ctrl+H) to show them in the cells and in the explanations.
+You can keep your own candidate notes: press **N** (or the notes button) to switch to notes mode, or hold Ctrl while typing a number, to note it in the selected cell; type it again to remove it.
+
+The solver's candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Use *View > Show hints* (Ctrl+H) to show them in the cells and in the explanations.
 
 Every change is undoable, including a Solve: use *Edit > Undo* and *Edit > Redo* (Ctrl+Z / Ctrl+Y, or Ctrl+Shift+Z depending on the platform).
 

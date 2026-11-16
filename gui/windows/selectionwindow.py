@@ -95,6 +95,13 @@ class SelectionWindow(PuzzleWindowBase):
     def updateHighlight(self) -> None:
         """Colour the cells of the selected tree items by the role they play in them."""
         roles = combinedHighlightRoles(self.selectedItems)
+        # where a hint says to look, and what Check found to be wrong
+        for cells, role in (
+            (self.hintRegion, HighlightRole.HINT),
+            (self.checkMarks, HighlightRole.WRONG),
+        ):
+            for cell in cells:
+                roles[cell] = max(role, roles.get(cell, HighlightRole.NONE))
         self.highlightRoles = roles
 
         # continue from wherever the previous fade got to
@@ -140,6 +147,12 @@ class SelectionWindow(PuzzleWindowBase):
         selectionModel = self.ui.puzzleTreeView.selectionModel()
         rows = selectionModel.selectedRows(0) if selectionModel is not None else []
         if not rows:
+            # e.g. a hint that shows where to look, without selecting a cell yet
+            if self.stepMessage:
+                legend = legendHtml(self.highlightRoles.values())
+                parts = [f"<i>{html.escape(self.stepMessage)}</i>"] + ([legend] if legend else [])
+                self.selectionInfoLabel.setText("<br>".join(parts))
+                return
             self.selectionInfoLabel.setText(
                 "Click a cell in the puzzle, or select a cell, group or constraint in the tree"
                 " to see its cells and rules."
@@ -149,7 +162,16 @@ class SelectionWindow(PuzzleWindowBase):
         parts = [self.constraintModel.getItem(index).describe(showHints) for index in rows]
         cell = self.selectedCell()
         if cell is not None and not cell.isGiven():
-            parts.append("<i>Type a number to enter it; Delete clears the cell.</i>")
+            if self.ui.notesPushButton.isChecked():
+                parts.append(
+                    "<i>Notes mode: type a number to note it, again to remove it (N ends"
+                    " notes mode).</i>"
+                )
+            else:
+                parts.append(
+                    "<i>Type a number to enter it; Delete clears the cell. Ctrl+number (or"
+                    " notes mode, N) notes a candidate.</i>"
+                )
         note = self.violationNote(cell) if cell is not None else None
         if note:
             parts.append(f'<span style="color:#c00000">{html.escape(note)}</span>')

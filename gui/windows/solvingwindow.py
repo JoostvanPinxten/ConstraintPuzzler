@@ -9,6 +9,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from gui.solverworker import SolveJob, SolveWorker
 from gui.windows.cellinputwindow import CellInputWindow
+from solver.hints import CELL, REGION, VALUE
 from structure.errors import ContradictionError
 
 if TYPE_CHECKING:
@@ -43,6 +44,7 @@ class SolvingWindow(CellInputWindow):
         self.ui.solvePushButton.setEnabled(True)
         self.ui.solveStepPushButton.setEnabled(not solving)
         self.ui.hintPushButton.setEnabled(not solving)
+        self.ui.checkPushButton.setEnabled(not solving)
         self.updateUndoActions()
 
     def solveFinished(self, state: PuzzleState, solved: bool) -> None:
@@ -97,12 +99,78 @@ class SolvingWindow(CellInputWindow):
         self.stopSolving()
         super().closeEvent(event)
 
+    def checkButtonClicked(self) -> None:
+        """Compare the filled-in values and notes with the solution. The solution is found once
+        per puzzle, in the background (like Solve), from the given values only."""
+        game = self.game
+        if game is None or self.solveJob is not None or self.puzzleFile is None:
+            return
+        if game.solution is not None:
+            self.showCheckResult()
+            return
+        parser, path = self.puzzleType.parser, self.puzzleFile
+        worker = SolveWorker(
+            lambda: parser(path), game.entries.initialState, True, findSolution=True
+        )
+        worker.finished.connect(self.solutionFound)
+        worker.failed.connect(self.solveFailed)
+        worker.cancelled.connect(self.solveCancelled)
+        job = SolveJob(worker, self)
+        job.done.connect(self.solveJobDone)
+        self.solveJob = job
+        self.setSolving(True)
+        job.start()
+
+    def solutionFound(self, solution: PuzzleState, unique: bool) -> None:
+        if self.game is None:
+            return
+        self.game.solution = solution
+        self.game.solutionIsUnique = unique
+        # report once the job is done, so the buttons are enabled again behind the dialog
+        QtCore.QTimer.singleShot(0, self.showCheckResult)
+
+    def showCheckResult(self) -> None:
+        game = self.game
+        if game is None or game.solution is None:
+            return
+        if not game.solutionIsUnique:
+            self.informCheck(
+                "This puzzle has more than one solution, so the values cannot be checked"
+                " against the solution; only values that break a rule are shown (in red)."
+            )
+            return
+        result = game.check(game.solution)
+        if result.isAllCorrect():
+            self.informCheck(result.summary())
+            return
+        if self.askShowCheckMarks(result.summary()):
+            self.checkMarks = result.wrongValues | result.wrongNotes
+            self.stepMessage = "Check: the cells marked in red are wrong."
+            self.updateHighlight()
+            self.updateSelectionInfo()
+
+    def informCheck(self, text: str) -> None:
+        QtWidgets.QMessageBox.information(self, "Check", text)
+
+    def askShowCheckMarks(self, summary: str) -> bool:
+        """Report what Check found and ask whether to mark the wrong cells."""
+        box = QtWidgets.QMessageBox(self)
+        box.setIcon(QtWidgets.QMessageBox.Icon.Information)
+        box.setWindowTitle("Check")
+        box.setText(summary)
+        showButton = box.addButton("Show them", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(QtWidgets.QMessageBox.StandardButton.Close)
+        box.exec()
+        return box.clickedButton() is showButton
+
     def hintButtonClicked(self) -> None:
-        """Show a cell whose value follows from the constraints, and why, without filling it."""
+        """Reveal a value that follows from the constraints, a bit more on every click: first
+        where to look, then the cell, then the value and why. Nothing is filled in."""
         if self.solver is None or self.game is None or self.solveJob is not None:
             return
+        session = self.hintSession
         try:
-            hint = self.solver.hint()
+            hint = session.advance(self.solver)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -117,9 +185,21 @@ class SolvingWindow(CellInputWindow):
                 "No value follows from a single round of the rules. Use Solve single step to"
                 " narrow down the candidates, or Solve.",
             )
+            self.resetGuidance()
+            self.updateHighlight()
             return
-        self.selectCell(hint.cell)
-        self.stepMessage = "Hint: " + hint.describe()
+        if session.level == REGION:
+            # show the area without giving away the cell
+            self.selectCell(None)
+            self.hintRegion = session.regionCells()
+        else:
+            self.hintRegion = set()
+            self.selectCell(hint.cell)
+        # after selectCell, which clears the message of the previous selection
+        self.stepMessage = "Hint: " + session.message()
+        nextText = {REGION: "Hint: which cell?", CELL: "Hint: show value", VALUE: "Hint"}
+        self.ui.hintPushButton.setText(nextText[session.level])
+        self.updateHighlight()
         self.updateSelectionInfo()
 
     def solveStepButtonClicked(self) -> None:
@@ -127,7 +207,8 @@ class SolvingWindow(CellInputWindow):
         if self.solver is None or self.game is None or self.game.puzzle.isSolved():
             return
         try:
-            changed = self.game.solveStep(self.solver)
+            # fill in the cell of the hint being shown, if any
+            changed = self.game.solveStep(self.solver, self.hintSession.deduction)
         except ContradictionError as e:
             QtWidgets.QMessageBox.warning(
                 self,

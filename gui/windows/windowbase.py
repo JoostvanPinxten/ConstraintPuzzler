@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from gui.settings import PuzzleSettings
     from gui.solverworker import SolveJob
     from gui.ui.mainWindowUi import Ui_MainWindow
+    from solver.hints import HintSession
     from solver.solver import Solver
     from structure.cell import Cell
     from structure.game import Game
@@ -51,7 +52,8 @@ class PuzzleWindowBase(QtWidgets.QMainWindow):
     highlightRoles: dict[Cell, HighlightRole]
     # the running fade of the cell highlight, if any (kept so it is not garbage collected)
     highlightAnimation: QtCore.QParallelAnimationGroup | None
-    # a message about entering a value, and one explaining the last solver step or hint
+    # a message about entering a value, and one explaining the last solver step, hint or
+    # Check (shown until the selection changes)
     inputMessage: str | None
     stepMessage: str | None
     # the cells whose shown value breaks a rule (drawn in red)
@@ -61,6 +63,12 @@ class PuzzleWindowBase(QtWidgets.QMainWindow):
     cellIndexes: dict[Cell, QtCore.QModelIndex]
     # the running background solve, if any (see SolvingWindow.solveButtonClicked)
     solveJob: SolveJob | None
+    # the hint being revealed level by level (see SolvingWindow.hintButtonClicked), and the
+    # cells of its region
+    hintSession: HintSession
+    hintRegion: set[Cell]
+    # the cells Check marked as wrong (until the puzzle changes)
+    checkMarks: set[Cell]
 
     def updateUndoActions(self) -> None:
         """Enable or disable undo and redo (BasicMainWindow has the Edit menu)."""
