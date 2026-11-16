@@ -12,7 +12,7 @@
 #
 # pyside6-android-deploy needs a main.py and regenerates buildozer.spec on every run, while the
 # app also needs its example puzzles (*.txt) and pyproject.toml (for the version). So the app is
-# staged in build/android/app, the deploy tool only runs with --init, and the generated
+# staged in build/android/app (with pyproject.toml renamed, see utility/version.py), the deploy tool only runs with --init, and the generated
 # buildozer.spec is patched before buildozer builds the APK.
 set -euo pipefail
 
@@ -62,6 +62,11 @@ fetchWheel() {
     echo "$WHEELS/$name"
 }
 PYSIDE_WHEEL=$(fetchWheel pyside6 | tail -n 1)
+# Keep only the Qt libraries the app needs (the full wheel makes a ~170 MB APK).
+SLIM_WHEEL="$WORK/slim/$(basename "$PYSIDE_WHEEL")"
+mkdir -p "$WORK/slim"
+python android/slim_wheel.py "$PYSIDE_WHEEL" "$SLIM_WHEEL"
+PYSIDE_WHEEL="$SLIM_WHEEL"
 SHIBOKEN_WHEEL=$(fetchWheel shiboken6 | tail -n 1)
 
 # Stage the app: the tracked sources and data files, without tests, docs and CI files.
@@ -71,6 +76,8 @@ git ls-files -z -- '*.py' '*.txt' pyproject.toml \
     | grep -zvE '(^|/)tests/|^(doc|android|\.github|\.claude)/|^constraintpuzzler\.spec$' \
     | xargs -0 cp --parents -t "$APP"
 cp android/main.py "$APP/main.py"
+# python-for-android leaves out everything but main.py when the app has a pyproject.toml.
+mv "$APP/pyproject.toml" "$APP/project-metadata.toml"
 cp doc/logo/constraintpuzzler-mark-512.png "$APP/icon.png"
 
 cd "$APP"
