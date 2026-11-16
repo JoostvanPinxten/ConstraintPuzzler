@@ -6,28 +6,28 @@ class Position:
 
     __slots__ = ("_x", "_y")
 
-    def __init__(self, x, y):
+    def __init__(self, x: int, y: int) -> None:
         self._x = x
         self._y = y
 
-    def x(self):
+    def x(self) -> int:
         return self._x
 
-    def y(self):
+    def y(self) -> int:
         return self._y
 
-    def __mul__(self, factor):
+    def __mul__(self, factor: int) -> "Position":
         return Position(self._x * factor, self._y * factor)
 
     __rmul__ = __mul__
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Position):
             return NotImplemented
         return (self._x, self._y) == (other._x, other._y)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self._x, self._y))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Position({self._x!r}, {self._y!r})"

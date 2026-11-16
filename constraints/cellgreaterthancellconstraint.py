@@ -4,45 +4,58 @@ Created on 7 jan. 2013
 @author: Juice
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
 from constraints import Constraint
 from constraints.constraint import formatValues
+
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
+    from structure.cell import Cell
+    from structure.types import Value, ValueOf
 
 
 class CellGreaterThanCellConstraint(Constraint):
     """Enforces lesserCell < greaterCell"""
 
-    def __init__(self, group, initialValues):
+    def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
 
-        self.lesserCell = None
-        self.greaterCell = None
+        self.lesserCell: Cell | None = None
+        self.greaterCell: Cell | None = None
 
-    def notify(self, cell):
+    def notify(self, cell: Cell) -> None:
         pass
 
-    def setLesserCell(self, cell):
+    def setLesserCell(self, cell: Cell) -> None:
         self.lesserCell = cell
 
-    def setGreaterCell(self, cell):
+    def setGreaterCell(self, cell: Cell) -> None:
         self.greaterCell = cell
 
-    def applyConstraint(self):
+    def applyConstraint(self) -> None:
+        lesser, greater = self.lesserCell, self.greaterCell
+        if lesser is None or greater is None:
+            return  # not set up yet
         # the lesser cell must be smaller than the largest option of the greater cell
-        maximumOfGreater = max(self.greaterCell.getPossibleValues())
-        for val in self.lesserCell.getPossibleValues():
+        maximumOfGreater = max(greater.getPossibleValues())
+        for val in lesser.getPossibleValues():
             if val >= maximumOfGreater:
-                self.lesserCell.remove(val)
+                lesser.remove(val)
 
         # the greater cell must be larger than the smallest option of the lesser cell
-        minimumOfLesser = min(self.lesserCell.getPossibleValues())
-        for val in self.greaterCell.getPossibleValues():
+        minimumOfLesser = min(lesser.getPossibleValues())
+        for val in greater.getPossibleValues():
             if val <= minimumOfLesser:
-                self.greaterCell.remove(val)
+                greater.remove(val)
 
-    def getType(self):
+    def getType(self) -> str:
         return "Cell Greater Than Cell Constraint"
 
-    def violations(self, valueOf):
+    def violations(self, valueOf: ValueOf) -> set[Cell]:
         """Both cells, when the smaller cell does not have the smaller value."""
         if self.lesserCell is None or self.greaterCell is None:
             return set()
@@ -51,12 +64,12 @@ class CellGreaterThanCellConstraint(Constraint):
             return {self.lesserCell, self.greaterCell}
         return set()
 
-    def summary(self):
+    def summary(self) -> str:
         if self.lesserCell is None or self.greaterCell is None:
             return "smaller than (cells not set)"
         return f"({self.lesserCell.getName()}) < ({self.greaterCell.getName()})"
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         if self.lesserCell is None or self.greaterCell is None:
             return "The cells of this constraint have not been set."
         lesser, greater = self.lesserCell, self.greaterCell
@@ -70,5 +83,7 @@ class CellGreaterThanCellConstraint(Constraint):
             f" < {formatValues(greater.getPossibleValues())}."
         )
 
-    def getAllowedValuesForValueList(self, allowedValues, usedValues):
+    def getAllowedValuesForValueList(
+        self, allowedValues: Iterable[Value], usedValues: Iterable[Value]
+    ) -> Iterable[Value]:
         return allowedValues

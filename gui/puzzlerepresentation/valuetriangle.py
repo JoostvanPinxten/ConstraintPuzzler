@@ -4,9 +4,16 @@ Created on 6 jan. 2013
 @author: Juice
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from gui.puzzlerepresentation.cellpiece import centerTextItem
+
+if TYPE_CHECKING:
+    from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 
 
 class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
@@ -15,7 +22,14 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
     BOTTOMRIGHT = 2
     BOTTOMLEFT = 3
 
-    def __init__(self, constraint, cellSize, position, alignment=None, parent=None):
+    def __init__(
+        self,
+        constraint: TotalSumValueConstraint,
+        cellSize: int,
+        position: QtCore.QPoint,
+        alignment: int | None = None,
+        parent: QtWidgets.QGraphicsItem | None = None,
+    ) -> None:
         super().__init__(QtGui.QPolygon(), parent)
         self.setPos(position * cellSize)
         self.constraint = constraint
@@ -42,16 +56,16 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
 
         pass
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QtWidgets.QGraphicsSceneMouseEvent) -> None:
         # TODO: be able to set the value?
         return super().mousePressEvent(event)
 
-    def instantiateRepresentation(self):
+    def instantiateRepresentation(self) -> None:
         # add a big text item to show the set value, hidden by default
         self.valueTextItem = QtWidgets.QGraphicsTextItem(str(self.constraint.getTotalValue()))
         self.valueTextItem.setParentItem(self)
         self.valueTextItem.setPos(0, self.cellSize / 6)
-        f = QtGui.QFont("Sans serif", self.cellSize / 4, 0)
+        f = QtGui.QFont("Sans serif", int(self.cellSize / 4), 0)
         self.valueTextItem.setDefaultTextColor(QtGui.QColorConstants.White)
         self.valueTextItem.setFont(f)
         self.valueTextItem.setTextWidth(self.cellSize)
@@ -60,7 +74,7 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
         centerTextItem(self.valueTextItem)
         self.valueTextItem.setOpacity(1)
 
-    def updateRepresentation(self):
+    def updateRepresentation(self) -> None:
         # TODO: add the two other cases
         if self.alignment == ValueTriangle.TOPRIGHT:
             self.setPolygon(

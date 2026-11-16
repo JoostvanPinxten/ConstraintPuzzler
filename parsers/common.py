@@ -11,7 +11,7 @@ _INTEGER_PATTERN = re.compile(r"\(\s*(-?\d+)\s*\)")
 class PuzzleFileError(ValueError):
     """A puzzle file could not be parsed; the message names the file and line."""
 
-    def __init__(self, filename, lineNumber, message):
+    def __init__(self, filename: str, lineNumber: int, message: str) -> None:
         super().__init__(f"{filename}, line {lineNumber}: {message}")
 
 

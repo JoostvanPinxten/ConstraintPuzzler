@@ -12,8 +12,18 @@ entered again; an earlier mistake may fit after that. Values deduced by the solv
 that way; the solver can deduce them again.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
 from structure.cell import ValueSource
 from structure.errors import ContradictionError
+
+if TYPE_CHECKING:
+    from structure.cell import Cell
+    from structure.puzzle import Puzzle
+    from structure.types import Value
 
 
 class EntryError(ValueError):
@@ -21,25 +31,25 @@ class EntryError(ValueError):
 
 
 class UserEntries:
-    def __init__(self, puzzle):
+    def __init__(self, puzzle: Puzzle) -> None:
         self.puzzle = puzzle
         self.initialState = puzzle.saveState()
         # cell -> value, in the order the values were entered
-        self.entries = {}
+        self.entries: dict[Cell, Value] = {}
         # the entries that do not fit the puzzle: cell -> value (not set in the model)
-        self.mistakes = {}
+        self.mistakes: dict[Cell, Value] = {}
 
-    def canEdit(self, cell):
+    def canEdit(self, cell: Cell) -> bool:
         return not cell.isGiven()
 
-    def isMistake(self, cell):
+    def isMistake(self, cell: Cell) -> bool:
         return cell in self.mistakes
 
-    def valueOf(self, cell):
+    def valueOf(self, cell: Cell) -> Value | None:
         """The value shown in a cell: a mistake typed in it, or else its value in the model."""
         return self.mistakes.get(cell, cell.getValue())
 
-    def enter(self, cell, value):
+    def enter(self, cell: Cell, value: Value) -> None:
         """Enter a value in a cell, replacing its current value (if any).
 
         Raises an EntryError (and leaves the puzzle unchanged) for a given cell or a value
@@ -60,7 +70,7 @@ class UserEntries:
             self.entries = entries
             self._applyEntry(cell, value)
 
-    def clear(self, cell):
+    def clear(self, cell: Cell) -> None:
         """Remove the value of a cell that is not given."""
         if cell.isGiven():
             raise EntryError(f"Cell {cell.getName()} is given; its value cannot be cleared.")
@@ -70,20 +80,20 @@ class UserEntries:
         entries.pop(cell, None)
         self._replay(entries)
 
-    def dropMistakes(self, cells):
+    def dropMistakes(self, cells: Iterable[Cell]) -> None:
         """Forget the mistakes typed in the given cells (e.g. after the solver filled them)."""
         for cell in cells:
             if self.mistakes.pop(cell, None) is not None:
                 self.entries.pop(cell, None)
 
-    def violations(self):
+    def violations(self) -> set[Cell]:
         """The cells whose shown value breaks a rule, including every mistake."""
         cells = set(self.mistakes)
         for constraint in self.puzzle.getConstraints():
             cells |= constraint.violations(self.valueOf)
         return cells
 
-    def _applyEntry(self, cell, value):
+    def _applyEntry(self, cell: Cell, value: Value) -> None:
         """Set an entry in the model; if it does not fit, keep it as a mistake instead."""
         state = self.puzzle.saveState()
         try:
@@ -94,7 +104,7 @@ class UserEntries:
             self.puzzle.restoreState(state)
             self.mistakes[cell] = value
 
-    def _replay(self, entries):
+    def _replay(self, entries: dict[Cell, Value]) -> None:
         self.puzzle.restoreState(self.initialState)
         self.entries = entries
         self.mistakes = {}

@@ -54,7 +54,7 @@ class StartPage(QtWidgets.QWidget):
 
     exampleChosen = QtCore.Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
         layout.addStretch()
@@ -83,7 +83,7 @@ class StartPage(QtWidgets.QWidget):
 class LauncherWindow(QtWidgets.QMainWindow):
     """Single application window with one tab per open puzzle."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {getVersion()}")
         self.setWindowIcon(appIcon())
@@ -116,7 +116,7 @@ class LauncherWindow(QtWidgets.QMainWindow):
 
         self.updateStartPage()
 
-    def createMenus(self):
+    def createMenus(self) -> None:
         fileMenu = self.menuBar().addMenu("File")
         self.examplesMenu = fileMenu.addMenu("Examples")
         openMenu = fileMenu.addMenu("Open file")
@@ -161,7 +161,7 @@ class LauncherWindow(QtWidgets.QMainWindow):
         aboutAction.setMenuRole(QtGui.QAction.MenuRole.AboutRole)
         aboutAction.triggered.connect(self.showAbout)
 
-    def showAbout(self):
+    def showAbout(self) -> None:
         QtWidgets.QMessageBox.about(self, f"About {APP_NAME}", BasicMainWindow.aboutText())
 
     def openPuzzle(
@@ -190,10 +190,10 @@ class LauncherWindow(QtWidgets.QMainWindow):
             )
             return None
 
-    def openExample(self, name: str, example: str | None = None):
+    def openExample(self, name: str, example: str | None = None) -> None:
         self.tryOpenPuzzle(name, example=example)
 
-    def openPuzzleFile(self, name: str):
+    def openPuzzleFile(self, name: str) -> None:
         puzzleType = PUZZLE_TYPES[name]
         fileName, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self, f"Open {puzzleType.label}", "", puzzleType.fileFilter
@@ -222,7 +222,7 @@ class LauncherWindow(QtWidgets.QMainWindow):
             windows.append(widget)
         return windows
 
-    def closeTab(self, index: int):
+    def closeTab(self, index: int) -> None:
         widget = self.tabs.widget(index)
         if widget is None:
             return
@@ -231,11 +231,11 @@ class LauncherWindow(QtWidgets.QMainWindow):
         widget.deleteLater()
         self.updateStartPage()
 
-    def closeCurrentTab(self):
+    def closeCurrentTab(self) -> None:
         if self.tabs.count():
             self.closeTab(self.tabs.currentIndex())
 
-    def updateStartPage(self):
+    def updateStartPage(self) -> None:
         hasTabs = self.tabs.count() > 0
         self.stack.setCurrentWidget(self.tabs if hasTabs else self.startPage)
         self.closeTabAction.setEnabled(hasTabs)

@@ -10,7 +10,7 @@ class PuzzleSettings(QtCore.QObject):
     allowGuessingChanged = QtCore.Signal(bool)
     showHintsChanged = QtCore.Signal(bool)
 
-    def __init__(self, parent: QtCore.QObject | None = None):
+    def __init__(self, parent: QtCore.QObject | None = None) -> None:
         super().__init__(parent)
         self._allowGuessing = False
         # off by default: the candidates give away much of the solution

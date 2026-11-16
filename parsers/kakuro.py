@@ -1,11 +1,17 @@
 """Parser for Kakuro files; see doc/puzzle-files.md for the syntax."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from parsers.common import PuzzleFileError, parsePosition, parsePositionList, parseRange
 from structure.position import Position
 from structure.puzzle import Puzzle
+
+if TYPE_CHECKING:
+    from structure.cell import PositionedCell
 
 
 def parseKakuroLines(lines: Iterable[str], filename: str = "<kakuro>") -> Puzzle:
@@ -69,7 +75,7 @@ def parseKakuroFile(filename: str) -> Puzzle:
         return parseKakuroLines(f.readlines(), filename)
 
 
-def clueAnchor(cells) -> tuple[Position, str]:
+def clueAnchor(cells: Iterable[PositionedCell]) -> tuple[Position, str]:
     """Where the clue of a Kakuro line is drawn: the position of the black square just before
     the line's first cell, and the direction of the line ("down" or "across").
 

@@ -28,7 +28,7 @@ class PuzzleType:
     # the module that defines this type's MainWindow (a *Main.py entry point)
     windowModule: str = ""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.defaultExample is not None and self.defaultExample not in self.examples:
             raise ValueError(f"{self.name}: default example {self.defaultExample!r} not listed")
 

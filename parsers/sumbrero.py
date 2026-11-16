@@ -1,12 +1,18 @@
 """Parser for Sumbrero files, plus the hexagon geometry it relies on; see doc/puzzle-files.md
 for the syntax."""
 
+from __future__ import annotations
+
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from constraints import TotalSumValueConstraint, UniqueValueConstraint
 from parsers.common import PuzzleFileError, parseIndex, parsePosition, parseRange
 from structure.position import Position
 from structure.puzzle import Puzzle
+
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
 
 # Sumbrero cells are flat-topped hexagons, laid out in columns: Position(x, y) is column x,
 # row y, and every odd column is shifted down by half a hexagon. A line of cells runs in one
@@ -51,7 +57,7 @@ def neighbour(position: Position, direction: str) -> Position:
     return Position(x + dx, y + dy)
 
 
-def lineKind(group):
+def lineKind(group: ConstraintGroup) -> str | None:
     """COLUMN, DESCENDING_ROW or ASCENDING_ROW for a line created by parseSumbreroLines,
     else None."""
     kind = group.getName().rsplit(" ", 1)[0]
@@ -87,7 +93,7 @@ def parseSumbreroLines(lines: Iterable[str], filename: str = "<sumbrero>") -> Pu
 
             if keyword == "cell":
                 position = parsePosition(line[len("cell") :])
-                if any(c.getPosition() == position for c in puzzle.getGrid().getCells()):
+                if any(c.getPosition() == position for c in puzzle.getGrid().getPositionedCells()):
                     raise ValueError(f"cell {position} is declared twice")
                 puzzle.getGrid().addCell(position)
                 continue
@@ -99,7 +105,9 @@ def parseSumbreroLines(lines: Iterable[str], filename: str = "<sumbrero>") -> Pu
             kind, indexOf = lineStatements[keyword]
             index = parseIndex(lineText)
             lineCells = [
-                c for c in puzzle.getGrid().getCells() if indexOf(c.getPosition()) == index
+                c
+                for c in puzzle.getGrid().getPositionedCells()
+                if indexOf(c.getPosition()) == index
             ]
             if not lineCells:
                 raise ValueError(f"{kind.lower()} {index} contains no cells")

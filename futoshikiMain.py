@@ -4,9 +4,12 @@ Created on Sat Dec 22 22:25:33 2012
 @author: Juice
 """
 
-import sys
+from __future__ import annotations
 
-from PySide6 import QtWidgets
+import sys
+from typing import TYPE_CHECKING
+
+from PySide6 import QtCore, QtWidgets
 
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from gui.puzzlerepresentation.inequalitysign import InequalitySign
@@ -15,11 +18,14 @@ from gui.windows.basicmainwindow import BasicMainWindow
 from structure.cell import PositionedCell
 from utility.puzzletypes import FUTOSHIKI
 
+if TYPE_CHECKING:
+    from structure.cell import Cell
+
 
 class MainWindow(BasicMainWindow):
     puzzleType = FUTOSHIKI
 
-    def initializePuzzleRepresentation(self):
+    def initializePuzzleRepresentation(self) -> None:
         assert self.puzzle is not None
         self.newScene()
         self.cellSize = 55
@@ -32,19 +38,22 @@ class MainWindow(BasicMainWindow):
                 piece = ValueRectangle(c, self.cellSize, c.getPosition() * self.cellPitch)
                 self.addCellPiece(c, piece)
 
-        self.inequalitySigns = {}
+        self.inequalitySigns: dict[CellGreaterThanCellConstraint, InequalitySign] = {}
         for constraint in self.puzzle.getConstraints():
-            if isinstance(constraint, CellGreaterThanCellConstraint):
+            if not isinstance(constraint, CellGreaterThanCellConstraint):
+                continue
+            greater, lesser = constraint.greaterCell, constraint.lesserCell
+            if greater is not None and lesser is not None:
                 sign = InequalitySign(
-                    self.cellCenter(constraint.greaterCell),
-                    self.cellCenter(constraint.lesserCell),
+                    self.cellCenter(greater),
+                    self.cellCenter(lesser),
                     depth=self.cellGap * 0.45,
                     width=self.cellGap * 0.8,
                 )
                 self.scene.addItem(sign)
                 self.inequalitySigns[constraint] = sign
 
-    def cellCenter(self, cell):
+    def cellCenter(self, cell: Cell) -> QtCore.QPointF:
         rect = self.puzzlePieces[cell].rect()
         return rect.center()
 

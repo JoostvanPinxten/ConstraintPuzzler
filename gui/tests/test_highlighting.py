@@ -53,7 +53,9 @@ class HighlightTest(unittest.TestCase):
 
     def cellItem(self, cell):
         gridItem = self.puzzleItem.children()[0]
-        return next(c for c in gridItem.children() if c.cell is cell)
+        return next(
+            c for c in gridItem.children() if isinstance(c, CellProxyItem) and c.cell is cell
+        )
 
     def testGreaterThanColoursTheSmallerAndTheLargerCell(self):
         constraintItem = self.groupItem("Relativity").children()[0]

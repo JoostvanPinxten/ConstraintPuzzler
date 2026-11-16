@@ -4,59 +4,72 @@ Created on 24 dec. 2012
 @author: Juice
 """
 
+from __future__ import annotations
 
-def formatValues(values):
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
+    from structure.cell import Cell
+    from structure.deduction import Deduction
+    from structure.types import Value, ValueOf
+
+
+def formatValues(values: Iterable[Value]) -> str:
     """Format a collection of values for a description, e.g. "1, 3, 4" (or "none")."""
     values = sorted(values)
     return ", ".join(str(v) for v in values) if values else "none"
 
 
-def placedValues(cells):
+def placedValues(cells: Iterable[Cell]) -> list[Value]:
     """The values that have been filled in for the given cells."""
-    return [c.getValue() for c in cells if c.hasValue()]
+    return [value for c in cells if (value := c.getValue()) is not None]
 
 
 class Constraint:
-    def __init__(self, group, initialValues):
-        self.initialValues = list(initialValues)
+    def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
+        self.initialValues: list[Value] = list(initialValues)
         self.group = group
 
         self.reset()
 
-    def reset(self):
-        self.values = list(self.initialValues)
+    def reset(self) -> None:
+        self.values: list[Value] = list(self.initialValues)
 
-    def applyConstraint(self):
+    def applyConstraint(self) -> None:
         raise NotImplementedError
 
-    def notify(self, cell):
+    def notify(self, cell: Cell) -> None:
         raise NotImplementedError
 
-    def getAllowedValuesForValueList(self, allowedValues, usedValues):
+    def getAllowedValuesForValueList(
+        self, allowedValues: Iterable[Value], usedValues: Iterable[Value]
+    ) -> Iterable[Value]:
         """Narrow allowedValues, given that usedValues are already used in the group.
 
         Used by ConstraintGroup.valuesAllowedByGroup; by default a rule allows everything."""
         return allowedValues
 
-    def getType(self):
+    def getType(self) -> str:
         return type(self).__name__
 
-    def explain(self, deduction):
+    def explain(self, deduction: Deduction) -> str:
         """Why this constraint made a change (a structure.deduction.Deduction), in words."""
         return f"{self.group.getName()} ({self.summary()})"
 
-    def summary(self):
+    def summary(self) -> str:
         """A short description of the rule, e.g. "sum = 17", used as its name in the GUI."""
         return self.getType()
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         """A one-line description of the rule and of how far it is satisfied.
 
         With showHints False, the description leaves out the candidate values the solver has
         deduced, so it does not give away hints about the solution."""
         return self.summary()
 
-    def violations(self, valueOf):
+    def violations(self, valueOf: ValueOf) -> set[Cell]:
         """The cells that break this rule, given the value shown in each cell.
 
         valueOf(cell) returns the value of a cell, or None for an empty cell. It may differ

@@ -165,7 +165,10 @@ class Test(unittest.TestCase):
 
         self.assertTrue(Solver(puzzle).solve())
         for relation in relations:
-            self.assertGreater(relation.greaterCell.getValue(), relation.lesserCell.getValue())
+            assert relation.greaterCell is not None and relation.lesserCell is not None
+            greater, lesser = relation.greaterCell.getValue(), relation.lesserCell.getValue()
+            assert greater is not None and lesser is not None
+            self.assertGreater(greater, lesser)
 
     def testSaveAndRestoreState(self):
         sudoku = parseSudokuFile(os.path.join(ROOT, "easySudoku.txt"))

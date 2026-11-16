@@ -48,9 +48,10 @@ exclude = [
     ".venv",
     "**/__pycache__",
 ]
-# Legacy code initialises many attributes to None and fills them in later. Report these as
-# warnings for now; promote to errors once the call sites are narrowed (e.g. with asserts).
-reportOptionalMemberAccess = "warning"
+# Accessing an attribute of a value that may be None (e.g. `cell.getValue().x` or
+# `self.puzzle.grid` before a puzzle is loaded) must be narrowed first (an `is not None`
+# check or an assert), so it fails CI.
+reportOptionalMemberAccess = "error"
 
 [tool.ruff.lint.flake8-bugbear]
 # Qt's idiomatic `parent=QModelIndex()` default arguments are immutable value types.
