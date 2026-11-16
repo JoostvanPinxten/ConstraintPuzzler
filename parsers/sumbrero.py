@@ -87,7 +87,7 @@ def parseSumbreroLines(lines: Iterable[str], filename: str = "<sumbrero>") -> Pu
 
             if keyword == "cell":
                 position = parsePosition(line[len("cell") :])
-                if any(c.getPosition() == position for c in puzzle.getGrid().getCells()):
+                if any(c.getPosition() == position for c in puzzle.getGrid().getPositionedCells()):
                     raise ValueError(f"cell {position} is declared twice")
                 puzzle.getGrid().addCell(position)
                 continue
@@ -99,7 +99,9 @@ def parseSumbreroLines(lines: Iterable[str], filename: str = "<sumbrero>") -> Pu
             kind, indexOf = lineStatements[keyword]
             index = parseIndex(lineText)
             lineCells = [
-                c for c in puzzle.getGrid().getCells() if indexOf(c.getPosition()) == index
+                c
+                for c in puzzle.getGrid().getPositionedCells()
+                if indexOf(c.getPosition()) == index
             ]
             if not lineCells:
                 raise ValueError(f"{kind.lower()} {index} contains no cells")

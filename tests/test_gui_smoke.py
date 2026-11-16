@@ -217,7 +217,7 @@ class SumbreroWindowTest(unittest.TestCase):
 
         layout = clueLayout(self.puzzle)
         self.assertEqual(len(layout), len(self.puzzle.getConstraintGroups()))
-        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getCells()}
+        cellPositions = {c.getPosition() for c in self.puzzle.getGrid().getPositionedCells()}
         for group in self.puzzle.getConstraintGroups():
             constraint = next(
                 c for c in group.getConstraints() if isinstance(c, TotalSumValueConstraint)
@@ -226,7 +226,7 @@ class SumbreroWindowTest(unittest.TestCase):
             self.assertNotIn(position, cellPositions)
             # one step in the wedge's direction leads to the first cell of the line
             first = neighbour(position, direction)
-            self.assertIn(first, [c.getPosition() for c in group.getCells()])
+            self.assertIn(first, [c.getPosition() for c in group.getPositionedCells()])
             expected = {COLUMN: "S", DESCENDING_ROW: "SE", ASCENDING_ROW: "NE"}
             self.assertEqual(direction, expected[group.getName().rsplit(" ", 1)[0]])
         # no two lines share a wedge
@@ -236,7 +236,7 @@ class SumbreroWindowTest(unittest.TestCase):
         self.assertLess(len(set(positions)), len(positions))
 
     def test_black_hexagons_frame_the_cells(self):
-        cells = {cell.getPosition() for cell in self.puzzle.getGrid().getCells()}
+        cells = {cell.getPosition() for cell in self.puzzle.getGrid().getPositionedCells()}
         frame = set(self.window.clueHexagons)
         self.assertFalse(cells & frame)
         from parsers.sumbrero import neighbour as hexNeighbour

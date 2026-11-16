@@ -37,7 +37,7 @@ def clueLayout(puzzle):
 def framePositions(puzzle):
     """The positions of the black hexagons around the grid: every position next to a cell that
     is not a cell itself (this includes every position that holds a clue)."""
-    cells = {cell.getPosition() for cell in puzzle.getGrid().getCells()}
+    cells = {cell.getPosition() for cell in puzzle.getGrid().getPositionedCells()}
     return {
         neighbour(position, direction)
         for position in cells
@@ -62,7 +62,7 @@ class MainWindow(BasicMainWindow):
         self.newScene()
         self.hexSide = 100
 
-        for c in self.puzzle.getGrid().getCells():
+        for c in self.puzzle.getGrid().getPositionedCells():
             hexagon = ValueHexagon(c, self.hexSide, self.hexScenePosition(c.getPosition()))
             self.addCellPiece(c, hexagon)
 

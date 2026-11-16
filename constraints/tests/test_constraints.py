@@ -28,6 +28,7 @@ class Test(unittest.TestCase):
 
         for cg in puzzle.getConstraintGroups():
             for constraint in cg.getConstraints():
+                assert isinstance(constraint, TotalSumValueConstraint)
                 constraint.setTotalValue(3)
                 constraint.applyConstraint()
 
@@ -76,6 +77,7 @@ class Test(unittest.TestCase):
             {1, 2, 3}, 2, CellGreaterThanCellConstraint
         )
         constraint = puzzle.getConstraintGroups()[0].getConstraints()[0]
+        assert isinstance(constraint, CellGreaterThanCellConstraint)
         lesser, greater = puzzle.grid.getCells()
         constraint.setLesserCell(lesser)
         constraint.setGreaterCell(greater)
@@ -90,6 +92,7 @@ class Test(unittest.TestCase):
             {1, 2, 3, 4}, 2, CellGreaterThanCellConstraint
         )
         constraint = puzzle.getConstraintGroups()[0].getConstraints()[0]
+        assert isinstance(constraint, CellGreaterThanCellConstraint)
         lesser, greater = puzzle.grid.getCells()
         constraint.setLesserCell(lesser)
         constraint.setGreaterCell(greater)

@@ -4,16 +4,27 @@ Created on 26 jan. 2013
 @author: Juice
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
 from .constraint import formatValues, placedValues
 from .uniquevalueconstraint import UniqueValueConstraint
 
+if TYPE_CHECKING:
+    from constraints.constraintgroup import ConstraintGroup
+    from structure.cell import Cell
+    from structure.deduction import Deduction
+    from structure.types import Value
+
 
 class ExactCoverConstraint(UniqueValueConstraint):
-    def __init__(self, group, initialValues):
+    def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
 
-    def applyConstraint(self):
-        values = set()
+    def applyConstraint(self) -> None:
+        values: set[Value] = set()
         for c in self.group.getCells():
             values |= set(c.getPossibleValues())
         newValues = self.checkForSinglePosition(values)
@@ -29,10 +40,10 @@ class ExactCoverConstraint(UniqueValueConstraint):
     #       exactlyOnce/UVC constraint
     # TODO: can be refactored into a new type of constraint (and extract the old
     #       exactlyonce contraint)
-    def searchForNakedSet(self):
+    def searchForNakedSet(self) -> None:
         # iterate over all the cells and check if any one of the initial value can still be
         # entered
-        cells = {}
+        cells: dict[Value, set[Cell]] = {}
         for value in self.group.getValues():
             cells[value] = set()
 
@@ -61,13 +72,13 @@ class ExactCoverConstraint(UniqueValueConstraint):
                             ):
                                 nakedCell.remove(removeValue)
 
-    def getType(self):
+    def getType(self) -> str:
         return "Exact cover constraint"
 
-    def summary(self):
+    def summary(self) -> str:
         return "each value once"
 
-    def explain(self, deduction):
+    def explain(self, deduction: Deduction) -> str:
         placed = set(placedValues(self.group.getCells()))
         if deduction.setsValue() or deduction.removed <= placed:
             return super().explain(deduction)
@@ -77,11 +88,11 @@ class ExactCoverConstraint(UniqueValueConstraint):
             f" so there is no room for {removed} ({self.summary()})"
         )
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         missing = set(self.group.getValues()) - set(placedValues(self.group.getCells()))
         if not missing:
             return "Every value appears exactly once; complete."
         return f"Every value appears exactly once; still missing: {formatValues(missing)}."
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "ecc[" + ",".join([str(x) for x in self.values]) + "]"
