@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Build an Android APK (arm64-v8a, debug-signed) with pyside6-android-deploy.
+# Build a debug-signed Android APK with pyside6-android-deploy.
 #
-#   android/build_apk.sh            # run from anywhere; Linux (or macOS) only
+#   android/build_apk.sh            # arm64 (phones, tablets); run from anywhere; Linux only
+#   ARCH=x86_64 android/build_apk.sh  # x86_64 (emulators, Chromebooks)
 #
 # Needs: uv, git, a JDK 17 (JAVA_HOME), and the usual python-for-android host packages
 # (autoconf, automake, libtool, pkg-config, cmake, zlib/libffi/libssl headers, zip, unzip).
 # The Android NDK (r28c) is downloaded to ~/.pyside6_android_deploy and the SDK to ~/.buildozer
 # on the first run. Set ANDROID_SDK_PATH to use an existing SDK instead.
 #
-# Output: dist/ConstraintPuzzler-<version>-android-arm64.apk
+# Output: dist/ConstraintPuzzler-<version>-android-<arm64|x86_64>.apk
 #
 # pyside6-android-deploy needs a main.py and regenerates buildozer.spec on every run, while the
 # app also needs its example puzzles (*.txt) and pyproject.toml (for the version). So the app is
@@ -21,7 +22,12 @@ WORK="$ROOT/build/android"
 APP="$WORK/app"
 WHEELS="$WORK/wheels"
 VENV="$WORK/venv"
-ARCH=aarch64
+ARCH=${ARCH:-aarch64}
+case "$ARCH" in
+    aarch64) ARCH_LABEL=arm64 ;;
+    x86_64) ARCH_LABEL=x86_64 ;;
+    *) echo "ARCH must be aarch64 or x86_64" >&2; exit 1 ;;
+esac
 QT_WHEELS_URL=https://download.qt.io/official_releases/QtForPython
 
 cd "$ROOT"
@@ -139,6 +145,6 @@ if [[ -z "$APK" ]]; then
     echo "buildozer did not produce an APK" >&2
     exit 1
 fi
-OUTPUT="$ROOT/dist/ConstraintPuzzler-$VERSION-android-arm64.apk"
+OUTPUT="$ROOT/dist/ConstraintPuzzler-$VERSION-android-$ARCH_LABEL.apk"
 cp "$APK" "$OUTPUT"
 echo "APK: $OUTPUT"

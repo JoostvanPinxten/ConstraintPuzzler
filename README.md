@@ -21,7 +21,7 @@ Standalone builds for Windows, Linux, macOS and Android are attached to every [G
 
 - **macOS**: the app is not signed, so the first time right-click it and choose *Open*.
 - **Linux**: Qt needs the usual X11/Wayland libraries; on Debian/Ubuntu you may have to `sudo apt install libxcb-cursor0`.
-- **Android**: install `ConstraintPuzzler-<version>-android-arm64.apk` (for 64-bit ARM phones and tablets). It is debug-signed and not on the Play Store, so allow installing apps from unknown sources. The interface is the desktop one, so it works best on a tablet or in landscape.
+- **Android**: install `ConstraintPuzzler-<version>-android-arm64.apk` (phones and tablets; `-android-x86_64.apk` is for emulators and Chromebooks). It is debug-signed and not on the Play Store, so allow installing apps from unknown sources. The interface is the desktop one, so it works best on a tablet or in landscape.
 
 ## Running from source
 

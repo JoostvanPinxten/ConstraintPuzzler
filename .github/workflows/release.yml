@@ -89,9 +89,14 @@ jobs:
           if-no-files-found: error
 
   android:
-    # Debug-signed APK for arm64 phones, built with pyside6-android-deploy (buildozer +
-    # python-for-android). See android/build_apk.sh.
+    # Debug-signed APKs built with pyside6-android-deploy (buildozer + python-for-android), see
+    # android/build_apk.sh: arm64 for phones and tablets, x86_64 for emulators and Chromebooks.
+    name: android (${{ matrix.arch }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, x86_64]
     timeout-minutes: 90
     env:
       PYTHONUNBUFFERED: "1"
@@ -123,13 +128,15 @@ jobs:
             ~/.buildozer
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: android-${{ hashFiles('uv.lock', 'android/build_apk.sh') }}
-          restore-keys: android-
+          key: android-${{ matrix.arch }}-${{ hashFiles('uv.lock', 'android/build_apk.sh') }}
+          restore-keys: android-${{ matrix.arch }}-
       - name: Build APK
         run: android/build_apk.sh
+        env:
+          ARCH: ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: android
+          name: android-${{ matrix.arch }}
           path: dist/*.apk
           if-no-files-found: error
 
