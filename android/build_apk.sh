@@ -40,6 +40,8 @@ if [[ ! -x "$VENV/bin/python" ]]; then
     uv venv --seed --python 3.13 "$VENV"
 fi
 uv pip install --python "$VENV/bin/python" "pyside6==$PYSIDE_VERSION" buildozer==1.6.0 cython==0.29.33
+DEPLOY_REQUIREMENTS=$("$VENV/bin/python" -c     "import pathlib, PySide6; print(pathlib.Path(PySide6.__file__).parent / 'scripts' / 'requirements-android.txt')")
+uv pip install --python "$VENV/bin/python" -r "$DEPLOY_REQUIREMENTS"
 export VIRTUAL_ENV="$VENV" PATH="$VENV/bin:$PATH"
 
 # The PySide6 and shiboken6 Android wheels are only published on download.qt.io.
