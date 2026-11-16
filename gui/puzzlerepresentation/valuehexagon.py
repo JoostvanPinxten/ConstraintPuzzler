@@ -4,19 +4,30 @@ Created on 30 dec. 2012
 @author: Juice
 """
 
+from __future__ import annotations
+
 from math import cos, pi, sin, sqrt
+from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from gui.puzzlerepresentation.cellpiece import CellPiece
+
+if TYPE_CHECKING:
+    from structure.cell import Cell
 
 
 class ValueHexagon(CellPiece, QtWidgets.QGraphicsPolygonItem):
     """A hexagonal cell (Sumbrero); position is the top-left of its bounding box in the scene."""
 
     def __init__(
-        self, cell, cellSize, position, parent=None, edgeColor=QtGui.QColorConstants.Black
-    ):
+        self,
+        cell: Cell,
+        cellSize: float,
+        position: QtCore.QPointF,
+        parent: QtWidgets.QGraphicsItem | None = None,
+        edgeColor: QtGui.QColor = QtGui.QColorConstants.Black,
+    ) -> None:
         # normalized hexagon
         polygon = QtGui.QPolygonF(
             [
@@ -35,7 +46,7 @@ class ValueHexagon(CellPiece, QtWidgets.QGraphicsPolygonItem):
 
         self.initCellPiece(cell, cellSize, position)
 
-    def hintArea(self):
+    def hintArea(self) -> QtCore.QRectF:
         # the square in the middle of the hexagon
         quarter = self.cellSize / 4
         return QtCore.QRectF(
@@ -45,7 +56,7 @@ class ValueHexagon(CellPiece, QtWidgets.QGraphicsPolygonItem):
             3 * quarter,
         )
 
-    def placeValueText(self):
+    def placeValueText(self) -> None:
         """Centers the value text vertically in the hexagon (horizontally, it is centered by
         its alignment within a text width of cellSize)."""
         hexagonHeight = self.cellSize * sqrt(3) / 2

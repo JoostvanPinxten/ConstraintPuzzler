@@ -9,7 +9,14 @@ class InequalitySign(QtWidgets.QGraphicsPathItem):
     """A chevron centred between two cell centres, its open side facing the greater cell and
     its point facing the lesser cell (so it reads as 'greater > lesser')."""
 
-    def __init__(self, greaterCenter, lesserCenter, depth, width, parent=None):
+    def __init__(
+        self,
+        greaterCenter: QtCore.QPointF,
+        lesserCenter: QtCore.QPointF,
+        depth: float,
+        width: float,
+        parent: QtWidgets.QGraphicsItem | None = None,
+    ) -> None:
         super().__init__(parent)
         self.greaterCenter = QtCore.QPointF(greaterCenter)
         self.lesserCenter = QtCore.QPointF(lesserCenter)

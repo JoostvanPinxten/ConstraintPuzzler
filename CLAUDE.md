@@ -46,6 +46,7 @@ QT_QPA_PLATFORM=offscreen uv run python -m unittest discover -s . -p "test_*.py"
 - Never hand-edit the generated files `gui/ui/mainWindowUi.py` and `gui/icons/icons_rc.py`. Edit `mainwindow.ui` / `icons.qrc` and regenerate them with `gui/ui/compile_ui.bat` / `gui/icons/compile_icons.bat`.
 - Existing code uses camelCase method names (Qt style). Keep that style for consistency.
 - Open files with `with open(...)`.
+- All functions (outside the tests and the generated files) have type hints; keep it that way. Shared aliases (`Value`, `PuzzleState`, `ValueOf`) live in `structure/types.py`. For imports needed only by annotations, use `from __future__ import annotations` plus an `if TYPE_CHECKING:` block, which also avoids import cycles between `structure`, `constraints` and `solver`. A file with a `TYPE_CHECKING` block must have the `__future__` import, or class-level annotations fail at import time. Code that needs a cell's position uses `getPositionedCells()` (on `Grid` and `ConstraintGroup`) rather than calling `getPosition()` on a plain `Cell`.
 
 ## Review focus
 When reviewing changes, prioritise: correctness of constraint propagation and possible-value bookkeeping, solver termination, grid coordinate off-by-ones, PySide6 API misuse (leftover Qt4/Qt5 APIs, signal signatures, object lifetimes), and missing tests.

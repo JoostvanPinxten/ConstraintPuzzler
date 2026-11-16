@@ -6,12 +6,20 @@ solves a detached copy of the puzzle (built by the puzzle type's parser, then se
 state) and reports the resulting state; the window applies that state on the GUI thread.
 """
 
+from __future__ import annotations
+
 import threading
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from PySide6 import QtCore
 
 from solver.Solver import SolveCancelled, Solver
 from structure.errors import ContradictionError
+
+if TYPE_CHECKING:
+    from structure.puzzle import Puzzle
+    from structure.types import PuzzleState
 
 
 class SolveWorker(QtCore.QObject):
@@ -21,7 +29,9 @@ class SolveWorker(QtCore.QObject):
     failed = QtCore.Signal(str)
     cancelled = QtCore.Signal()
 
-    def __init__(self, makePuzzle, state, allowGuessing):
+    def __init__(
+        self, makePuzzle: Callable[[], Puzzle], state: PuzzleState, allowGuessing: bool
+    ) -> None:
         """makePuzzle(): a new, independent puzzle with the same structure as the shown one;
         state: the shown puzzle's saveState()."""
         super().__init__()
@@ -30,12 +40,12 @@ class SolveWorker(QtCore.QObject):
         self.allowGuessing = allowGuessing
         self._stop = threading.Event()
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Ask the solver to stop; it does so between passes and guesses."""
         self._stop.set()
 
     @QtCore.Slot()
-    def run(self):
+    def run(self) -> None:
         try:
             puzzle = self.makePuzzle()
             puzzle.restoreState(self.state)
@@ -56,7 +66,7 @@ class SolveJob(QtCore.QObject):
 
     done = QtCore.Signal()
 
-    def __init__(self, worker: SolveWorker, parent=None):
+    def __init__(self, worker: SolveWorker, parent: QtCore.QObject | None = None) -> None:
         super().__init__(parent)
         self.worker = worker
         self.workerThread = QtCore.QThread()
@@ -69,16 +79,16 @@ class SolveJob(QtCore.QObject):
             signal.connect(self.workerThread.quit, QtCore.Qt.ConnectionType.DirectConnection)
         self.workerThread.finished.connect(self.done)
 
-    def start(self):
+    def start(self) -> None:
         self.workerThread.start()
 
-    def cancel(self):
+    def cancel(self) -> None:
         self.worker.cancel()
 
-    def isRunning(self):
+    def isRunning(self) -> bool:
         return self.workerThread.isRunning()
 
-    def wait(self, milliseconds=-1):
+    def wait(self, milliseconds: int = -1) -> bool:
         """Block until the thread has finished (call cancel first to make that quick)."""
         if milliseconds < 0:
             return self.workerThread.wait()

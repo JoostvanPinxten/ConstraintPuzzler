@@ -4,22 +4,34 @@ Created on 28 dec. 2012
 @author: Juice
 """
 
+from __future__ import annotations
+
 import html
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
 
-ParentRole = QtCore.Qt.ItemDataRole.UserRole + 1
+if TYPE_CHECKING:
+    from constraints.constraint import Constraint
+    from constraints.constraintgroup import ConstraintGroup
+    from structure.cell import Cell
+    from structure.grid import Grid
+    from structure.puzzle import Puzzle
+
+# the index types Qt passes to a model's methods
+type ModelIndex = QtCore.QModelIndex | QtCore.QPersistentModelIndex
 
 
-def _cellCounts(cells):
+def _cellCounts(cells: Iterable[Cell]) -> str:
     """E.g. "9 cells: 4 filled, 5 open"."""
     cells = list(cells)
     filled = sum(1 for c in cells if c.hasValue())
     return f"{len(cells)} cells: {filled} filled, {len(cells) - filled} open"
 
 
-def describeCell(cell, showHints=True):
+def describeCell(cell: Cell, showHints: bool = True) -> str:
     """Rich text describing the value or the candidates of a cell and its groups.
 
     With showHints False, the candidates of an open cell are not listed."""
@@ -40,18 +52,18 @@ def describeCell(cell, showHints=True):
 
 
 class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QtCore.QObject | None = None) -> None:
         super().__init__(parent)
         self.root = ConstraintPuzzleRootItem()
         # whether the tooltips mention the candidate values of open cells
         self.showHints = True
 
-    def rowCount(self, parent=QtCore.QModelIndex()):
+    def rowCount(self, parent: ModelIndex = QtCore.QModelIndex()) -> int:
         parentItem = self.getItem(parent)
 
         return parentItem.childCount()
 
-    def getItem(self, index):
+    def getItem(self, index: ModelIndex) -> ProxyItem:
         if index.isValid():
             item = index.internalPointer()
             if item:
@@ -59,11 +71,15 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
 
         return self.root
 
-    def columnCount(self, parent):
+    def columnCount(self, parent: ModelIndex = QtCore.QModelIndex()) -> int:
         return 2
 
-    def index(self, row, column, parent):
-
+    def index(
+        self,
+        row: int,
+        column: int,
+        parent: ModelIndex = QtCore.QModelIndex(),
+    ) -> QtCore.QModelIndex:
         if parent.isValid() and parent.column() != 0:
             return QtCore.QModelIndex()
 
@@ -74,7 +90,7 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
         else:
             return QtCore.QModelIndex()
 
-    def parent(self, index):
+    def parent(self, index: ModelIndex) -> QtCore.QModelIndex:
         # the index must be valid
         if not index.isValid():
             return QtCore.QModelIndex()
@@ -82,12 +98,16 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
         childItem = self.getItem(index)
         parentItem = childItem.parent()
 
-        if parentItem == self.root:
+        if parentItem is None or parentItem == self.root:
             return QtCore.QModelIndex()
 
         return self.createIndex(parentItem.childNumber(), 0, parentItem)
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def data(
+        self,
+        index: ModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> Any:
         if not index.isValid():
             return None
 
@@ -110,7 +130,12 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
         else:
             return None
 
-    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+    def headerData(
+        self,
+        section: int,
+        orientation: QtCore.Qt.Orientation,
+        role: int = QtCore.Qt.ItemDataRole.DisplayRole,
+    ) -> Any:
         sections = [self.tr("Name"), self.tr("Type")]
 
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
@@ -120,93 +145,100 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
 
 
 class ProxyItem(QtCore.QObject):
-    def __init__(self, parent=None):
+    """An item of the puzzle tree. It derives from QObject only for tr(); its tree parent
+    and children are its own (parentItem, childItems), not the QObject ones."""
+
+    def __init__(self, parent: ProxyItem | None = None) -> None:
         super().__init__()
         self.parentItem = parent
-        self.childItems = []
+        self.childItems: list[ProxyItem] = []
 
         if parent is not None:
             parent.addChild(self)
 
-    def parent(self):
+    def parent(self) -> ProxyItem | None:
         return self.parentItem
 
-    def childCount(self):
+    def childCount(self) -> int:
         return len(self.childItems)
 
-    def children(self):
+    def children(self) -> list[ProxyItem]:
         return list(self.childItems)
 
-    def child(self, row):
+    def child(self, row: int) -> ProxyItem | None:
         try:
             return self.childItems[row]
         except IndexError:
-            # print row
-            pass
+            return None
 
-    def childNumber(self):
+    def childNumber(self) -> int:
         if self.parentItem is not None:
             return self.parentItem.childItems.index(self)
         return 0
 
-    def addChild(self, child):
+    def addChild(self, child: ProxyItem) -> None:
         self.childItems.append(child)
 
-    def data(self, column):
+    def data(self, column: int) -> str | None:
         if column == 0:
             return self.getName()
         elif column == 1:
             return self.getType()
+        return None
 
-    def getName(self):
+    def getName(self) -> str:
         raise NotImplementedError
 
-    def getType(self):
+    def getType(self) -> str:
         raise NotImplementedError
 
-    def getIcon(self):
+    def getIcon(self) -> QtGui.QIcon | QtGui.QColor:
         return QtGui.QColor(255, 255, 255)
 
-    def describe(self, showHints=True):
+    def getCells(self) -> set[Cell]:
+        """The cells this item is about (none for the root and the puzzle)."""
+        return set()
+
+    def describe(self, showHints: bool = True) -> str:
         """Rich text that explains the item (shown as tooltip and below the tree).
 
         With showHints False, the text leaves out the candidate values of open cells."""
         return f"<b>{html.escape(str(self.getName()))}</b> ({html.escape(str(self.getType()))})"
 
-    def setParent(self, parent):
+    def setParent(self, parent: ProxyItem) -> None:
         parent.addChild(self)
         self.parentItem = parent
 
-    def getItem(self):
+    def getItem(self) -> Any:
         raise NotImplementedError
 
 
 class ConstraintPuzzleRootItem(ProxyItem):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def getName(self):
+    def getName(self) -> str:
         return self.tr("Root")
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Root")
 
 
 class PuzzleProxyItem(ProxyItem):
-    def __init__(self, puzzle, parent=None):
+    def __init__(self, puzzle: Puzzle, parent: ProxyItem | None = None) -> None:
         super().__init__(parent)
         self.puzzle = puzzle
 
-    def getName(self):
+    def getName(self) -> str:
         return self.puzzle.name
 
-    def setName(self, name):
+    def setName(self, name: str) -> None:
         self.puzzle.name = name
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Puzzle")
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         cells = self.puzzle.getGrid().getCells()
         groups = len(self.puzzle.getConstraintGroups())
         return (
@@ -216,102 +248,96 @@ class PuzzleProxyItem(ProxyItem):
 
 
 class GridProxyItem(ProxyItem):
-    def __init__(self, grid, parent):
+    def __init__(self, grid: Grid, parent: ProxyItem) -> None:
         super().__init__(parent)
 
         self.grid = grid
 
-    def getName(self):
+    def getName(self) -> str:
         return self.tr("Grid")
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Grid")
 
-    def getIcon(self):
+    def getIcon(self) -> QtGui.QIcon:
         return QtGui.QIcon(":/icons/gridIcon")
 
-    def getCells(self):
-        s = set()
-        [s.add(c) for c in self.grid.getCells()]
-        return s
+    def getCells(self) -> set[Cell]:
+        return set(self.grid.getCells())
 
-    def getPuzzle(self):
+    def getPuzzle(self) -> ProxyItem | None:
         return self.parent()
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         return f"<b>Grid</b><br>{_cellCounts(self.grid.getCells())}"
 
-    def getItem(self):
+    def getItem(self) -> Grid:
         return self.grid
 
 
 class CellProxyItem(ProxyItem):
-    def __init__(self, cell, parent):
+    def __init__(self, cell: Cell, parent: ProxyItem) -> None:
         super().__init__(parent)
 
         self.cell = cell
 
-    def getName(self):
+    def getName(self) -> str:
         return self.cell.getName()
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Cell")
 
-    def getIcon(self):
+    def getIcon(self) -> QtGui.QIcon:
         return QtGui.QIcon(":/icons/cellIcon")
 
-    def getCells(self):
-        s = set()
-        s.add(self.cell)
-        return s
+    def getCells(self) -> set[Cell]:
+        return {self.cell}
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         return describeCell(self.cell, showHints)
 
-    def getItem(self):
+    def getItem(self) -> Cell:
         return self.cell
 
 
 class ReferencedCellProxyItem(ProxyItem):
-    def __init__(self, cell, parent):
+    def __init__(self, cell: Cell, parent: ProxyItem) -> None:
         super().__init__(parent)
 
         self.cell = cell
 
-    def getName(self):
+    def getName(self) -> str:
         return self.cell.getName()
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Cell")
 
-    def getIcon(self):
+    def getIcon(self) -> QtGui.QIcon:
         return QtGui.QIcon(":/icons/cellIcon")
 
-    def getCells(self):
-        s = set()
-        s.add(self.cell)
-        return s
+    def getCells(self) -> set[Cell]:
+        return {self.cell}
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         return describeCell(self.cell, showHints)
 
-    def getItem(self):
+    def getItem(self) -> Cell:
         return self.cell
 
 
 class ConstraintGroupProxyItem(ProxyItem):
-    def __init__(self, cg, parent):
+    def __init__(self, cg: ConstraintGroup, parent: ProxyItem) -> None:
         super().__init__(parent)
 
         self.constraintGroup = cg
 
-    def getName(self):
+    def getName(self) -> str:
         return self.constraintGroup.getName()
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr("Constraint Group")
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         group = self.constraintGroup
         rules = "".join(
             f"<li>{html.escape(c.describe(showHints))}</li>" for c in group.getConstraints()
@@ -321,33 +347,32 @@ class ConstraintGroupProxyItem(ProxyItem):
             f"{_cellCounts(group.getCells())}<ul>{rules}</ul>"
         )
 
-    def getCells(self):
-        s = set()
-        [s.add(c) for c in self.constraintGroup.getCells()]
-        return s
+    def getCells(self) -> set[Cell]:
+        return set(self.constraintGroup.getCells())
 
-    def getItem(self):
+    def getItem(self) -> ConstraintGroup:
         return self.constraintGroup
 
 
 class ConstraintProxyItem(ProxyItem):
-    def __init__(self, constraint, parent):
+    def __init__(self, constraint: Constraint, parent: ProxyItem) -> None:
         super().__init__(parent)
         self.constraint = constraint
 
-    def getName(self):
+    def getName(self) -> str:
         return self.constraint.summary()
 
-    def getType(self):
+    def getType(self) -> str:
         return self.tr(self.constraint.getType())
 
-    def getIcon(self):
+    def getIcon(self) -> QtGui.QIcon:
         return QtGui.QIcon(":/icons/constraintIcon")
 
-    def getCells(self):
-        return self.parent().getCells()
+    def getCells(self) -> set[Cell]:
+        parent = self.parent()
+        return parent.getCells() if parent is not None else set()
 
-    def describe(self, showHints=True):
+    def describe(self, showHints: bool = True) -> str:
         group = self.constraint.group
         return (
             f"<b>{html.escape(self.constraint.summary())}</b> "
@@ -356,11 +381,11 @@ class ConstraintProxyItem(ProxyItem):
             f"Group {html.escape(group.getName())}: {_cellCounts(group.getCells())}"
         )
 
-    def getItem(self):
+    def getItem(self) -> Constraint:
         return self.constraint
 
 
-def buildPuzzleTree(puzzle, root):
+def buildPuzzleTree(puzzle: Puzzle, root: ProxyItem) -> PuzzleProxyItem:
     """Build the tree of proxy items that presents the puzzle model in a view:
     the puzzle holds the grid (with its cells) and the constraint groups, each
     group holds its constraints and references to its cells."""

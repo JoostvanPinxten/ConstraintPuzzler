@@ -18,7 +18,8 @@ from utility.puzzletypes import KAKURO
 class MainWindow(BasicMainWindow):
     puzzleType = KAKURO
 
-    def initializePuzzleRepresentation(self):
+    def initializePuzzleRepresentation(self) -> None:
+        assert self.puzzle is not None
         self.newScene()
         self.cellSize = 55
 

@@ -6,15 +6,28 @@ into three wedges. A line that starts next to the hexagon has its sum in the wed
 along the line: S for a column, SE for a row running down-right, NE for a row running up-right.
 """
 
+from __future__ import annotations
+
+from collections.abc import Mapping
 from math import sqrt
+from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtGui, QtWidgets
+
+if TYPE_CHECKING:
+    from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 
 CLUE_DIRECTIONS = ("NE", "SE", "S")
 
 
 class ClueHexagon(QtWidgets.QGraphicsPolygonItem):
-    def __init__(self, size, position, clues=None, parent=None):
+    def __init__(
+        self,
+        size: float,
+        position: QtCore.QPointF,
+        clues: Mapping[str, TotalSumValueConstraint] | None = None,
+        parent: QtWidgets.QGraphicsItem | None = None,
+    ) -> None:
         """size: width of the (flat-topped) hexagon; position: its top-left corner in the
         scene; clues: {direction: constraint} with direction in CLUE_DIRECTIONS."""
         self.size = size
@@ -45,16 +58,16 @@ class ClueHexagon(QtWidgets.QGraphicsPolygonItem):
             line.setPen(self.whitePen())
 
         self.clues = dict(clues or {})
-        self.textItems = {}
+        self.textItems: dict[str, QtWidgets.QGraphicsSimpleTextItem] = {}
         for direction, constraint in self.clues.items():
             self.textItems[direction] = self.addClueText(direction, constraint.getTotalValue())
 
-    def whitePen(self):
+    def whitePen(self) -> QtGui.QPen:
         pen = QtGui.QPen(QtGui.QColorConstants.White)
         pen.setWidthF(max(1.0, self.size / 50))
         return pen
 
-    def wedgeCorners(self, direction):
+    def wedgeCorners(self, direction: str) -> list[QtCore.QPointF]:
         """The corners of the triangle that holds the sum of a line running in direction."""
         corners = self.corners
         outer = {
@@ -64,11 +77,11 @@ class ClueHexagon(QtWidgets.QGraphicsPolygonItem):
         }[direction]
         return [self.center, *outer]
 
-    def wedge(self, direction):
+    def wedge(self, direction: str) -> QtGui.QPolygonF:
         """The triangle that holds the sum of a line running in direction."""
         return QtGui.QPolygonF(self.wedgeCorners(direction))
 
-    def addClueText(self, direction, value):
+    def addClueText(self, direction: str, value: int | None) -> QtWidgets.QGraphicsSimpleTextItem:
         text = QtWidgets.QGraphicsSimpleTextItem(str(value), self)
         font = QtGui.QFont("Sans serif")
         font.setBold(True)
@@ -81,5 +94,5 @@ class ClueHexagon(QtWidgets.QGraphicsPolygonItem):
         text.setPos(centroid - text.boundingRect().center())
         return text
 
-    def updateRepresentation(self):
+    def updateRepresentation(self) -> None:
         """Clue sums do not change while solving."""

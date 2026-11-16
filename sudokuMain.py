@@ -17,7 +17,8 @@ from utility.puzzletypes import SUDOKU
 class MainWindow(BasicMainWindow):
     puzzleType = SUDOKU
 
-    def initializePuzzleRepresentation(self):
+    def initializePuzzleRepresentation(self) -> None:
+        assert self.puzzle is not None
         self.newScene()
         self.cellSize = 55
         self.blockPadding = 3

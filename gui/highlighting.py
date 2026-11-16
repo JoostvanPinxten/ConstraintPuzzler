@@ -5,8 +5,12 @@ the open and the solved cells of a constraint group. The role decides the colour
 so the highlight shows how the cells take part in the selected item, not only which cells.
 """
 
+from __future__ import annotations
+
 import html
+from collections.abc import Iterable
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from PySide6 import QtGui
 
@@ -18,6 +22,10 @@ from gui.puzzlemodel.puzzletreemodel import (
     GridProxyItem,
     ReferencedCellProxyItem,
 )
+
+if TYPE_CHECKING:
+    from gui.puzzlemodel.puzzletreemodel import ProxyItem
+    from structure.cell import Cell
 
 
 class HighlightRole(IntEnum):
@@ -61,21 +69,21 @@ def onWhite(color: QtGui.QColor) -> QtGui.QColor:
     """The opaque colour a translucent colour shows on the (white) puzzle background."""
     alpha = color.alphaF()
 
-    def blend(channel):
+    def blend(channel: int) -> int:
         return round(channel * alpha + 255 * (1 - alpha))
 
     return QtGui.QColor(blend(color.red()), blend(color.green()), blend(color.blue()))
 
 
-def _memberRoles(cells) -> dict:
+def _memberRoles(cells: Iterable[Cell]) -> dict[Cell, HighlightRole]:
     return {c: HighlightRole.SOLVED if c.hasValue() else HighlightRole.OPEN for c in cells}
 
 
-def highlightRoles(item) -> dict:
+def highlightRoles(item: ProxyItem) -> dict[Cell, HighlightRole]:
     """Map the cells involved in a tree item to their HighlightRole."""
     if isinstance(item, (CellProxyItem, ReferencedCellProxyItem)):
         cell = item.cell
-        roles = {}
+        roles: dict[Cell, HighlightRole] = {}
         for group in cell.getConstraintGroups():
             roles.update(dict.fromkeys(group.getCells(), HighlightRole.PEER))
         roles[cell] = HighlightRole.SELECTED
@@ -97,16 +105,16 @@ def highlightRoles(item) -> dict:
     return {}
 
 
-def combinedHighlightRoles(items) -> dict:
+def combinedHighlightRoles(items: Iterable[ProxyItem]) -> dict[Cell, HighlightRole]:
     """The roles for several selected items; the strongest role wins for shared cells."""
-    roles = {}
+    roles: dict[Cell, HighlightRole] = {}
     for item in items:
         for cell, role in highlightRoles(item).items():
             roles[cell] = max(role, roles.get(cell, HighlightRole.NONE))
     return roles
 
 
-def legendHtml(roles) -> str:
+def legendHtml(roles: Iterable[HighlightRole]) -> str:
     """A legend (as rich text) for the roles that are in use, strongest first."""
     entries = []
     for role in sorted(set(roles), reverse=True):
