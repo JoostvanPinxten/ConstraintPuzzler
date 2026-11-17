@@ -1,20 +1,18 @@
-# Prettier formats the TypeScript/JSON/YAML of the npm workspaces; Python is formatted by ruff.
+# Prettier formats the TypeScript, JavaScript, JSON and YAML of the workspaces.
 node_modules/
 coverage/
 dist/
 build/
 .venv/
-uv.lock
 package-lock.json
 packages/core/fixtures/
-*.py
 *.md
 *.txt
-*.ui
-*.qrc
 .github/
 .claude/
 app/.expo/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
 e2e/results/
 playwright-report/
 app/src/puzzles/examples.generated.ts

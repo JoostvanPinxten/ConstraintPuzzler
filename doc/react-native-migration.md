@@ -30,7 +30,7 @@ the Python code is removed.
 | 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | done |
 | 3 | Kakuro, Futoshiki and Sumbrero boards | done |
 | 4 | Packaging: web (GitHub Pages), Tauri desktop, Android APK on each GitHub Release (`app-builds.yml`, called by `release.yml`) | done; iOS still needs an Apple developer account (EAS) |
-| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | prepared on a separate branch, waiting for the sign-off |
+| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | done (branch `feature/react-native-remove-python`; the examples moved to `puzzles/`) |
 
 ## The app
 
@@ -93,11 +93,9 @@ with its uniqueness. `packages/core/test/fixtures.test.ts` checks that the TypeS
 reaches the same results. Only order-independent facts are recorded, because the Python solver
 iterates cells hashed by identity, so the order of its deduction log differs between runs.
 
-Regenerate the fixtures after changing the Python engine or an example:
-
-```
-uv run python -m tools.export_fixtures
-```
+Since phase 5 the Python engine and `tools/export_fixtures.py` are gone (see the git history up
+to v0.2.0), so the fixtures are frozen regression data. If a deliberate change to the engine or an
+example changes a result, update the fixture by hand and explain why in the commit.
 
 ## Porting conventions
 

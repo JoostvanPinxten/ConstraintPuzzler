@@ -24,10 +24,12 @@ it deduces, and how to use it. For the grid types and the puzzle file formats, s
 
 | Concept | Where | What it is |
 |---|---|---|
-| `Puzzle` | `structure/puzzle.py` | The top-level object. It has the list of allowed values (e.g. 1-9), a `Grid` of cells and the constraint groups. |
-| `Cell` | `structure/cell.py` | One square (or triangle, hexagon...) of the puzzle. It keeps the set of values that are still **possible**, and its **value** once it is known. |
-| `ConstraintGroup` | `constraints/constraintgroup.py` | A named set of cells (a row, a block, a Kakuro line...) with one or more constraints that apply to all of them. A cell can be in many groups. |
-| `Constraint` | `constraints/constraint.py` | A rule over the cells of its group. It narrows down the possible values of those cells. |
+| `Puzzle` | `structure/puzzle.ts` | The top-level object. It has the list of allowed values (e.g. 1-9), a `Grid` of cells and the constraint groups. |
+| `Cell` | `structure/cell.ts` | One square (or triangle, hexagon...) of the puzzle. It keeps the set of values that are still **possible**, and its **value** once it is known. |
+| `ConstraintGroup` | `constraints/constraintgroup.ts` | A named set of cells (a row, a block, a Kakuro line...) with one or more constraints that apply to all of them. A cell can be in many groups. |
+| `Constraint` | `constraints/constraint.ts` | A rule over the cells of its group. It narrows down the possible values of those cells. |
+
+(The paths are in `packages/core/src/`; everything is exported from `@constraintpuzzler/core`.)
 
 A cell starts with every puzzle value as a possibility. Solving means removing possibilities:
 
@@ -39,25 +41,22 @@ A cell starts with every puzzle value as a possibility. Solving means removing p
 
 Whenever something impossible happens (removing the last possibility of a cell, removing the
 value a cell already has, setting a value that is no longer possible, a sum that does not add
-up) a `structure.errors.ContradictionError` is raised.
+up) a `ContradictionError` is thrown.
 
 A minimal example: a group of three cells whose values must all differ.
 
-```python
-from constraints import UniqueValueConstraint
-from structure.position import Position
-from structure.puzzle import Puzzle
+```ts
+import { Position, Puzzle, UniqueValueConstraint } from '@constraintpuzzler/core';
 
-puzzle = Puzzle("Example", {1, 2, 3})
-cells = [puzzle.grid.addCell(Position(x, 1)) for x in range(1, 4)]
+const puzzle = new Puzzle('Example', [1, 2, 3]);
+const cells = [1, 2, 3].map((x) => puzzle.getGrid().addCell(new Position(x, 1)));
 
-group = puzzle.addConstraintGroup("Row 1")
-group.addConstraint(UniqueValueConstraint)  # pass the class, the group creates the instance
-for cell in cells:
-    group.addCell(cell)
+const group = puzzle.addConstraintGroup('Row 1');
+group.addConstraint(UniqueValueConstraint); // pass the class, the group creates the instance
+for (const cell of cells) group.addCell(cell);
 
-cells[0].setValue(2)
-print(cells[1].getPossibleValues())  # {1, 3}
+cells[0].setValue(2);
+console.log(cells[1].getPossibleValues()); // Set { 1, 3 }
 ```
 
 ## How the solver uses constraints
@@ -73,10 +72,10 @@ Constraints get two chances to deduce something:
    their work here.
 
 `Solver.propagate()` repeats these passes until a pass changes nothing. If the puzzle is still
-not solved and guessing is enabled (*Solver > Allow guessing*), the solver picks the open cell
-with the fewest possibilities, tries a value, and propagates again. A `ContradictionError`
-raised by any constraint means the guess was wrong: the solver restores the saved state and
-tries the next value.
+not solved and guessing is enabled (*Allow guessing*), the solver picks the open cell with the
+fewest possibilities, tries a value, and propagates again. A `ContradictionError` thrown by any
+constraint means the guess was wrong: the solver restores the saved state and tries the next
+value.
 
 Because propagation and contradictions are all a constraint has to provide, a constraint does
 not need to be complete: deducing *some* values is enough, as long as it never removes a value
@@ -93,7 +92,7 @@ that could still be correct.
 
 ## UniqueValueConstraint
 
-`constraints/uniquevalueconstraint.py`
+`packages/core/src/constraints/uniquevalueconstraint.ts`
 
 **Rule:** all cells in the group have different values. It does *not* require that every value
 is used, so the group may have fewer cells than there are values (a Kakuro line of 3 cells with
@@ -118,7 +117,7 @@ values 1-9).
 
 ## ExactCoverConstraint
 
-`constraints/exactcoverconstraint.py`
+`packages/core/src/constraints/exactcoverconstraint.ts`
 
 **Rule:** every puzzle value appears exactly once in the group. Use it when the group has as
 many cells as there are values: the rows, columns and blocks of a Sudoku, or the rows and
@@ -148,14 +147,14 @@ values involved.
 
 ## TotalSumValueConstraint
 
-`constraints/totalsumvalueconstraint.py`
+`packages/core/src/constraints/totalsumvalueconstraint.ts`
 
 **Rule:** the values of the cells in the group add up to a given total.
 
 **Deductions:** on every pass the constraint subtracts the values of the cells that are already
 filled from the total, and works out every combination of values that can fill the remaining
 open cells to make up the rest. Any value that appears in none of these combinations is removed
-from all open cells of the group. When all cells are filled and the sum is wrong, it raises a
+from all open cells of the group. When all cells are filled and the sum is wrong, it throws a
 `ContradictionError`.
 
 Which combinations count depends on the other constraints in the group:
@@ -175,23 +174,21 @@ cell belongs to (in Kakuro, the crossing line).
 
 **Setup:**
 
-```python
-group = puzzle.addConstraintGroup("Line")
-for cell in lineCells:
-    group.addCell(cell)
-group.addConstraint(UniqueValueConstraint)
-tsvc = group.addConstraint(TotalSumValueConstraint)
-tsvc.setTotalValue(17)
+```ts
+const group = puzzle.addConstraintGroup('Line');
+for (const cell of lineCells) group.addCell(cell);
+group.addConstraint(UniqueValueConstraint);
+group.addConstraint(TotalSumValueConstraint).setTotalValue(17);
 ```
 
-`setTotalValue` is required; solving without it raises an exception. It also rejects totals
+`setTotalValue` is required; solving without it throws an error. It also rejects totals
 that are obviously too small (smaller than the sum of the smallest values that fit). That check
 looks at the cells and constraints the group has at that moment, so call `setTotalValue` after
 adding the cells and the `UniqueValueConstraint`.
 
 ## CellGreaterThanCellConstraint
 
-`constraints/cellgreaterthancellconstraint.py`
+`packages/core/src/constraints/cellgreaterthancellconstraint.ts`
 
 **Rule:** the value of one cell (the *lesser* cell) is strictly smaller than the value of another
 cell (the *greater* cell). This is the `<` / `>` sign between two Futoshiki cells.
@@ -210,17 +207,17 @@ Because the passes repeat, chains such as `A < B < C` are propagated as well.
 
 **Setup:** one group per pair of cells, containing both cells:
 
-```python
-group = puzzle.addConstraintGroup("Relativity")
-constraint = group.addConstraint(CellGreaterThanCellConstraint)
-group.addCell(greaterCell)
-group.addCell(lesserCell)
-constraint.setGreaterCell(greaterCell)
-constraint.setLesserCell(lesserCell)
+```ts
+const group = puzzle.addConstraintGroup('Relativity');
+const constraint = group.addConstraint(CellGreaterThanCellConstraint);
+group.addCell(greaterCell);
+group.addCell(lesserCell);
+constraint.setGreaterCell(greaterCell);
+constraint.setLesserCell(lesserCell);
 ```
 
 In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line `relativity`;
-`parsers.parseFutoshikiFile` creates these groups.
+`parseFutoshikiLines` creates these groups.
 
 ## How the puzzles combine constraints
 
@@ -235,29 +232,33 @@ The power comes from cells being in several groups at once. In Kakuro, the horiz
 narrows a cell to `{1, 3}` and the vertical line to `{3, 5, 7}`, so the cell must be 3, which in
 turn feeds back into both lines.
 
-The tree view in the GUI shows every group with its constraints and cells; selecting one
-highlights its cells in the puzzle, which is a handy way to see how a puzzle is built up.
+The list of groups and rules in the app shows every group with its constraints and cells;
+selecting one highlights its cells in the puzzle, which is a handy way to see how a puzzle is built up.
 
 ## Writing your own constraint
 
-The `/new-constraint` Claude Code skill scaffolds a new constraint with tests. By hand, subclass
-`Constraint` and implement:
+The `/new-constraint` Claude Code skill scaffolds a new constraint with tests. By hand, extend
+`Constraint` (in `packages/core/src/constraints/`) and implement:
 
 | Method | Called when | Should |
 |---|---|---|
-| `__init__(self, group, initialValues)` | `group.addConstraint(YourConstraint)` | Call `super().__init__`, initialise your own settings. |
-| `notify(self, cell)` | A cell in the group gets a value | React to the new value, or `pass`. |
-| `applyConstraint(self)` | A solver pass in which a cell of the group changed (the first pass: always) | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. Only look at the cells of the group: the solver re-applies a constraint only when one of those cells changed. |
-| `explain(self, deduction)` | A step or hint is explained | Optional: say in words why your rule removed `deduction.removed` or set `deduction.value`. The default names the group and `summary()`. |
-| `getAllowedValuesForValueList(self, allowedValues, usedValues)` | `TotalSumValueConstraint` builds its combinations | Return the values still allowed given `usedValues`; return `allowedValues` unchanged if your rule does not limit combinations. |
-| `getType(self)` | Tree view | Return a readable name. |
+| `constructor(group, initialValues)` | `group.addConstraint(YourConstraint)` | Only needed for your own settings; call `super(group, initialValues)`. |
+| `notify(cell)` | A cell in the group gets a value | React to the new value, or do nothing. |
+| `applyConstraint()` | A solver pass in which a cell of the group changed (the first pass: always) | Remove impossible values with `cell.remove(value)` or set forced values with `cell.inferValue(value)`. Only look at the cells of the group: the solver re-applies a constraint only when one of those cells changed. |
+| `explain(deduction)` | A step or hint is explained | Optional: say in words why your rule removed `deduction.removed` or set `deduction.value`. The default names the group and `summary()`. |
+| `getAllowedValuesForValueList(allowedValues, usedValues)` | `TotalSumValueConstraint` builds its combinations | Return the values still allowed given `usedValues`; return `allowedValues` unchanged if your rule does not limit combinations. |
+| `getType()`, `summary()`, `describe(showHints)` | The list of groups and rules, and the info panel | Return a readable name, a short rule ("sum = 17") and how far the rule is satisfied. |
+| `violations(valueOf)` | The app checks the values shown | Return the cells that break the rule (drawn in red). |
+
+Also set `static override difficulty`: how hard a deduction of your rule is for a person (hints
+and single steps show the easiest deduction first).
 
 Rules of thumb:
 
 - Only remove values that are certainly impossible. Removing a value that could be correct
   makes the solver produce wrong answers or report contradictions in solvable puzzles.
-- Raise `ContradictionError` (from `structure.errors`) when the state is impossible, instead of
-  silently ignoring it; backtracking depends on it. `cell.remove` and `cell.setValue` already
-  raise it for you.
-- Keep `constraints/` free of PySide6 imports.
-- Add unit tests in `constraints/tests/test_constraints.py`.
+- Throw `ContradictionError` when the state is impossible, instead of silently ignoring it;
+  backtracking depends on it. `cell.remove` and `cell.setValue` already throw it for you.
+- Iterate candidates in a fixed order (`sortedValues(...)`), so the solver is deterministic.
+- Keep `packages/core/src/` free of React / React Native (a test allows only relative imports).
+- Add unit tests in `packages/core/test/constraints/` (vitest).

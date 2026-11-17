@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -14,35 +14,13 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: lint (pre-commit)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - uses: actions/cache@v6
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-      - run: uv sync --locked
-      - run: uv run pre-commit run --all-files --show-diff-on-failure
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - run: uv sync --locked
-      - run: uv run pyright
-
-  # the TypeScript engine (packages/core) of the React Native port; see doc/react-native-migration.md
-  typescript:
-    name: typescript (typecheck, lint, test)
-    runs-on: ubuntu-latest
+  check:
+    name: typecheck, lint, test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -51,32 +29,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm run lint
-      - name: Unit tests, golden fixtures and coverage (fails below the vitest thresholds)
-        run: npm test
-
-  test:
-    name: test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    env:
-      QT_QPA_PLATFORM: offscreen
-      PYTHONUNBUFFERED: "1"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - name: Install Qt runtime libraries (Linux)
+      - name: ESLint and Prettier
+        run: npm run lint
+      - name: No trailing whitespace or missing final newline
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libegl1 libxkbcommon0 libgl1 libfontconfig1 libdbus-1-3
-      - run: uv sync --locked
-      - name: Unit and GUI smoke tests
-        run: uv run coverage run -m unittest discover -s . -p "test_*.py" -t . -v
-      - name: Coverage (fails below fail_under in pyproject.toml)
-        run: uv run coverage report
+          bad=$(git ls-files -z -- ':!*.png' ':!*.ico' ':!*.icns' ':!package-lock.json' \
+            | xargs -0 grep -lIE '[[:space:]]+$' || true)
+          if [[ -n "$bad" ]]; then echo "::error::trailing whitespace in:"; echo "$bad"; exit 1; fi
+      - name: Unit tests (engine, golden fixtures, app) with coverage thresholds
+        run: npm test

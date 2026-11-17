@@ -8,10 +8,28 @@ updates:
       actions:
         patterns: ["*"]
 
-  - package-ecosystem: uv
+  # Expo pins its packages to the SDK: upgrade those with `npx expo install --fix` (or a new SDK)
+  # rather than one by one, so dependabot only proposes the other minor and patch updates.
+  - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "expo*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native*"
+      - dependency-name: "@react-native-async-storage/*"
+      - dependency-name: "jest-expo"
     groups:
-      python-minor-and-patch:
+      npm-minor-and-patch:
         update-types: [minor, patch]
+
+  - package-ecosystem: cargo
+    directory: /desktop/src-tauri
+    schedule:
+      interval: weekly
+    groups:
+      cargo:
+        patterns: ["*"]

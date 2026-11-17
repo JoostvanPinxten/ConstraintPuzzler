@@ -9,10 +9,10 @@ describe('bundled examples', () => {
   it('are the registered example files, unchanged', () => {
     expect(Object.keys(EXAMPLES).sort()).toEqual(exampleFiles().sort());
     for (const file of exampleFiles()) {
-      const text = readFileSync(join(__dirname, '..', '..', '..', file), 'utf-8').replace(
-        /\r\n/g,
-        '\n',
-      );
+      const text = readFileSync(
+        join(__dirname, '..', '..', '..', 'puzzles', file),
+        'utf-8',
+      ).replace(/\r\n/g, '\n');
       expect(EXAMPLES[file]).toBe(text);
     }
   });

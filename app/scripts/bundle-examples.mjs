@@ -13,7 +13,7 @@ const files = [...registry.matchAll(/'([A-Za-z0-9_-]+\.txt)'/g)].map((m) => m[1]
 
 const entries = files
   .map((file) => {
-    const text = readFileSync(join(root, file), 'utf-8').replaceAll('\r\n', '\n');
+    const text = readFileSync(join(root, 'puzzles', file), 'utf-8').replaceAll('\r\n', '\n');
     return `  ${JSON.stringify(file)}: ${JSON.stringify(text)},`;
   })
   .join('\n');

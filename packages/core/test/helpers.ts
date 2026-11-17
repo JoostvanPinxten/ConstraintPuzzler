@@ -6,12 +6,12 @@ import { parsePuzzle, PUZZLE_TYPES, type PuzzleTypeName } from '../src/puzzletyp
 import type { Puzzle } from '../src/structure/puzzle';
 
 const here = dirname(fileURLToPath(import.meta.url));
-/** The repository root (the example puzzle files live there). */
+/** The repository root (the example puzzle files are in its puzzles/ folder). */
 export const REPO_ROOT = resolve(here, '..', '..', '..');
 export const FIXTURES = resolve(here, '..', 'fixtures');
 
 export function readExample(filename: string): string {
-  return readFileSync(join(REPO_ROOT, filename), 'utf-8');
+  return readFileSync(join(REPO_ROOT, 'puzzles', filename), 'utf-8');
 }
 
 export function loadExample(type: PuzzleTypeName, filename: string): Puzzle {

@@ -1,13 +1,11 @@
-*.pyc
-__pycache__/
-.venv/
 .claude/worktrees/
 failed*.log
 build/
 dist/
-.coverage
-.coverage.*
 node_modules/
 coverage/
 e2e/results/
 playwright-report/
+# left over from the Python (PySide6) version, in old checkouts
+.venv/
+__pycache__/

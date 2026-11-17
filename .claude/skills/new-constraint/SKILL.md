@@ -6,15 +6,21 @@ argument-hint: <ConstraintName> <short description of the rule>
 
 Create a new constraint: $ARGUMENTS
 
-1. Read `constraints/constraint.py` (the contract) and two reference implementations:
-   `constraints/uniquevalueconstraint.py` (notify-driven) and `constraints/totalsumvalueconstraint.py`
-   (applyConstraint-driven, recursive feasibility check).
-2. Create `constraints/<lowercasename>constraint.py` with a class implementing `notify(cell)`,
-   `applyConstraint()`, `getType()`, `getAllowedValuesForValueList(allowedValues, usedValues)` and `__str__`.
-   Follow the existing camelCase style. Only remove values through the group (`self.group.removeValueExceptForList`)
-   or the cells (`cell.remove`), so the Qt signals fire.
-3. Export it from `constraints/__init__.py` (both the import and `__all__`).
-4. Add tests in `constraints/tests/test_constraints.py` (or a new `constraints/tests/test_<name>.py`), using
-   `PuzzleFactory.createSingleConstraintPuzzle(values, numberOfCells, YourConstraint)` from
-   `utility/puzzlefactory.py`. Cover: no-op when nothing is known, correct elimination, and an infeasible case.
-5. Run the `/test` checks and fix anything that fails.
+1. Read `packages/core/src/constraints/constraint.ts` (the contract) and two reference implementations:
+   `uniquevalueconstraint.ts` (notify-driven, with explained subset deductions) and
+   `totalsumvalueconstraint.ts` (applyConstraint-driven, recursive feasibility check).
+2. Create `packages/core/src/constraints/<lowercasename>constraint.ts` with a class extending `Constraint`:
+   `applyConstraint()`, `notify(cell)`, `getType()`, `summary()`, `describe(showHints)`, `explain(deduction)`,
+   `violations(valueOf)`, and a `static override difficulty` (how hard its deductions are for a person; see
+   `Deduction.difficulty`). Only remove values through the group (`this.group.removeValueExceptForList`) or
+   the cells (`cell.remove`), so the change is recorded in the deduction log; throw `ContradictionError` for
+   an impossible state. Iterate candidate sets with `sortedValues(...)`, so the order is deterministic.
+   `src/` may only use relative imports (no React / React Native).
+3. Export it from `packages/core/src/index.ts`.
+4. Add tests in `packages/core/test/constraints/<name>.test.ts` (vitest), using
+   `createSingleConstraintPuzzle(values, numberOfCells, YourConstraint)` from `src/puzzlefactory.ts`. Cover: no
+   change when nothing is known, correct elimination, an infeasible case, `describe`, `explain` and
+   `violations`.
+5. If a puzzle type uses it, the app's highlight roles (`app/src/logic/highlight.ts`) and board decorations
+   (`app/src/logic/layout.ts`) may need a case for it.
+6. Run the `/test` checks and fix anything that fails.

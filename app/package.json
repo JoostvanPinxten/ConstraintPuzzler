@@ -33,7 +33,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "export:web": "expo export -p web"
+    "export:web": "expo export -p web",
+    "examples": "node scripts/bundle-examples.mjs"
   },
   "jest": {
     "preset": "jest-expo",

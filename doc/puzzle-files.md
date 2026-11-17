@@ -2,11 +2,12 @@
 
 A puzzle in ConstraintPuzzler is a set of cells plus the constraint groups over them (see
 [constraints.md](constraints.md)). Each puzzle type has a plain-text file format that describes
-those cells and the clues, and a parser in its `*Main.py` that turns the file into cells and
-constraint groups.
+those cells and the clues, and a parser (in `packages/core/src/parsers/`) that turns the file
+into cells and constraint groups.
 
 This page describes the three kinds of grid, the file syntax of each puzzle type, and how to
-define a puzzle that has no file format yet, directly in Python.
+define a puzzle that has no file format yet, directly in TypeScript. The example files are in
+`puzzles/`.
 
 - [Grid types and coordinates](#grid-types-and-coordinates)
 - [Sudoku](#sudoku)
@@ -14,7 +15,7 @@ define a puzzle that has no file format yet, directly in Python.
 - [Kakuro](#kakuro)
 - [Sumbrero](#sumbrero)
 - [Opening your own puzzle file](#opening-your-own-puzzle-file)
-- [Defining a puzzle in Python](#defining-a-puzzle-in-python)
+- [Defining a puzzle in code](#defining-a-puzzle-in-code)
 - [Adding a new puzzle type](#adding-a-new-puzzle-type)
 
 ## Grid types and coordinates
@@ -22,11 +23,11 @@ define a puzzle that has no file format yet, directly in Python.
 Every cell has a `Position(x, y)`: **x is the column, y is the row**, and y grows downwards.
 How cells are laid out depends on the grid type:
 
-| Grid type | Used by | Cells | Coordinates in the file | Shape in the GUI |
+| Grid type | Used by | Cells | Coordinates in the file | Drawn in the app (`app/src/logic/layout.ts`) |
 |---|---|---|---|---|
-| **Square grid** | Sudoku, Futoshiki | Every position of an N×N square is a cell. | Implicit: the file is a picture of the grid, one line per row. Futoshiki relations use 1-based `x,y`. | `ValueRectangle` |
-| **Free-form grid** | Kakuro | Only the positions you list are cells; everything else is empty (black). | Explicit `cell(x,y)`, any integers. | `ValueRectangle`, clues as `ValueTriangle` |
-| **Hexagonal grid** | Sumbrero | Only the positions you list are cells. | Explicit `cell(x,y)`, any integers (the example starts at 0). | `ValueHexagon` |
+| **Square grid** | Sudoku, Futoshiki | Every position of an N×N square is a cell. | Implicit: the file is a picture of the grid, one line per row. Futoshiki relations use 1-based `x,y`. | squares (`sudokuLayout`, `futoshikiLayout`) |
+| **Free-form grid** | Kakuro | Only the positions you list are cells; everything else is empty (black). | Explicit `cell(x,y)`, any integers. | squares, clues as triangles (`kakuroLayout`) |
+| **Hexagonal grid** | Sumbrero | Only the positions you list are cells. | Explicit `cell(x,y)`, any integers (the example starts at 0). | hexagons (`sumbreroLayout`) |
 
 The hexagonal grid uses flat-topped hexagons in columns, with every **odd column shifted down by
 half a hexagon** (an "odd-q" offset layout):
@@ -40,12 +41,13 @@ half a hexagon** (an "odd-q" offset layout):
 ```
 
 The set of values a cell can take is the same for every cell of a puzzle: 1-9 for Sudoku, 1-N
-for an N×N Futoshiki, and the `range` line for Kakuro and Sumbrero. The GUI shows at most nine
-pencil-mark hints per cell, so puzzles with more than nine values only show the first nine.
+for an N×N Futoshiki, and the `range` line for Kakuro and Sumbrero. The app shows the candidates
+and notes of an open cell in a small grid sized to the number of values (3×3 for nine values,
+4×4 for sixteen).
 
 ## Sudoku
 
-Parser: `parseSudokuFile` (`parsers/sudoku.py`). Examples: `easySudoku.txt`,
+Parser: `parseSudokuLines` (`parsers/sudoku.ts`). Examples: `easySudoku.txt`,
 `mediumSudoku.txt`, `hardSudoku.txt`.
 
 A 9×9 picture of the grid: nine lines, nine entries per line, separated by whitespace. A digit
@@ -71,11 +73,11 @@ Things to watch:
 - Entries must be separated by whitespace: `-69----2` is read as one (empty) entry.
 - Every line counts as a row, including blank lines and comments, so the file should contain
   only the nine grid lines.
-- Two givens that conflict (e.g. two 5s in a row) raise a `ContradictionError` while loading.
+- Two givens that conflict (e.g. two 5s in a row) throw a `ContradictionError` while loading.
 
 ## Futoshiki
 
-Parser: `parseFutoshikiFile` (`parsers/futoshiki.py`). Example: `futoshiki.txt`.
+Parser: `parseFutoshikiLines` (`parsers/futoshiki.ts`). Example: `futoshiki.txt`.
 
 A Futoshiki file has two parts: the grid, in the same format as a Sudoku, followed by a line
 `relativity` and the inequality signs.
@@ -112,7 +114,7 @@ with a `CellGreaterThanCellConstraint` per relation.
 
 ## Kakuro
 
-Parser: `parseKakuroFile` (`parsers/kakuro.py`). Examples: `simpleKakuro.txt`,
+Parser: `parseKakuroLines` (`parsers/kakuro.ts`). Examples: `simpleKakuro.txt`,
 `mediumKakuro.txt`.
 
 A Kakuro file is a list of statements, one per line. Unlike the square grids, you list the white
@@ -153,12 +155,12 @@ Rules:
 - **Whitespace** is allowed anywhere: around `=`, inside `( 1, 1 )`, around `;`, and before a
   statement (indentation).
 - **List the cells of a total in order, from left to right or top to bottom, with at least two
-  cells.** The solver does not care, but the GUI draws the clue triangle next to the first cell:
+  cells.** The solver does not care, but the app draws the clue triangle next to the first cell:
   to its left when the first two cells are on the same row, above it when they are in the same
   column. Leave column 0 and row 0 free (start your cells at 1) so the clues of the first row
   and column have room.
 
-**Errors.** A file that cannot be read raises a `PuzzleFileError` (a `ValueError`) that names the
+**Errors.** A file that cannot be read throws a `PuzzleFileError` that names the
 file and line, for example
 `mediumKakuro.txt, line 98: cell Position(9, 9) is used before it is declared (total(...) = 6)`.
 This happens for:
@@ -170,7 +172,7 @@ This happens for:
 
 ## Sumbrero
 
-Parser: `parseSumbreroFile` (`parsers/sumbrero.py`). Example: `simpleSumbrero.txt`.
+Parser: `parseSumbreroLines` (`parsers/sumbrero.ts`). Example: `simpleSumbrero.txt`.
 
 Sumbrero uses the hexagonal grid. Like Kakuro, the file lists the cells, but a clue names a whole
 line of hexagons instead of listing its cells. Lines run in three directions:
@@ -214,10 +216,10 @@ For the 4×4 block of `simpleSumbrero.txt`, the lines are:
 ```
 
 Whitespace is allowed as in Kakuro. Declare all cells before the clues: a clue collects the cells
-that exist when it is read. Mistakes raise a `PuzzleFileError` naming the line, as in Kakuro;
+that exist when it is read. Mistakes throw a `PuzzleFileError` naming the line, as in Kakuro;
 this includes a clue whose line contains no cells.
 
-In the GUI the grid is framed by black hexagons, drawn like the clue squares of a Kakuro: a white
+In the app the grid is framed by black hexagons, drawn like the clue squares of a Kakuro: a white
 diagonal from the top-right to the bottom-left corner, and the right part cut into three wedges.
 The sum of a line is shown in the black hexagon just before its first cell, in the wedge that
 faces along the line:
@@ -232,95 +234,100 @@ So one black hexagon can hold up to three sums, and every line has its own wedge
 
 ## Opening your own puzzle file
 
-In the launcher (`constraintPuzzlerMain.py`, the standalone executable), use
-*File > Open file > Sudoku... / Futoshiki... / Kakuro... / Sumbrero...*. The puzzle opens in a new
-tab. A file that cannot be read shows a *Cannot open puzzle* message with the error, which for
-Kakuro and Sumbrero names the line. The separate `*Main.py` windows have the same option as
-*File > Open <puzzle>...*.
+On the start page of the app, every puzzle type has an *Open file…* button. The puzzle opens in a
+new tab. A file that cannot be read shows the error, which for Kakuro and Sumbrero names the line.
 
-| Puzzle | File types offered |
+| Puzzle | File types offered (web) |
 |---|---|
 | Sudoku | `*.txt`, `*.sud` |
 | Futoshiki | `*.txt`, `*.fut` |
 | Kakuro, Sumbrero | `*.txt` |
 
-You can also parse and solve a file without the GUI, which is handy while you are writing a
-puzzle:
+You can also parse and solve a file without the app, which is handy while you are writing a
+puzzle (e.g. in a vitest test in `packages/core/test/`, or a small script):
 
-```python
-from parsers import parseFutoshikiFile
-from solver.solver import Solver
+```ts
+import { readFileSync } from 'node:fs';
+import { FUTOSHIKI, parsePuzzle, Solver } from '@constraintpuzzler/core';
 
-# or parseSudokuFile, parseKakuroFile, parseSumbreroFile
-puzzle = parseFutoshikiFile("myFutoshiki.txt")
-solver = Solver(puzzle, allowGuessing=True)
-print(solver.solve())  # True when solved
-for cell in puzzle.getGrid().getCells():
-    print(cell.getPosition(), cell.getValue())
+// or SUDOKU, KAKURO, SUMBRERO (all in PUZZLE_TYPES)
+const puzzle = parsePuzzle(FUTOSHIKI, readFileSync('myFutoshiki.txt', 'utf-8'), 'myFutoshiki.txt');
+const solver = new Solver(puzzle, true); // allow guessing
+console.log(solver.solve()); // true when solved
+for (const cell of puzzle.getGrid().getPositionedCells()) {
+  console.log(cell.getName(), cell.getValue());
+}
 ```
 
-The parsers do not import PySide6. Each also has a `parse<Type>Lines(lines)` variant that takes
-the lines of a file, e.g. `parseKakuroLines(text.splitlines())`. The Kakuro and Sumbrero
-parsers raise `parsers.PuzzleFileError`, naming the line, when a file cannot be read.
+Each parser is a `parse<Type>Lines(lines, filename?)` function (`parsePuzzle` splits the text
+into lines for you). The Kakuro and Sumbrero parsers throw a `PuzzleFileError`, naming the line,
+when a file cannot be read.
 
-## Defining a puzzle in Python
+## Defining a puzzle in code
 
 A puzzle does not need a file format: you can build any grid and any combination of constraints
 in code. The steps are always the same:
 
-1. Create a `Puzzle` with its name and the set of values.
-2. Add cells to its grid with `puzzle.grid.addCell(Position(x, y))`.
+1. Create a `Puzzle` with its name and the values.
+2. Add cells to its grid with `puzzle.getGrid().addCell(new Position(x, y))`.
 3. Add constraint groups, give each group its constraints and its cells.
 4. Set the givens with `cell.setValue(v)`, after the groups exist (setting a value notifies the
    groups the cell is already in).
-5. Solve with `Solver(puzzle).solve()`.
+5. Solve with `new Solver(puzzle).solve()`.
 
 Example: a 4×4 Futoshiki-like puzzle where every row and column contains 1-4, the top-left 2×2
 area adds up to 10, and one cell is smaller than its neighbour.
 
-```python
-from constraints import TotalSumValueConstraint
-from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
-from constraints.exactcoverconstraint import ExactCoverConstraint
-from solver.solver import Solver
-from structure.position import Position
-from structure.puzzle import Puzzle
+```ts
+import {
+  CellGreaterThanCellConstraint,
+  ExactCoverConstraint,
+  Position,
+  Puzzle,
+  Solver,
+  TotalSumValueConstraint,
+  type PositionedCell,
+} from '@constraintpuzzler/core';
 
-puzzle = Puzzle("My puzzle", {1, 2, 3, 4})
-cells = {(x, y): puzzle.grid.addCell(Position(x, y)) for y in range(1, 5) for x in range(1, 5)}
+const puzzle = new Puzzle('My puzzle', [1, 2, 3, 4]);
+const cells = new Map<string, PositionedCell>();
+for (let y = 1; y <= 4; y++) {
+  for (let x = 1; x <= 4; x++) cells.set(`${x},${y}`, puzzle.getGrid().addCell(new Position(x, y)));
+}
+const at = (x: number, y: number) => cells.get(`${x},${y}`)!;
 
-for i in range(1, 5):
-    row = puzzle.addConstraintGroup(f"Row {i}")
-    row.addConstraint(ExactCoverConstraint)
-    column = puzzle.addConstraintGroup(f"Column {i}")
-    column.addConstraint(ExactCoverConstraint)
-    for j in range(1, 5):
-        row.addCell(cells[(j, i)])
-        column.addCell(cells[(i, j)])
+for (let i = 1; i <= 4; i++) {
+  const row = puzzle.addConstraintGroup(`Row ${i}`);
+  row.addConstraint(ExactCoverConstraint);
+  const column = puzzle.addConstraintGroup(`Column ${i}`);
+  column.addConstraint(ExactCoverConstraint);
+  for (let j = 1; j <= 4; j++) {
+    row.addCell(at(j, i));
+    column.addCell(at(i, j));
+  }
+}
 
-corner = puzzle.addConstraintGroup("Corner")
-for position in [(1, 1), (2, 1), (1, 2), (2, 2)]:
-    corner.addCell(cells[position])
-corner.addConstraint(TotalSumValueConstraint).setTotalValue(10)
+const corner = puzzle.addConstraintGroup('Corner');
+for (const [x, y] of [[1, 1], [2, 1], [1, 2], [2, 2]]) corner.addCell(at(x, y));
+corner.addConstraint(TotalSumValueConstraint).setTotalValue(10);
 
-sign = puzzle.addConstraintGroup("(3,1) < (4,1)")
-greater = sign.addConstraint(CellGreaterThanCellConstraint)
-sign.addCell(cells[(3, 1)])
-sign.addCell(cells[(4, 1)])
-greater.setLesserCell(cells[(3, 1)])
-greater.setGreaterCell(cells[(4, 1)])
+const sign = puzzle.addConstraintGroup('(3,1) < (4,1)');
+const smaller = sign.addConstraint(CellGreaterThanCellConstraint);
+sign.addCell(at(3, 1));
+sign.addCell(at(4, 1));
+smaller.setLesserCell(at(3, 1));
+smaller.setGreaterCell(at(4, 1));
 
-cells[(1, 1)].setValue(1)
+at(1, 1).setValue(1);
 
-print(Solver(puzzle, allowGuessing=True).solve())
+console.log(new Solver(puzzle, true).solve());
 ```
 
 Notes:
 
 - The order of `addCell` calls matters for square grids: `grid.getCellFromSquareGrid(x, y)`
-  (0-based) assumes the cells were added row by row, which `parseSudokuFile` and
-  `parseFutoshikiFile` rely on. For other layouts, look cells up with
-  `grid.searchCellWithPosition(Position(x, y))`.
+  (0-based) assumes the cells were added row by row, which the Sudoku and Futoshiki parsers rely
+  on. For other layouts, look cells up with `grid.searchCellWithPosition(new Position(x, y))`.
 - A cell can be in any number of groups, and the groups do not need to be rows or columns: any
   set of cells works. This is how you add extra regions, diagonals or cages.
 - For `TotalSumValueConstraint`, add the cells (and any `UniqueValueConstraint`) before calling
@@ -328,20 +335,18 @@ Notes:
 
 ## Adding a new puzzle type
 
-To make a puzzle type available in the GUI and the launcher, you need a parser for its file
-format, a window that draws its cells, an example file and tests. The `/new-puzzle <name>`
-Claude Code skill scaffolds all of these. By hand:
+To make a puzzle type available in the app, you need a parser for its file format, a board
+layout that draws its cells, an example file and tests. The `/new-puzzle <name>` Claude Code
+skill scaffolds all of these. By hand:
 
-1. Write the parser in `parsers/<name>.py`: `parse<Name>Lines(lines)` returning a `Puzzle`, and a
-   `parse<Name>File(filename)` wrapper. Export both from `parsers/__init__.py`. The parser must not
-   import PySide6.
-2. Add an example `<name>.txt` in the repository root.
-3. Register the type in `utility/puzzletypes.py`: a `PuzzleType` with its name, label, parser,
-   file filter, examples, default example and `windowModule="<name>Main"`, added to
-   `PUZZLE_TYPES`. The launcher, the GUI smoke tests and the standalone build (examples and
-   window) all read this registry.
-4. Create `<name>Main.py` with a `MainWindow(BasicMainWindow)` that sets `puzzleType` to the
-   registry entry and implements `initializePuzzleRepresentation()`: call `newScene()`,
-   then `addCellPiece(cell, ValueRectangle(...))` (or `ValueHexagon`) for every cell, see
-   the existing windows.
-5. Add parser tests to `parsers/tests/test_parsers.py`.
+1. Write the parser in `packages/core/src/parsers/<name>.ts`: `parse<Name>Lines(lines, filename?)`
+   returning a `Puzzle`, and export it from `packages/core/src/index.ts`.
+2. Add an example `puzzles/<name>.txt`.
+3. Register the type in `packages/core/src/puzzletypes.ts`: a `definePuzzleType({...})` with its
+   name, label, parser, file extensions, examples and default example, added to `PUZZLE_TYPES`.
+   The start page, the tests and the app's bundled examples
+   (`npm run examples -w @constraintpuzzler/app`) all read this registry.
+4. Add a layout to `app/src/logic/layout.ts` (`LAYOUTS`): the cells as polygons with an area for
+   the small values, and the clues or signs as decorations; see the existing layouts.
+5. Add parser tests to `packages/core/test/parsers/`, and the example to `e2e/app.spec.ts`.
+
