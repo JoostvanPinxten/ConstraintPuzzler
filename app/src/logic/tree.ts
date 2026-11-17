@@ -2,7 +2,7 @@
  * The tree that presents a puzzle: the puzzle holds the grid (with its cells) and the
  * constraint groups; each group holds its constraints and references to its cells. Selecting a
  * node selects a puzzle part, which the board highlights and the info panel describes.
- * (Port of gui/puzzlemodel/puzzletreemodel.py.)
+ * (Ported from gui/puzzlemodel/puzzletreemodel.py of the former PySide6 app.)
  */
 import type { Cell, Constraint, ConstraintGroup, Puzzle } from '@constraintpuzzler/core';
 

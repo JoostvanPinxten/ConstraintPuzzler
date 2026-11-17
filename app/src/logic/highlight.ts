@@ -2,7 +2,7 @@
  * Which cells to highlight, and in which colour. Every cell gets a role: e.g. the smaller and
  * the larger cell of a greater-than constraint, or the open and the solved cells of a group.
  * The role decides the colour, so the highlight shows how the cells take part in the
- * selection, not only which cells. (Port of gui/highlighting.py.)
+ * selection, not only which cells. (Ported from gui/highlighting.py of the former PySide6 app.)
  */
 import { CellGreaterThanCellConstraint, type Cell, type Puzzle } from '@constraintpuzzler/core';
 

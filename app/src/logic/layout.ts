@@ -3,8 +3,8 @@
  * candidate values and the place of the big value) and the decorations around them (Sudoku
  * block lines, Kakuro clue triangles, Futoshiki inequality signs, Sumbrero clue hexagons).
  *
- * The geometry follows the PySide6 windows (sudokuMain.py, kakuroMain.py, futoshikiMain.py,
- * sumbreroMain.py and gui/puzzlerepresentation). It is pure data, so it can be tested without
+ * The geometry follows the former PySide6 windows (sudokuMain.py, kakuroMain.py, futoshikiMain.py,
+ * sumbreroMain.py and gui/puzzlerepresentation, in the git history). It is pure data, so it can be tested without
  * rendering; components/Board.tsx draws it with react-native-svg.
  */
 import {

@@ -1,4 +1,4 @@
-// The board geometry of every puzzle type (cf. the layout tests in tests/test_gui_smoke.py).
+// The board geometry of every puzzle type (as the former PySide6 GUI smoke tests checked it).
 import {
   CellGreaterThanCellConstraint,
   PUZZLE_TYPES,

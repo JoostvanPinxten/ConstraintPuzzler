@@ -1,5 +1,5 @@
 // Playing a puzzle through a PuzzleSession: the behaviour of the desktop window layers
-// (cf. tests/test_gui_smoke.py), without rendering.
+// (as the former PySide6 GUI smoke tests checked them), without rendering.
 import { CELL, PUZZLE_TYPES, REGION, VALUE, type Cell } from '@constraintpuzzler/core';
 
 import { openExample, openText } from '../puzzles/open';

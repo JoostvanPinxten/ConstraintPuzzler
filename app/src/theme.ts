@@ -1,4 +1,4 @@
-// Colours, as in the desktop app (gui/puzzlerepresentation/cellpiece.py).
+// Colours, as in the former PySide6 app (gui/puzzlerepresentation/cellpiece.py, in the git history).
 export const COLORS = {
   /** a value that is part of the puzzle as it was loaded */
   given: '#0000ff',

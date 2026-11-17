@@ -1,4 +1,4 @@
-// ESLint for the TypeScript workspaces (the Python code is linted by ruff via pre-commit).
+// ESLint for the TypeScript workspaces.
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';

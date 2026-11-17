@@ -2,7 +2,7 @@
  * One open puzzle and everything the user does with it: selecting, entering values and notes,
  * undo/redo, hints, single solver steps, Solve (cancellable) and Check.
  *
- * This is the behaviour of the PySide6 window layers (selectionwindow, cellinputwindow,
+ * This is the behaviour of the former PySide6 window layers (selectionwindow, cellinputwindow,
  * solvingwindow) without any UI: the React components render a session's state and call its
  * methods, and subscribe() tells them when to render again. Dialogs are data (`notice`), so the
  * whole flow can be tested without rendering.

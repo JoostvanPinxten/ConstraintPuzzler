@@ -42,14 +42,6 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
             exit 1
           fi
-          # while the PySide6 app is still released too, both versions must agree
-          if [[ -f pyproject.toml ]]; then
-            PYPROJECT=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)
-            if [[ "$PYPROJECT" != "$VERSION" ]]; then
-              echo "::error::package.json ($VERSION) and pyproject.toml ($PYPROJECT) versions differ"
-              exit 1
-            fi
-          fi
 
   web:
     needs: version
