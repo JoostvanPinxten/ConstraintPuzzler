@@ -2,9 +2,9 @@
 
 The goal is one code base that runs on iOS, Android, the web, Windows, macOS and Linux. React
 Native cannot run Python, so the puzzle engine (`structure/`, `constraints/`, `solver/`,
-`parsers/`, `utility/puzzletypes.py`) is ported to TypeScript in `packages/core`. The PySide6
-app stays in the repository, and in CI, until the React Native app does everything it does; then
-the Python code is removed.
+`parsers/`, `utility/puzzletypes.py`) was ported to TypeScript in `packages/core`. The PySide6
+app stayed in the repository, and in CI, until the React Native app did everything it did; then
+the Python code was removed (phase 5). The Python code is in the git history up to v0.2.0.
 
 ## Decisions
 
@@ -25,12 +25,12 @@ the Python code is removed.
 
 | Phase | What | Status |
 | --- | --- | --- |
-| 0 | npm workspaces, TypeScript/ESLint/Prettier/vitest, Node CI job | done |
+| 0 | npm workspaces, TypeScript/ESLint/Prettier/vitest, Node CI job; the examples in `puzzles/` | done |
 | 1 | Engine port with the Python tests ported, plus golden fixtures | done |
 | 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | done |
 | 3 | Kakuro, Futoshiki and Sumbrero boards | done |
-| 4 | Packaging: web (GitHub Pages), Tauri desktop, Android APK on each GitHub Release (`app-builds.yml`, called by `release.yml`) | done; iOS still needs an Apple developer account (EAS) |
-| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | done (branch `feature/react-native-remove-python`; the examples moved to `puzzles/`) |
+| 4 | Packaging: web (GitHub Pages), Tauri desktop, Android APK (expo prebuild + Gradle, debug-signed) on each GitHub Release (`app-builds.yml`, called by `release.yml`) | done; iOS still needs an Apple developer account (EAS Build) |
+| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | removal done on this branch; the hands-on sign-off of the desktop installers and the APK is still to do |
 
 ## The app
 
@@ -60,29 +60,34 @@ installers and the APK are built in CI, but have to be tried by hand.
 
 ## Removing the Python app (phase 5)
 
-Once the parity checklist passes, remove the PySide6 app and everything that builds it:
+Phase 5 removed the PySide6 app and everything that built it:
 
 - the Python code: `gui/`, the `*Main.py` entry points, `structure/`, `constraints/`, `solver/`,
-  `parsers/`, `utility/` and their tests (keep `packages/core/fixtures/` as regression data, and
-  `tools/export_fixtures.py` goes with the Python engine);
+  `parsers/`, `utility/`, their tests, and `tools/export_fixtures.py` (`packages/core/fixtures/`
+  stays, as frozen regression data); the PySide6 logo renderer `doc/logo/render.py` became
+  `doc/logo/render.mjs` (Chromium via Playwright);
 - the PyInstaller build: `constraintpuzzler.spec` and the `build` job of `release.yml`;
 - **the PySide6 Android build** (merged from main for v0.2.0): the `android/` folder
-  (`build_apk.sh`, `main.py`, `slim_wheel.py`, tests), the `android` job of `release.yml` (and
-  `needs: [build, android]` of the publish job), the `ANDROID_DEBUG_KEYSTORE` repository secret,
+  (`build_apk.sh`, `main.py`, `slim_wheel.py`, tests), the `android` job of `release.yml`,
   `"android"` in pyright's `include` in `pyproject.toml`, and the `project-metadata.toml` fallback
-  in `utility/version.py`. Its replacement is the EAS Android build of phase 4, which must also
-  attach a sideloadable APK to every GitHub Release, so releases keep an Android download;
-- uv: `pyproject.toml`, `uv.lock`, the Python CI jobs, `.pre-commit-config.yaml`'s ruff hooks and
-  `.claude/hooks/ruff_on_edit.py`;
-- docs: the README's download section (the Windows/Linux/macOS archives and the Android APK
-  become the Tauri installers and the EAS APK), CLAUDE.md, and the `/test`, `/new-constraint` and
-  `/new-puzzle` skills, rewritten for the TypeScript code base.
+  in `utility/version.py`. Its replacement is the app's Android build in `app-builds.yml` (expo
+  prebuild + Gradle, debug-signed), which attaches `ConstraintPuzzler-<version>-app-android.apk`
+  to every GitHub Release, so releases keep an Android download;
+- uv and its tooling: `pyproject.toml`, `uv.lock`, `.python-version`, the Python CI jobs,
+  `.pre-commit-config.yaml` (CI now checks formatting with Prettier and trailing whitespace) and
+  `.claude/hooks/ruff_on_edit.py`; dependabot watches npm and Cargo instead of uv;
+- docs: the README (downloads: the web version, the Tauri installers and the APK), CLAUDE.md,
+  `doc/constraints.md` and `doc/puzzle-files.md` (TypeScript examples), and the `/test`,
+  `/new-constraint` and `/new-puzzle` skills, rewritten for the TypeScript code base.
 
-Until then the PySide6 Android build keeps shipping, so releases are never without an Android
-download.
+The example puzzle files moved from the repository root to `puzzles/`.
 
-Still open from phase 0: moving the example `*.txt` files to a `puzzles/` folder (when the app
-needs to bundle them) and running ESLint/Prettier from pre-commit.
+Left for the repository owner:
+
+- `.claude/settings.json` still allows `uv` commands, sets `QT_QPA_PLATFORM` and runs the ruff
+  hook (which now does nothing, as its script is gone): replace them with npm permissions.
+- The `ANDROID_DEBUG_KEYSTORE` repository secret is no longer used and can be deleted.
+- GitHub Pages must be enabled with *GitHub Actions* as its source before the first release.
 
 ## Golden fixtures
 
