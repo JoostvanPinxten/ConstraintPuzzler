@@ -29,8 +29,31 @@ the Python code is removed.
 | 1 | Engine port with the Python tests ported, plus golden fixtures | done |
 | 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | to do |
 | 3 | Kakuro, Futoshiki and Sumbrero boards | to do |
-| 4 | Packaging: web (GitHub Pages), Tauri desktop, EAS mobile builds, release workflow | to do |
-| 5 | Parity sign-off; remove the Python code, PyInstaller and uv; update CLAUDE.md and skills | to do |
+| 4 | Packaging: web (GitHub Pages), Tauri desktop, EAS mobile builds (incl. a sideloadable Android APK on each GitHub Release), release workflow | to do |
+| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | to do |
+
+## Removing the Python app (phase 5)
+
+Once the parity checklist passes, remove the PySide6 app and everything that builds it:
+
+- the Python code: `gui/`, the `*Main.py` entry points, `structure/`, `constraints/`, `solver/`,
+  `parsers/`, `utility/` and their tests (keep `packages/core/fixtures/` as regression data, and
+  `tools/export_fixtures.py` goes with the Python engine);
+- the PyInstaller build: `constraintpuzzler.spec` and the `build` job of `release.yml`;
+- **the PySide6 Android build** (merged from main for v0.2.0): the `android/` folder
+  (`build_apk.sh`, `main.py`, `slim_wheel.py`, tests), the `android` job of `release.yml` (and
+  `needs: [build, android]` of the publish job), the `ANDROID_DEBUG_KEYSTORE` repository secret,
+  `"android"` in pyright's `include` in `pyproject.toml`, and the `project-metadata.toml` fallback
+  in `utility/version.py`. Its replacement is the EAS Android build of phase 4, which must also
+  attach a sideloadable APK to every GitHub Release, so releases keep an Android download;
+- uv: `pyproject.toml`, `uv.lock`, the Python CI jobs, `.pre-commit-config.yaml`'s ruff hooks and
+  `.claude/hooks/ruff_on_edit.py`;
+- docs: the README's download section (the Windows/Linux/macOS archives and the Android APK
+  become the Tauri installers and the EAS APK), CLAUDE.md, and the `/test`, `/new-constraint` and
+  `/new-puzzle` skills, rewritten for the TypeScript code base.
+
+Until then the PySide6 Android build keeps shipping, so releases are never without an Android
+download.
 
 Still open from phase 0: moving the example `*.txt` files to a `puzzles/` folder (when the app
 needs to bundle them) and running ESLint/Prettier from pre-commit.
