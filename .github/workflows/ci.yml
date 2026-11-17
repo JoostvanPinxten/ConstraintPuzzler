@@ -39,6 +39,22 @@ jobs:
       - run: uv sync --locked
       - run: uv run pyright
 
+  # the TypeScript engine (packages/core) of the React Native port; see doc/react-native-migration.md
+  typescript:
+    name: typescript (typecheck, lint, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Unit tests, golden fixtures and coverage (fails below the vitest thresholds)
+        run: npm test
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
