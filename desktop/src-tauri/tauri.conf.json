@@ -23,7 +23,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "category": "Puzzle",
+    "category": "PuzzleGame",
     "shortDescription": "Solve number puzzles with constraint propagation",
     "icon": [
       "icons/32x32.png",
