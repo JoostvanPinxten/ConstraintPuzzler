@@ -99,11 +99,6 @@ export class Solver {
     }
   }
 
-  /** The values deduced (not guessed) since position `start` of the log. */
-  private deducedValues(start = 0): Deduction[] {
-    return this.log.since(start).filter((d) => d.setsValue() && d.source === ValueSource.DEDUCED);
-  }
-
   /** One of the easiest deductions (see Deduction.difficulty), chosen at random. */
   private easiest(deductions: Deduction[]): Deduction {
     const lowest = Math.min(...deductions.map((d) => d.difficulty()));
@@ -112,25 +107,60 @@ export class Solver {
   }
 
   /**
-   * The values one deduction pass determines, without changing the puzzle (what hint() and
-   * solveStep() choose from). Throws ContradictionError when the pass shows that the puzzle
-   * has no solution.
+   * The values that follow directly from the puzzle as it is now, without changing it (what
+   * hint() and solveStep() choose from): a cell with a single candidate left, or a value one
+   * constraint deduces on its own from the current candidates (e.g. a value that fits in only
+   * one cell of a group). So the reason of every deduction holds in the state the user sees.
+   *
+   * A deduction pass would determine more values, but those may rely on candidates that other
+   * groups removed earlier in the same pass, which the user does not see yet (issue #32).
+   *
+   * Throws ContradictionError when a deduction pass shows that the puzzle has no solution.
    */
   deducibleValues(): Deduction[] {
     const state = this.puzzle.saveState();
     try {
+      // a whole pass, only to notice a contradiction
       this.record(() => this.step());
-      return this.deducedValues();
+      this.puzzle.restoreState(state);
+      return this.directValues(state);
     } finally {
       this.puzzle.restoreState(state);
     }
   }
 
+  /** The values that follow directly from `state` (the current state); see deducibleValues. */
+  private directValues(state: PuzzleState): Deduction[] {
+    const values: Deduction[] = [];
+    for (const cell of this.puzzle.getGrid().getCells()) {
+      if (cell.value === null && cell.values.size === 1) {
+        const [only] = cell.values;
+        values.push(new Deduction(cell, new Set(), only as number, ValueSource.DEDUCED, null));
+      }
+    }
+    for (const constraint of this.puzzle.getConstraints()) {
+      const log = new DeductionLog();
+      try {
+        this.puzzle.recording(log, () =>
+          this.puzzle.causedBy(constraint, () => constraint.applyConstraint()),
+        );
+      } finally {
+        this.puzzle.restoreState(state);
+      }
+      values.push(
+        ...log.deductions.filter(
+          (d) => d.setsValue() && d.source === ValueSource.DEDUCED && d.cause === constraint,
+        ),
+      );
+    }
+    return values;
+  }
+
   /**
-   * The next value the rules determine (a Deduction with its reason), without changing the
-   * puzzle; of the values a pass determines, one of the easiest is chosen. null when a
-   * deduction pass does not determine any value. Throws ContradictionError when the pass shows
-   * that the puzzle has no solution.
+   * The next value the rules determine directly (a Deduction with its reason, see
+   * deducibleValues), without changing the puzzle; one of the easiest is chosen. null when no
+   * value follows directly. Throws ContradictionError when a deduction pass shows that the
+   * puzzle has no solution.
    */
   hint(): Deduction | null {
     const values = this.deducibleValues();
@@ -138,35 +168,55 @@ export class Solver {
   }
 
   /**
-   * Fill in a single cell, e.g. to follow the solver step by step (no guessing). A deduction
-   * pass is tried; if it determines the values of one or more cells, the puzzle is reset and
-   * only one of those cells gets its value (lastStep tells which, and why): the cell and value
-   * of `preferred` (e.g. the hint shown last) if the pass determines it, else one of the
-   * easiest deductions. If the pass only narrows down possible values, that narrowing is kept,
-   * so the next step can progress.
+   * Fill in a single cell, e.g. to follow the solver step by step (no guessing): one of the
+   * values that follow directly from the current state (lastStep tells which, and why), the
+   * cell and value of `preferred` (e.g. the hint shown last) if it is one of them, else one of
+   * the easiest. When no value follows directly, the candidates are narrowed down instead, so
+   * the next step can progress (see narrow()).
    *
-   * Returns whether the puzzle changed. Throws ContradictionError if the pass detects that the
-   * puzzle has no solution; the puzzle is then restored to the state it had before.
+   * Returns whether the puzzle changed. Throws ContradictionError if a deduction pass detects
+   * that the puzzle has no solution; the puzzle is then restored to the state it had before.
    */
   solveStep(preferred: Deduction | null = null): boolean {
     const state = this.puzzle.saveState();
     this.lastStep = null;
     try {
-      this.record(() => {
-        this.step();
-        const values = this.deducedValues();
-        if (values.length === 0) return;
-        this.puzzle.restoreState(state);
+      const values = this.deducibleValues();
+      if (values.length > 0) {
         const chosen = this.preferredOrEasiest(values, preferred);
-        this.log.truncate(0);
-        this.puzzle.causedBy(chosen.cause, () => chosen.cell.inferValue(chosen.value as number));
+        this.record(() =>
+          this.puzzle.causedBy(chosen.cause, () => chosen.cell.inferValue(chosen.value as number)),
+        );
         this.lastStep = this.log.deductions[0] ?? null;
-      });
+      } else {
+        this.narrow(state);
+      }
     } catch (error) {
       if (error instanceof ContradictionError) this.puzzle.restoreState(state);
       throw error;
     }
     return !statesEqual(this.puzzle.saveState(), state);
+  }
+
+  /**
+   * Narrow down the candidates when no value follows directly from `state` (the current
+   * state): keep what a deduction pass removes before it determines its first value. Every
+   * kept removal follows from the state and the removals before it; the first value of the
+   * pass then follows directly, so the next step fills it in.
+   */
+  private narrow(state: PuzzleState): void {
+    this.record(() => this.step());
+    const first = this.log.deductions.findIndex((d) => d.setsValue());
+    if (first < 0) return; // the pass only removed candidates: keep all of it
+    const removals = this.log.deductions.slice(0, first);
+    this.puzzle.restoreState(state);
+    this.record(() => {
+      for (const d of removals) {
+        this.puzzle.causedBy(d.cause, () => {
+          for (const value of d.removed) d.cell.remove(value);
+        });
+      }
+    });
   }
 
   private preferredOrEasiest(deductions: Deduction[], preferred: Deduction | null): Deduction {

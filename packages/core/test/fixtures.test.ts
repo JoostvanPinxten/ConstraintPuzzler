@@ -2,7 +2,8 @@
 // Python code makes of every example puzzle; the port must reach the same conclusions.
 import { describe, expect, it } from 'vitest';
 
-import { PositionedCell } from '../src/structure/cell';
+import { PositionedCell, ValueSource } from '../src/structure/cell';
+import { DeductionLog } from '../src/structure/deduction';
 import { TotalSumValueConstraint } from '../src/constraints/totalsumvalueconstraint';
 import { Solver } from '../src/solver/solver';
 import { exampleFiles } from '../src/puzzletypes';
@@ -38,11 +39,15 @@ describe('golden fixtures from the Python engine', () => {
     });
 
     it('determines the same values in one deduction pass', () => {
+      // a whole pass, as the Python engine's hint() used (hints now only offer the values
+      // that follow directly from the current state, see directhints.test.ts)
       const puzzle = loadExample(fixture.type, fixture.file);
       const cells = puzzle.getGrid().getCells();
-      const before = puzzle.saveState();
-      const deduced = new Solver(puzzle).deducibleValues();
-      expect(puzzle.saveState()).toEqual(before);
+      const log = new DeductionLog();
+      puzzle.recording(log, () => new Solver(puzzle).step());
+      const deduced = log.deductions.filter(
+        (d) => d.setsValue() && d.source === ValueSource.DEDUCED,
+      );
       const rows = new Map<string, (typeof fixture.firstPass)[number]>();
       for (const d of deduced) {
         const row = {
