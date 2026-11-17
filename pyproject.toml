@@ -42,7 +42,7 @@ select = [
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
-include = ["constraints", "parsers", "solver", "structure", "utility", "gui", "tests", "*.py"]
+include = ["constraints", "parsers", "solver", "structure", "utility", "gui", "tests", "android", "*.py"]
 exclude = [
     "gui/ui/mainWindowUi.py",
     "gui/icons/icons_rc.py",
