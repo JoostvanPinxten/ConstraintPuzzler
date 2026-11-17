@@ -1,7 +1,10 @@
 name: Release
 
-# Push a tag vX.Y.Z (matching [project].version in pyproject.toml) to build standalone executables
-# for Windows, Linux and macOS plus an Android APK, and publish them as a GitHub Release.
+# Push a tag vX.Y.Z (matching [project].version in pyproject.toml and "version" in package.json)
+# to build standalone executables for Windows, Linux and macOS plus an Android APK, and publish
+# them as a GitHub Release. The React Native app (app-builds.yml) is released alongside: desktop
+# installers, an Android APK, and the web version on GitHub Pages (the repository's Pages source
+# must be set to "GitHub Actions").
 # Run it manually (workflow_dispatch) for a dry run: it builds and uploads workflow artifacts only.
 on:
   push:
@@ -84,7 +87,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.name }}
+          name: release-${{ matrix.name }}
           path: ${{ steps.archive.outputs.file }}
           if-no-files-found: error
 
@@ -138,13 +141,32 @@ jobs:
           ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
       - uses: actions/upload-artifact@v4
         with:
-          name: android-${{ matrix.arch }}
+          name: release-android-${{ matrix.arch }}
           path: dist/*.apk
           if-no-files-found: error
 
+  app:
+    # the React Native app: web (tested), desktop installers, Android APK
+    uses: ./.github/workflows/app-builds.yml
+
+  pages:
+    # the web version of the app, at https://<owner>.github.io/<repository>/
+    if: github.ref_type == 'tag'
+    needs: [app]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
+
   release:
     if: github.ref_type == 'tag'
-    needs: [build, android]
+    needs: [build, android, app]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -154,6 +176,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: release-*
           merge-multiple: true
       - name: Create or update GitHub Release
         run: |

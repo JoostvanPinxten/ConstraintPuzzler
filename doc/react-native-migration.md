@@ -27,10 +27,36 @@ the Python code is removed.
 | --- | --- | --- |
 | 0 | npm workspaces, TypeScript/ESLint/Prettier/vitest, Node CI job | done |
 | 1 | Engine port with the Python tests ported, plus golden fixtures | done |
-| 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | to do |
-| 3 | Kakuro, Futoshiki and Sumbrero boards | to do |
-| 4 | Packaging: web (GitHub Pages), Tauri desktop, EAS mobile builds (incl. a sideloadable Android APK on each GitHub Release), release workflow | to do |
-| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | to do |
+| 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | done |
+| 3 | Kakuro, Futoshiki and Sumbrero boards | done |
+| 4 | Packaging: web (GitHub Pages), Tauri desktop, Android APK on each GitHub Release (`app-builds.yml`, called by `release.yml`) | done; iOS still needs an Apple developer account (EAS) |
+| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | prepared on a separate branch, waiting for the sign-off |
+
+## The app
+
+- `app/`: the Expo (React Native) app. `src/logic/` is plain TypeScript, tested without
+  rendering: `session.ts` (`PuzzleSession`: selection, typing, notes, undo, hints, Step,
+  Solve/Check in the background on a detached copy, dialogs as `notice`), `layout.ts` (the board
+  geometry per puzzle type), `highlight.ts` and `tree.ts`. `src/components/` renders them
+  (`Board.tsx` with react-native-svg). The example puzzles are bundled in
+  `src/puzzles/examples.generated.ts` (`npm run examples -w @constraintpuzzler/app` after
+  changing one; a test checks it). Settings are kept with AsyncStorage.
+- `desktop/`: Tauri v2 shell that shows `app/dist`. Needs Rust; `npm run build -w
+  @constraintpuzzler/desktop` exports the web build and makes the installers.
+- `e2e/`: Playwright tests of the web export (desktop and phone sizes).
+
+Running it: `npm run web -w @constraintpuzzler/app` (browser), `npm run android|ios -w
+@constraintpuzzler/app` (Expo Go or a development build), `npm run dev -w
+@constraintpuzzler/desktop` (desktop window). Testing: `npm test` (vitest + jest), and
+`npm run export:web -w @constraintpuzzler/app && npx playwright test`.
+
+### Parity checklist (phase 5 gate)
+
+On web, one desktop build and one phone: all 4 types load (examples and files); enter, clear and
+notes; mistakes and broken rules in red; undo/redo; Solve with cancel; hint levels; Step; Check
+with marks; Show hints; Allow guessing; the list of groups and rules with descriptions; version.
+The Playwright tests cover this on the web build (Chromium, desktop and phone sizes); the desktop
+installers and the APK are built in CI, but have to be tried by hand.
 
 ## Removing the Python app (phase 5)
 

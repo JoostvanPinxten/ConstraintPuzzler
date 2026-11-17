@@ -14,3 +14,7 @@ packages/core/fixtures/
 *.qrc
 .github/
 .claude/
+app/.expo/
+e2e/results/
+playwright-report/
+app/src/puzzles/examples.generated.ts

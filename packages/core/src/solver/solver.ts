@@ -39,8 +39,10 @@ const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setTimeou
 
 async function runAsync<T>(steps: Steps<T>, options: AsyncSolveOptions = {}): Promise<T> {
   const sliceMs = options.sliceMs ?? 12;
+  // let the caller (e.g. a UI showing a Cancel button) run before the work starts
+  await yieldToEventLoop();
   let deadline = Date.now() + sliceMs;
-  let result = steps.next();
+  let result = options.signal?.aborted ? steps.throw(new SolveCancelled()) : steps.next();
   while (!result.done) {
     if (Date.now() >= deadline) {
       await yieldToEventLoop();

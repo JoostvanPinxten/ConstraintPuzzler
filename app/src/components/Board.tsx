@@ -1,0 +1,205 @@
+// The puzzle drawn with react-native-svg: the cells (value, or notes and candidates), their
+// highlight, and the decorations of the puzzle type. Tapping a cell selects it.
+import type { Cell, Value } from '@constraintpuzzler/core';
+import { memo, useMemo, useState } from 'react';
+import { Platform, View, type LayoutChangeEvent } from 'react-native';
+import Svg, { G, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
+
+import { HighlightRole, roleColor } from '../logic/highlight';
+import { hintGrid, LAYOUTS, type BoardLayout, type CellShape, type Point } from '../logic/layout';
+import type { PuzzleSession } from '../logic/session';
+import { useSettings } from '../settings';
+import { useSession } from '../useSession';
+import { COLORS } from '../theme';
+
+// sans-serif, like the desktop app (SVG text is serif by default)
+const FONT = Platform.select({
+  web: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  android: 'sans-serif',
+  default: undefined,
+});
+
+const pointsAttribute = (points: readonly Point[]): string =>
+  points.map((p) => `${p.x},${p.y}`).join(' ');
+
+interface CellViewProps {
+  readonly shape: CellShape;
+  readonly values: readonly Value[];
+  /** the big value and its colour, or null for an open cell */
+  readonly value: Value | null;
+  readonly valueColor: string;
+  /** small values: notes (green) and candidates (grey) */
+  readonly notes: string;
+  readonly candidates: string;
+  readonly fill: string;
+  readonly onPress: (cell: Cell) => void;
+}
+
+const CellView = memo(function CellView({
+  shape,
+  values,
+  value,
+  valueColor,
+  notes,
+  candidates,
+  fill,
+  onPress,
+}: CellViewProps) {
+  const noteSet = new Set(notes.split(',').filter(Boolean).map(Number));
+  const candidateSet = new Set(candidates.split(',').filter(Boolean).map(Number));
+  const [columns, rows] = hintGrid(values.length);
+  const area = shape.hintArea;
+  const smallSize = Math.min(area.width / columns, area.height / rows) * 0.62;
+  return (
+    <G onPress={() => onPress(shape.cell)} testID={`cell-${shape.cell.getName()}`}>
+      <Polygon
+        points={pointsAttribute(shape.outline)}
+        fill={fill}
+        stroke="#000000"
+        strokeWidth={shape.strokeWidth}
+      />
+      {value !== null ? (
+        <SvgText
+          x={shape.valueCenter.x}
+          y={shape.valueCenter.y + shape.valueFontSize * 0.35}
+          fontSize={shape.valueFontSize}
+          fill={valueColor}
+          textAnchor="middle"
+          fontFamily={FONT}
+        >
+          {String(value)}
+        </SvgText>
+      ) : (
+        values.map((v, index) => {
+          const isNote = noteSet.has(v);
+          if (!isNote && !candidateSet.has(v)) return null;
+          const x = area.x + ((index % columns) + 0.5) * (area.width / columns);
+          const y = area.y + (Math.floor(index / columns) + 0.5) * (area.height / rows);
+          return (
+            <SvgText
+              key={v}
+              x={x}
+              y={y + smallSize * 0.35}
+              fontSize={smallSize}
+              fill={isNote ? COLORS.note : COLORS.candidate}
+              fontWeight={isNote ? 'bold' : 'normal'}
+              textAnchor="middle"
+              fontFamily={FONT}
+            >
+              {String(v)}
+            </SvgText>
+          );
+        })
+      )}
+    </G>
+  );
+});
+
+function Decorations({ layout }: { layout: BoardLayout }) {
+  return (
+    <>
+      {layout.decorations.map((d, i) => {
+        switch (d.kind) {
+          case 'polygon':
+            return (
+              <Polygon
+                key={i}
+                points={pointsAttribute(d.points)}
+                fill={d.fill}
+                stroke={d.stroke ?? 'none'}
+                strokeWidth={d.strokeWidth ?? 0}
+              />
+            );
+          case 'polyline':
+            return (
+              <Polyline
+                key={i}
+                points={pointsAttribute(d.points)}
+                fill="none"
+                stroke={d.stroke}
+                strokeWidth={d.strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            );
+          case 'text':
+            return (
+              <SvgText
+                key={i}
+                x={d.at.x}
+                y={d.at.y + d.fontSize * 0.35}
+                fontSize={d.fontSize}
+                fill={d.fill}
+                fontWeight={d.bold ? 'bold' : 'normal'}
+                textAnchor="middle"
+                fontFamily={FONT}
+              >
+                {d.text}
+              </SvgText>
+            );
+        }
+      })}
+    </>
+  );
+}
+
+export function Board({ session }: { session: PuzzleSession }) {
+  useSession(session);
+  const { settings } = useSettings();
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const layout = useMemo(() => LAYOUTS[session.type.name](session.puzzle), [session]);
+  const values = useMemo(() => session.puzzle.getValues(), [session]);
+
+  const { game } = session;
+  const violations = session.violations();
+  const roles = session.highlight();
+  const onPress = useMemo(() => (cell: Cell) => session.selectCell(cell), [session]);
+  const { bounds } = layout;
+
+  return (
+    <View
+      style={{ flex: 1, alignSelf: 'stretch' }}
+      onLayout={(e: LayoutChangeEvent) => setSize(e.nativeEvent.layout)}
+      testID="board"
+    >
+      {size.width > 0 && size.height > 0 && (
+        <Svg
+          width={size.width}
+          height={size.height}
+          viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+        >
+          {layout.cells.map((shape) => {
+            const cell = shape.cell;
+            const shown = game.valueOf(cell);
+            let valueColor: string = COLORS.given;
+            if (game.isMistake(cell) || (shown !== null && violations.has(cell))) {
+              valueColor = COLORS.violation;
+            } else if (cell.isEntered()) {
+              valueColor = COLORS.entered;
+            } else if (cell.isInferred()) {
+              valueColor = COLORS.solver;
+            }
+            const candidates =
+              shown === null && settings.showHints
+                ? [...cell.values].sort((a, b) => a - b).join(',')
+                : '';
+            return (
+              <CellView
+                key={cell.getName()}
+                shape={shape}
+                values={values}
+                value={shown}
+                valueColor={valueColor}
+                notes={[...game.notesOf(cell)].sort((a, b) => a - b).join(',')}
+                candidates={candidates}
+                fill={roleColor(roles.get(cell) ?? HighlightRole.NONE)}
+                onPress={onPress}
+              />
+            );
+          })}
+          <Decorations layout={layout} />
+        </Svg>
+      )}
+    </View>
+  );
+}
