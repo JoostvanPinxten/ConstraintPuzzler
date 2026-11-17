@@ -26,7 +26,7 @@ uv version --bump patch|minor|major       # bump the version (pyproject.toml + u
 uv run python -m PyInstaller constraintpuzzler.spec --noconfirm   # standalone build in dist/
 ```
 - The version is only defined in `pyproject.toml`. Never hard-code version strings; use `utility.version.getVersion()`.
-- Releases: pushing a tag `vX.Y.Z` (must equal the pyproject version) runs `.github/workflows/release.yml`, which builds and smoke-tests PyInstaller bundles on Windows/Linux/macOS and publishes a GitHub Release. New data files the app needs at runtime must be added to `datas` in `constraintpuzzler.spec`.
+- Releases: pushing a tag `vX.Y.Z` (must equal the pyproject version) runs `.github/workflows/release.yml`, which builds and smoke-tests PyInstaller bundles on Windows/Linux/macOS, builds an Android APK (`android/build_apk.sh`: pyside6-android-deploy + buildozer, Linux only; the app runs on Android's Python 3.14) and publishes a GitHub Release. New data files the app needs at runtime must be added to `datas` in `constraintpuzzler.spec`; the Android build bundles the tracked `*.py`, `*.txt` and `pyproject.toml` files, so other file types need adding to `source.include_exts` in `android/build_apk.sh`.
 
 ## Checks (what CI runs)
 ```
