@@ -83,10 +83,8 @@ Phase 5 removed the PySide6 app and everything that built it:
 
 The example puzzle files moved from the repository root to `puzzles/`.
 
-Left for the repository owner:
-
-- The `ANDROID_DEBUG_KEYSTORE` repository secret is no longer used and can be deleted.
-- GitHub Pages must be enabled with *GitHub Actions* as its source before the first release.
+Left for the repository owner: GitHub Pages must be enabled with *GitHub Actions* as its source
+before the first release.
 
 ## Golden fixtures
 
