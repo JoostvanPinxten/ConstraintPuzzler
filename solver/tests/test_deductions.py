@@ -6,7 +6,7 @@ from constraints.exactcoverconstraint import ExactCoverConstraint
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 from parsers.sudoku import parseSudokuLines
-from solver.Solver import SolveCancelled, Solver
+from solver.solver import SolveCancelled, Solver
 from structure.cell import ValueSource
 from structure.deduction import NAKED_SINGLE, DeductionLog
 from structure.errors import ContradictionError

@@ -1,9 +1,3 @@
-"""
-Created on Sat Dec 22 22:25:33 2012
-
-@author: Juice
-"""
-
 import sys
 from math import floor
 

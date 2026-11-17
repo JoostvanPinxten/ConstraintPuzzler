@@ -12,6 +12,7 @@ dev = [
     "pyright",
     "pre-commit",
     "pyinstaller>=6.22.3",
+    "coverage>=7.17.3",
 ]
 
 [tool.uv]
@@ -40,7 +41,7 @@ select = [
 
 [tool.pyright]
 pythonVersion = "3.13"
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 include = ["constraints", "parsers", "solver", "structure", "utility", "gui", "tests", "android", "*.py"]
 exclude = [
     "gui/ui/mainWindowUi.py",
@@ -56,3 +57,21 @@ reportOptionalMemberAccess = "error"
 [tool.ruff.lint.flake8-bugbear]
 # Qt's idiomatic `parent=QModelIndex()` default arguments are immutable value types.
 extend-immutable-calls = ["PySide6.QtCore.QModelIndex"]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "gui/ui/mainWindowUi.py",
+    "gui/icons/icons_rc.py",
+    # embedded in PySide6 (shiboken), without a source file
+    "pyscript",
+    "shibokensupport/*",
+    "signature_bootstrap.py",
+]
+source = ["."]
+
+[tool.coverage.report]
+# CI fails when the total coverage drops below this
+fail_under = 90
+skip_covered = true
+show_missing = true

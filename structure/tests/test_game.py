@@ -3,7 +3,7 @@
 import unittest
 
 from parsers.sudoku import parseSudokuFile, parseSudokuLines
-from solver.Solver import Solver
+from solver.solver import Solver
 from structure.cell import ValueSource
 from structure.entries import EntryError
 from structure.game import Game

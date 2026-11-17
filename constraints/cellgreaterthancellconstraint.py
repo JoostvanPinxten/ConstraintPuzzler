@@ -1,9 +1,3 @@
-"""
-Created on 7 jan. 2013
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 from collections.abc import Iterable

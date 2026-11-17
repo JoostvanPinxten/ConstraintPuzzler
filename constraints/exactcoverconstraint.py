@@ -1,13 +1,10 @@
-"""
-Created on 26 jan. 2013
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 from collections.abc import Iterable
+from itertools import combinations
 from typing import TYPE_CHECKING
+
+from structure.errors import ContradictionError
 
 from .constraint import formatValues, placedValues
 from .uniquevalueconstraint import UniqueValueConstraint
@@ -20,6 +17,8 @@ if TYPE_CHECKING:
 
 
 class ExactCoverConstraint(UniqueValueConstraint):
+    """Every value of the group appears exactly once (e.g. a Sudoku row)."""
+
     def __init__(self, group: ConstraintGroup, initialValues: Iterable[Value]) -> None:
         super().__init__(group, initialValues)
 
@@ -33,44 +32,48 @@ class ExactCoverConstraint(UniqueValueConstraint):
             if value is not None:
                 cell.inferValue(value)
 
-        self.searchForNakedSet()
+        self.searchForNakedSubsets()
+        self.searchForHiddenSubsets()
 
-    # TODO: make this more generic, iso just for a single pair, use multiple levels
-    # TODO: this only applies for combination of constraint groups that have the
-    #       exactlyOnce/UVC constraint
-    # TODO: can be refactored into a new type of constraint (and extract the old
-    #       exactlyonce contraint)
-    def searchForNakedSet(self) -> None:
-        # iterate over all the cells and check if any one of the initial value can still be
-        # entered
-        cells: dict[Value, set[Cell]] = {}
-        for value in self.group.getValues():
-            cells[value] = set()
+    def searchForHiddenSubsets(self) -> None:
+        """If k missing values can only go in the same k open cells, those cells hold exactly
+        those values, so their other candidates go (a hidden pair, triple, ...).
 
-        for c in self.group.getCells():
-            for val in c.getPossibleValues():
-                cells[val].add(c)
-
-        for value in self.group.getValues():
-            # at least values for two cells must be eliminated to qualify for a naked set:
-            if len(cells[value]) > len(self.group.getCells()) - 2:
-                continue
-
-            # naked pair
-            if len(cells[value]) == 2:
-                relatedValues = set()
-                for cell in cells[value]:
-                    relatedValues |= cell.getPossibleValues()
-
-                relatedValues -= set([value])
-
-                for otherValue in relatedValues:
-                    if cells[otherValue] == cells[value]:
-                        for nakedCell in cells[otherValue]:
-                            for removeValue in set(self.group.getValues()) - set(
-                                [value, otherValue]
-                            ):
-                                nakedCell.remove(removeValue)
+        Subsets up to half the open cells suffice: a larger hidden subset is the complement
+        of a smaller naked one, which searchForNakedSubsets finds."""
+        found = True
+        while found:
+            found = False
+            openCells = self.openCells()
+            placed = set(placedValues(self.group.getCells()))
+            missing = sorted(set(self.group.getValues()) - placed)
+            cellsFor = {v: {c for c in openCells if v in c.getPossibleValues()} for v in missing}
+            for size in range(2, len(openCells) // 2 + 1):
+                candidates = [v for v in missing if len(cellsFor[v]) <= size]
+                for subset in combinations(candidates, size):
+                    cells: set[Cell] = set().union(*(cellsFor[v] for v in subset))
+                    if len(cells) < size:
+                        raise ContradictionError(
+                            f"{self.group.getName()}: {formatValues(subset)} fit in only"
+                            f" {len(cells)} cells"
+                        )
+                    if len(cells) > size:
+                        continue
+                    values = set(subset)
+                    if all(c.getPossibleValues() <= values for c in cells):
+                        continue
+                    others = set().union(*(c.getPossibleValues() for c in cells)) - values
+                    names = "; ".join(c.getName() for c in sorted(cells, key=openCells.index))
+                    reason = (
+                        f"{self.group.getName()}: {formatValues(values)} can only go in"
+                        f" {names}, so those cells cannot hold anything else"
+                        f" ({self.summary()})"
+                    )
+                    self.removeWithReason(cells, others, reason)
+                    found = True
+                    break
+                if found:
+                    break
 
     def getType(self) -> str:
         return "Exact cover constraint"
@@ -79,14 +82,10 @@ class ExactCoverConstraint(UniqueValueConstraint):
         return "each value once"
 
     def explain(self, deduction: Deduction) -> str:
-        placed = set(placedValues(self.group.getCells()))
-        if deduction.setsValue() or deduction.removed <= placed:
-            return super().explain(deduction)
-        removed = formatValues(deduction.removed)
-        return (
-            f"{self.group.getName()} has values that can only go in this cell and one other,"
-            f" so there is no room for {removed} ({self.summary()})"
-        )
+        reason = self.subsetReason(deduction)
+        if reason is not None:
+            return reason
+        return super().explain(deduction)
 
     def describe(self, showHints: bool = True) -> str:
         missing = set(self.group.getValues()) - set(placedValues(self.group.getCells()))

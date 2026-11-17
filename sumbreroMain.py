@@ -1,9 +1,3 @@
-"""
-Created on Sat Dec 22 22:25:33 2012
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 from math import cos, pi, sin

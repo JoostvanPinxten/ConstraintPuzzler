@@ -1,9 +1,3 @@
-"""
-Created on 6 jan. 2013
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -17,10 +11,20 @@ if TYPE_CHECKING:
 
 
 class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
+    """Half of a Kakuro clue cell, cut along a diagonal, showing the sum of one run."""
+
     TOPLEFT = 0
     TOPRIGHT = 1
     BOTTOMRIGHT = 2
     BOTTOMLEFT = 3
+
+    # per alignment: the triangle's corners and the text position, in units of the cell size
+    LAYOUT: dict[int, tuple[tuple[tuple[int, int], ...], tuple[float, float]]] = {
+        TOPLEFT: (((0, 0), (1, 0), (0, 1)), (-1 / 6, 0)),
+        TOPRIGHT: (((0, 0), (1, 1), (1, 0)), (1 / 6, 0)),
+        BOTTOMRIGHT: (((1, 0), (1, 1), (0, 1)), (1 / 6, 1 / 2)),
+        BOTTOMLEFT: (((0, 0), (1, 1), (0, 1)), (-1 / 6, 1 / 2)),
+    }
 
     def __init__(
         self,
@@ -36,12 +40,7 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
         self.position = position
         self.cellSize = cellSize
 
-        if alignment is None:
-            self.alignment = ValueTriangle.TOPRIGHT
-        else:
-            self.alignment = alignment
-        # combine a horizontal flag with a vertical flag: e.g. AlignLeft with AlignTop
-        # to create a layout thingy
+        self.alignment = ValueTriangle.TOPRIGHT if alignment is None else alignment
 
         self.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.DeviceCoordinateCache)
 
@@ -53,12 +52,6 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
         )
         self.surrounding.setBrush(QtGui.QColorConstants.Transparent)
         self.surrounding.setPen(QtGui.QColorConstants.Transparent)
-
-        pass
-
-    def mousePressEvent(self, event: QtWidgets.QGraphicsSceneMouseEvent) -> None:
-        # TODO: be able to set the value?
-        return super().mousePressEvent(event)
 
     def instantiateRepresentation(self) -> None:
         # add a big text item to show the set value, hidden by default
@@ -75,29 +68,8 @@ class ValueTriangle(QtWidgets.QGraphicsPolygonItem):
         self.valueTextItem.setOpacity(1)
 
     def updateRepresentation(self) -> None:
-        # TODO: add the two other cases
-        if self.alignment == ValueTriangle.TOPRIGHT:
-            self.setPolygon(
-                QtGui.QPolygon(
-                    [
-                        QtCore.QPoint(0, 0),
-                        QtCore.QPoint(self.cellSize, self.cellSize),
-                        QtCore.QPoint(self.cellSize, 0),
-                    ]
-                )
-            )
-            self.valueTextItem.setPos(self.cellSize / 6, 0)
-            centerTextItem(self.valueTextItem)
-        else:
-            self.setPolygon(
-                QtGui.QPolygon(
-                    [
-                        QtCore.QPoint(0, 0),
-                        QtCore.QPoint(self.cellSize, self.cellSize),
-                        QtCore.QPoint(0, self.cellSize),
-                    ]
-                )
-            )
-            # self.valueTextItem.setPos(0, self.cellSize/6)
-            self.valueTextItem.setPos(-self.cellSize / 6, self.cellSize / 2)
-            centerTextItem(self.valueTextItem)
+        corners, (textX, textY) = ValueTriangle.LAYOUT[self.alignment]
+        size = self.cellSize
+        self.setPolygon(QtGui.QPolygon([QtCore.QPoint(x * size, y * size) for x, y in corners]))
+        self.valueTextItem.setPos(textX * size, textY * size)
+        centerTextItem(self.valueTextItem)
