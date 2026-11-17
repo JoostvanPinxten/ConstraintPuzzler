@@ -37,11 +37,12 @@ def disableAccessibilityBridge() -> None:
 
 
 class AndroidApplication(QtWidgets.QApplication):
-    def exec(self) -> int:
+    @staticmethod
+    def exec() -> int:
         # QGuiApplication.exec() calls QAccessible.setRootObject(app), which (re)creates the
         # accessibility context object, so disable the bridge once the event loop is running.
         QtCore.QTimer.singleShot(0, disableAccessibilityBridge)
-        return super().exec()
+        return QtWidgets.QApplication.exec()
 
 
 if __name__ == "__main__":
