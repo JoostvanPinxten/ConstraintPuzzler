@@ -83,8 +83,8 @@ Phase 5 removed the PySide6 app and everything that built it:
 
 The example puzzle files moved from the repository root to `puzzles/`.
 
-Left for the repository owner: GitHub Pages must be enabled with *GitHub Actions* as its source
-before the first release.
+GitHub Pages is enabled with *GitHub Actions* as its source, so a release also publishes the web
+version.
 
 ## Golden fixtures
 
