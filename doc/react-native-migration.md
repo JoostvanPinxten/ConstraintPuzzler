@@ -30,7 +30,7 @@ the Python code was removed (phase 5). The Python code is in the git history up 
 | 2 | Expo app shell and Sudoku end to end (board, input, notes, undo, hints, solve, check) | done |
 | 3 | Kakuro, Futoshiki and Sumbrero boards | done |
 | 4 | Packaging: web (GitHub Pages), Tauri desktop, Android APK (expo prebuild + Gradle, debug-signed) on each GitHub Release (`app-builds.yml`, called by `release.yml`) | done; iOS still needs an Apple developer account (EAS Build) |
-| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | done: the desktop installers were tried by hand (2026-11-18), then the Python code was removed; the APK has not been confirmed on a phone yet |
+| 5 | Parity sign-off; remove the Python code, PyInstaller, the PySide6 Android build and uv; update CLAUDE.md and skills | done: the desktop installers and the Android APK were tried by hand (2026-11-18), then the Python code was removed |
 
 ## The app
 
