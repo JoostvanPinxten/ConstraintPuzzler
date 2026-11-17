@@ -1,14 +1,8 @@
-"""
-Created on 28 dec. 2012
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 import html
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtCore import Qt
@@ -90,7 +84,16 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
         else:
             return QtCore.QModelIndex()
 
-    def parent(self, index: ModelIndex) -> QtCore.QModelIndex:
+    @overload
+    def parent(self) -> QtCore.QObject | None: ...
+
+    @overload
+    def parent(self, index: ModelIndex) -> QtCore.QModelIndex: ...
+
+    def parent(self, index: ModelIndex | None = None) -> QtCore.QObject | QtCore.QModelIndex | None:
+        # without an index, this is QObject.parent(): the object that owns the model
+        if index is None:
+            return super().parent()
         # the index must be valid
         if not index.isValid():
             return QtCore.QModelIndex()
@@ -144,12 +147,15 @@ class ConstraintPuzzleModel(QtCore.QAbstractItemModel):
             return QtCore.QAbstractItemModel.headerData(self, section, orientation, role)
 
 
-class ProxyItem(QtCore.QObject):
-    """An item of the puzzle tree. It derives from QObject only for tr(); its tree parent
-    and children are its own (parentItem, childItems), not the QObject ones."""
+class ProxyItem:
+    """An item of the puzzle tree: a plain object with its own tree parent and children
+    (parentItem, childItems). It is not a QObject, so Qt never owns or deletes it."""
+
+    @staticmethod
+    def tr(text: str) -> str:
+        return QtCore.QCoreApplication.translate("ProxyItem", text)
 
     def __init__(self, parent: ProxyItem | None = None) -> None:
-        super().__init__()
         self.parentItem = parent
         self.childItems: list[ProxyItem] = []
 
@@ -204,10 +210,6 @@ class ProxyItem(QtCore.QObject):
 
         With showHints False, the text leaves out the candidate values of open cells."""
         return f"<b>{html.escape(str(self.getName()))}</b> ({html.escape(str(self.getType()))})"
-
-    def setParent(self, parent: ProxyItem) -> None:
-        parent.addChild(self)
-        self.parentItem = parent
 
     def getItem(self) -> Any:
         raise NotImplementedError

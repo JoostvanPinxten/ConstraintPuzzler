@@ -1,9 +1,3 @@
-"""
-Created on 6 jan. 2013
-
-@author: Juice
-"""
-
 import os
 import tempfile
 import unittest
@@ -12,7 +6,7 @@ from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstra
 from constraints.totalsumvalueconstraint import TotalSumValueConstraint
 from constraints.uniquevalueconstraint import UniqueValueConstraint
 from parsers import parseFutoshikiFile, parseSudokuFile
-from solver.Solver import Solver
+from solver.solver import Solver
 from structure.errors import ContradictionError
 from utility.puzzlefactory import PuzzleFactory
 

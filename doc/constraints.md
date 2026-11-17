@@ -106,6 +106,11 @@ values 1-9).
 - It tells other constraints in the same group which values are still free
   (`getAllowedValuesForValueList`). `TotalSumValueConstraint` uses this, so that with a unique
   constraint in the group, a sum of 4 over two cells can only be 1+3, never 2+2.
+- **Naked subsets** (`searchForNakedSubsets`): if k open cells together have only k
+  candidates (a naked pair, triple, ...), those cells use up those values, so they are removed
+  from the other cells of the group. Example: in a Kakuro line of three cells, two cells are
+  both `{1, 2}`, so the third cannot be 1 or 2. If k cells have *fewer* than k candidates
+  between them, the puzzle is contradictory.
 
 **Example:** in a Kakuro line `1 ? ?`, the two open cells can no longer be 1.
 
@@ -126,10 +131,17 @@ it), so it does everything the unique constraint does, plus:
 - **Hidden single:** if a value can only go in one open cell of the group, that cell gets the
   value. Example: in a Sudoku row, 7 is only still possible in the third cell, so the third
   cell is 7, even if that cell still has other possibilities.
-- **Hidden pair** (`searchForNakedSet`): if two values can each only go in the same two cells,
-  those two cells must hold exactly those two values, so all other possibilities are removed
-  from them. Example: in a row, 4 and 8 are only possible in cells A and B. A and B are then
-  `{4, 8}`, even if they previously also allowed 1, 2 or 6.
+- **Naked subsets** (inherited, see above).
+- **Hidden subsets** (`searchForHiddenSubsets`): if k values can each only go in the same k
+  cells (a hidden pair, triple, ...), those cells must hold exactly those values, so all other
+  possibilities are removed from them. Example: in a row, 4 and 8 are only possible in cells A
+  and B. A and B are then `{4, 8}`, even if they previously also allowed 1, 2 or 6. Subsets
+  up to half the open cells are searched; a larger hidden subset is the same fact as a smaller
+  naked subset in the other cells. If k values fit in fewer than k cells, the puzzle is
+  contradictory.
+
+Each subset deduction explains itself in the hint and step messages, naming the cells and
+values involved.
 
 **Setup:** `group.addConstraint(ExactCoverConstraint)`. Do not add a separate
 `UniqueValueConstraint` to the same group; it is already included.

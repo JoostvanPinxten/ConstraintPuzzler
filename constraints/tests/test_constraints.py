@@ -1,9 +1,3 @@
-"""
-Created on 5 jan. 2013
-
-@author: Juice
-"""
-
 import unittest
 
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint

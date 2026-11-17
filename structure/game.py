@@ -22,7 +22,7 @@ from structure.entries import EntryError, UserEntries
 
 if TYPE_CHECKING:
     # for the annotations only: at run time, this module does not import the solver
-    from solver.Solver import Solver
+    from solver.solver import Solver
     from structure.cell import Cell
     from structure.deduction import Deduction
     from structure.puzzle import Puzzle

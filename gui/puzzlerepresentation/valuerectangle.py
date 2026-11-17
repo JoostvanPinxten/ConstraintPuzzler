@@ -1,9 +1,3 @@
-"""
-Created on 30 dec. 2012
-
-@author: Juice
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

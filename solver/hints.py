@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from solver.Solver import Solver
+    from solver.solver import Solver
     from structure.cell import Cell
     from structure.deduction import Deduction
     from structure.types import PuzzleState

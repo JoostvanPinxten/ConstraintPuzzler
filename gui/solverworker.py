@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtCore
 
-from solver.Solver import SolveCancelled, Solver
+from solver.solver import SolveCancelled, Solver
 from structure.errors import ContradictionError
 
 if TYPE_CHECKING:

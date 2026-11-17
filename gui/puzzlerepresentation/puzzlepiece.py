@@ -1,9 +1,3 @@
-"""
-Created on 3 jan. 2013
-
-@author: Juice
-"""
-
 from PySide6 import QtCore, QtGui, QtWidgets
 
 

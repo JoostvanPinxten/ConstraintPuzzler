@@ -4,7 +4,7 @@ import unittest
 
 from parsers.sudoku import parseSudokuLines
 from solver.hints import CELL, REGION, VALUE, HintSession
-from solver.Solver import Solver
+from solver.solver import Solver
 from structure.tests.test_entries import EASY
 
 

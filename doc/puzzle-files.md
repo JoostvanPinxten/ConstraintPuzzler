@@ -249,7 +249,7 @@ puzzle:
 
 ```python
 from parsers import parseFutoshikiFile
-from solver.Solver import Solver
+from solver.solver import Solver
 
 # or parseSudokuFile, parseKakuroFile, parseSumbreroFile
 puzzle = parseFutoshikiFile("myFutoshiki.txt")
@@ -282,7 +282,7 @@ area adds up to 10, and one cell is smaller than its neighbour.
 from constraints import TotalSumValueConstraint
 from constraints.cellgreaterthancellconstraint import CellGreaterThanCellConstraint
 from constraints.exactcoverconstraint import ExactCoverConstraint
-from solver.Solver import Solver
+from solver.solver import Solver
 from structure.position import Position
 from structure.puzzle import Puzzle
 
