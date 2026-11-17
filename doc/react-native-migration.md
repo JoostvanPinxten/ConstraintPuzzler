@@ -75,7 +75,8 @@ Phase 5 removed the PySide6 app and everything that built it:
   to every GitHub Release, so releases keep an Android download;
 - uv and its tooling: `pyproject.toml`, `uv.lock`, `.python-version`, the Python CI jobs,
   `.pre-commit-config.yaml` (CI now checks formatting with Prettier and trailing whitespace) and
-  `.claude/hooks/ruff_on_edit.py`; dependabot watches npm and Cargo instead of uv;
+  `.claude/hooks/ruff_on_edit.py` (with its hook, the `uv` permissions and `QT_QPA_PLATFORM` in
+  `.claude/settings.json`); dependabot watches npm and Cargo instead of uv;
 - docs: the README (downloads: the web version, the Tauri installers and the APK), CLAUDE.md,
   `doc/constraints.md` and `doc/puzzle-files.md` (TypeScript examples), and the `/test`,
   `/new-constraint` and `/new-puzzle` skills, rewritten for the TypeScript code base.
@@ -84,8 +85,6 @@ The example puzzle files moved from the repository root to `puzzles/`.
 
 Left for the repository owner:
 
-- `.claude/settings.json` still allows `uv` commands, sets `QT_QPA_PLATFORM` and runs the ruff
-  hook (which now does nothing, as its script is gone): replace them with npm permissions.
 - The `ANDROID_DEBUG_KEYSTORE` repository secret is no longer used and can be deleted.
 - GitHub Pages must be enabled with *GitHub Actions* as its source before the first release.
 
