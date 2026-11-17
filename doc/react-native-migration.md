@@ -70,19 +70,21 @@ Once the parity checklist passes, remove the PySide6 app and everything that bui
   (`build_apk.sh`, `main.py`, `slim_wheel.py`, tests), the `android` job of `release.yml` (and
   `needs: [build, android]` of the publish job), the `ANDROID_DEBUG_KEYSTORE` repository secret,
   `"android"` in pyright's `include` in `pyproject.toml`, and the `project-metadata.toml` fallback
-  in `utility/version.py`. Its replacement is the EAS Android build of phase 4, which must also
-  attach a sideloadable APK to every GitHub Release, so releases keep an Android download;
+  in `utility/version.py`. Its replacement is the app's Android build of phase 4 (expo prebuild +
+  Gradle in `app-builds.yml`, debug-signed), which already attaches
+  `ConstraintPuzzler-<version>-app-android.apk` to every GitHub Release;
 - uv: `pyproject.toml`, `uv.lock`, the Python CI jobs, `.pre-commit-config.yaml`'s ruff hooks and
   `.claude/hooks/ruff_on_edit.py`;
 - docs: the README's download section (the Windows/Linux/macOS archives and the Android APK
-  become the Tauri installers and the EAS APK), CLAUDE.md, and the `/test`, `/new-constraint` and
+  become the Tauri installers and the app's APK), CLAUDE.md, and the `/test`, `/new-constraint` and
   `/new-puzzle` skills, rewritten for the TypeScript code base.
 
 Until then the PySide6 Android build keeps shipping, so releases are never without an Android
 download.
 
-Still open from phase 0: moving the example `*.txt` files to a `puzzles/` folder (when the app
-needs to bundle them) and running ESLint/Prettier from pre-commit.
+Phase 5 also moves the example `*.txt` files to a `puzzles/` folder, and replaces pre-commit
+with the formatting (Prettier) and whitespace checks in CI. Both are prepared on the branch
+`feature/react-native-remove-python`.
 
 ## Golden fixtures
 
