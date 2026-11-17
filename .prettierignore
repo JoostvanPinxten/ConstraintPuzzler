@@ -1,0 +1,18 @@
+# Prettier formats the TypeScript, JavaScript, JSON and YAML of the workspaces.
+node_modules/
+coverage/
+dist/
+build/
+.venv/
+package-lock.json
+packages/core/fixtures/
+*.md
+*.txt
+.github/
+.claude/
+app/.expo/
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+e2e/results/
+playwright-report/
+app/src/puzzles/examples.generated.ts

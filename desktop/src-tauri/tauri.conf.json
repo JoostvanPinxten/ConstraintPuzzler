@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ConstraintPuzzler",
+  "version": "../../package.json",
+  "identifier": "io.github.joostvanpinxten.constraintpuzzler",
+  "build": {
+    "frontendDist": "../../app/dist",
+    "devUrl": "http://localhost:8081",
+    "beforeDevCommand": { "script": "npm run web", "cwd": "../../app", "wait": false }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ConstraintPuzzler",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 420,
+        "minHeight": 560
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "PuzzleGame",
+    "shortDescription": "Solve number puzzles with constraint propagation",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

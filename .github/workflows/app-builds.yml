@@ -1,0 +1,169 @@
+name: App builds
+
+# Builds the React Native app (see doc/react-native-migration.md) for every platform:
+# - web: the Expo web export, tested in Chromium (Playwright), plus the GitHub Pages site;
+# - desktop: the web export in a Tauri window, as installers for Windows, macOS and Linux;
+# - android: a debug-signed APK (expo prebuild + Gradle; no Expo account needed).
+# release.yml calls this workflow for a tag and attaches the results to the GitHub Release; on
+# pull requests (and pushes to the migration branch) it checks that everything still builds.
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - "app/**"
+      - "desktop/**"
+      - "packages/**"
+      - "e2e/**"
+      - "puzzles/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.ts"
+      - ".github/workflows/app-builds.yml"
+  push:
+    branches: [feature/react-native]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Determine version (and check it against the tag)
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+            exit 1
+          fi
+
+  web:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Export the web build
+        run: npm run export:web -w @constraintpuzzler/app
+      - name: Test it in the browser (desktop and phone sizes)
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-results
+          path: e2e/results
+      - name: Export the web build for GitHub Pages (served from /<repository>)
+        run: npm run export:web -w @constraintpuzzler/app
+        env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: app/dist
+
+  desktop:
+    needs: version
+    name: desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, name: windows }
+          - { os: macos-latest, name: macos }
+          - { os: ubuntu-22.04, name: linux }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+      - name: Install WebKitGTK and friends (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf libssl-dev libxdo-dev xvfb
+      - run: npm ci
+      - name: Build the installers
+        run: npm run build -w @constraintpuzzler/desktop
+      - name: Smoke test (Linux; the app must start and keep running)
+        if: runner.os == 'Linux'
+        run: |
+          set +e
+          xvfb-run -a timeout 15 desktop/src-tauri/target/release/constraintpuzzler
+          status=$?
+          if [[ $status -ne 124 ]]; then
+            echo "::error::the desktop app exited with $status instead of running"
+            exit 1
+          fi
+      - name: Collect the installers
+        run: |
+          mkdir -p out
+          bundle=desktop/src-tauri/target/release/bundle
+          for f in "$bundle"/nsis/*.exe "$bundle"/msi/*.msi "$bundle"/dmg/*.dmg \
+                   "$bundle"/appimage/*.AppImage "$bundle"/deb/*.deb "$bundle"/rpm/*.rpm; do
+            [[ -f "$f" ]] && cp "$f" out/
+          done
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-desktop-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+
+  android:
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-app-${{ hashFiles('package-lock.json') }}
+          restore-keys: gradle-app-
+      - run: npm ci
+      - name: Generate the native Android project
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install
+      - name: Build the APK (release build, debug-signed; arm64 and x86_64)
+        working-directory: app/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --no-daemon
+      - name: Name the APK
+        run: |
+          mkdir -p out
+          cp app/android/app/build/outputs/apk/release/app-release.apk \
+            "out/ConstraintPuzzler-${{ needs.version.outputs.version }}-app-android.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android-app
+          path: out/*.apk
+          if-no-files-found: error

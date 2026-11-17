@@ -1,0 +1,1243 @@
+{
+ "type": "futoshiki",
+ "example": "7x7",
+ "file": "futoshiki.txt",
+ "structure": {
+  "values": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ],
+  "cells": [
+   {
+    "position": [
+     1,
+     1
+    ],
+    "given": 5
+   },
+   {
+    "position": [
+     2,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     1
+    ],
+    "given": 6
+   },
+   {
+    "position": [
+     1,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     4
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     5
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     4,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     6
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     7
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     7
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     7
+    ],
+    "given": 2
+   },
+   {
+    "position": [
+     4,
+     7
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     5,
+     7
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     6,
+     7
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     7,
+     7
+    ],
+    "given": 5
+   }
+  ],
+  "groups": [
+   {
+    "name": "Row 0",
+    "cells": [
+     0,
+     7,
+     14,
+     21,
+     28,
+     35,
+     42
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 0",
+    "cells": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 1",
+    "cells": [
+     1,
+     8,
+     15,
+     22,
+     29,
+     36,
+     43
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 1",
+    "cells": [
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 2",
+    "cells": [
+     2,
+     9,
+     16,
+     23,
+     30,
+     37,
+     44
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 2",
+    "cells": [
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 3",
+    "cells": [
+     3,
+     10,
+     17,
+     24,
+     31,
+     38,
+     45
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 3",
+    "cells": [
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 4",
+    "cells": [
+     4,
+     11,
+     18,
+     25,
+     32,
+     39,
+     46
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 4",
+    "cells": [
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 5",
+    "cells": [
+     5,
+     12,
+     19,
+     26,
+     33,
+     40,
+     47
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 5",
+    "cells": [
+     35,
+     36,
+     37,
+     38,
+     39,
+     40,
+     41
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Row 6",
+    "cells": [
+     6,
+     13,
+     20,
+     27,
+     34,
+     41,
+     48
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Column 6",
+    "cells": [
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48
+    ],
+    "constraints": [
+     {
+      "type": "Exact cover constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     1,
+     2
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     3,
+     2
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     8,
+     1
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     10,
+     17
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     13,
+     20
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     15,
+     14
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     15,
+     16
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     19,
+     26
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     22,
+     21
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     24,
+     31
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     34,
+     27
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     29,
+     28
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     29,
+     30
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     31,
+     32
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     28,
+     35
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     38,
+     31
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     33,
+     40
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     35,
+     36
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     37,
+     36
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     40,
+     39
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     39,
+     46
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     47,
+     40
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     41,
+     48
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   },
+   {
+    "name": "Relativity",
+    "cells": [
+     45,
+     46
+    ],
+    "constraints": [
+     {
+      "type": "Cell Greater Than Cell Constraint"
+     }
+    ]
+   }
+  ]
+ },
+ "firstPass": [],
+ "propagated": {
+  "solved": true,
+  "cells": [
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 4,
+    "candidates": [
+     4
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   }
+  ]
+ },
+ "solution": {
+  "unique": true,
+  "values": [
+   5,
+   2,
+   1,
+   3,
+   7,
+   4,
+   6,
+   7,
+   3,
+   6,
+   5,
+   2,
+   1,
+   4,
+   6,
+   7,
+   4,
+   1,
+   5,
+   3,
+   2,
+   3,
+   5,
+   7,
+   4,
+   6,
+   2,
+   1,
+   4,
+   6,
+   5,
+   2,
+   1,
+   7,
+   3,
+   2,
+   1,
+   3,
+   6,
+   4,
+   5,
+   7,
+   1,
+   4,
+   2,
+   7,
+   3,
+   6,
+   5
+  ]
+ }
+}

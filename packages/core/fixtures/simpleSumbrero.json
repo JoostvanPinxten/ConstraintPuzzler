@@ -1,0 +1,515 @@
+{
+ "type": "sumbrero",
+ "example": "Simple",
+ "file": "simpleSumbrero.txt",
+ "structure": {
+  "values": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "cells": [
+   {
+    "position": [
+     0,
+     0
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     0,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     0,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     0,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     0
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     1,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     0
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     2,
+     3
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     0
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     1
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     2
+    ],
+    "given": null
+   },
+   {
+    "position": [
+     3,
+     3
+    ],
+    "given": null
+   }
+  ],
+  "groups": [
+   {
+    "name": "Column 0",
+    "cells": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 11
+     }
+    ]
+   },
+   {
+    "name": "Column 1",
+    "cells": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 24
+     }
+    ]
+   },
+   {
+    "name": "Column 2",
+    "cells": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 21
+     }
+    ]
+   },
+   {
+    "name": "Column 3",
+    "cells": [
+     12,
+     13,
+     14,
+     15
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 23
+     }
+    ]
+   },
+   {
+    "name": "Descending row -1",
+    "cells": [
+     8,
+     12
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 7
+     }
+    ]
+   },
+   {
+    "name": "Descending row 0",
+    "cells": [
+     0,
+     4,
+     9,
+     13
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 21
+     }
+    ]
+   },
+   {
+    "name": "Descending row 1",
+    "cells": [
+     1,
+     5,
+     10,
+     14
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 20
+     }
+    ]
+   },
+   {
+    "name": "Descending row 2",
+    "cells": [
+     2,
+     6,
+     11,
+     15
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 27
+     }
+    ]
+   },
+   {
+    "name": "Descending row 3",
+    "cells": [
+     3,
+     7
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 4
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 0",
+    "cells": [
+     0
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 5
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 1",
+    "cells": [
+     1,
+     4,
+     8
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 9
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 2",
+    "cells": [
+     2,
+     5,
+     9,
+     12
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 24
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 3",
+    "cells": [
+     3,
+     6,
+     10,
+     13
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 14
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 4",
+    "cells": [
+     7,
+     11,
+     14
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 20
+     }
+    ]
+   },
+   {
+    "name": "Ascending row 5",
+    "cells": [
+     15
+    ],
+    "constraints": [
+     {
+      "type": "Unique Value Constraint"
+     },
+     {
+      "type": "Total Sum Value Constraint",
+      "total": 7
+     }
+    ]
+   }
+  ]
+ },
+ "firstPass": [],
+ "propagated": {
+  "solved": true,
+  "cells": [
+   {
+    "value": 5,
+    "candidates": [
+     5
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   },
+   {
+    "value": 8,
+    "candidates": [
+     8
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 1,
+    "candidates": [
+     1
+    ]
+   },
+   {
+    "value": 8,
+    "candidates": [
+     8
+    ]
+   },
+   {
+    "value": 3,
+    "candidates": [
+     3
+    ]
+   },
+   {
+    "value": 9,
+    "candidates": [
+     9
+    ]
+   },
+   {
+    "value": 6,
+    "candidates": [
+     6
+    ]
+   },
+   {
+    "value": 2,
+    "candidates": [
+     2
+    ]
+   },
+   {
+    "value": 8,
+    "candidates": [
+     8
+    ]
+   },
+   {
+    "value": 7,
+    "candidates": [
+     7
+    ]
+   }
+  ]
+ },
+ "solution": {
+  "unique": true,
+  "values": [
+   5,
+   2,
+   3,
+   1,
+   6,
+   7,
+   8,
+   3,
+   1,
+   8,
+   3,
+   9,
+   6,
+   2,
+   8,
+   7
+  ]
+ }
+}

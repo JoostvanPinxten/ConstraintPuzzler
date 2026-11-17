@@ -1,0 +1,19 @@
+[package]
+name = "constraintpuzzler"
+# the app version comes from the root package.json (see tauri.conf.json)
+version = "0.0.0"
+description = "ConstraintPuzzler desktop app: the web build in a Tauri window"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

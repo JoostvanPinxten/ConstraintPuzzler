@@ -25,7 +25,7 @@ jobs:
           gh label create new-puzzle-type --force --color 0e8a16 --description "Support for a new kind of puzzle"
           gh label create constraint      --force --color 1d76db --description "Constraint implementations"
           gh label create solver          --force --color 5319e7 --description "Solver / deduction logic"
-          gh label create gui             --force --color fbca04 --description "PySide6 GUI and puzzle rendering"
+          gh label create gui             --force --color fbca04 --description "App UI and puzzle rendering"
           gh label create needs-info      --force --color cccccc --description "Waiting on more information from the reporter"
       - uses: anthropics/claude-code-action@v1
         with:
@@ -38,8 +38,9 @@ jobs:
                the project layout.
             2. Apply 1-3 of these labels with `gh issue edit --add-label`:
                bug, enhancement, question, new-puzzle-type, constraint, solver, gui, needs-info.
-            3. If it is a bug report missing the details the README asks for (platform, Python version,
-               PySide6 version, which *Main.py / how it was started, and the puzzle file if relevant),
+            3. If it is a bug report missing the details the README asks for (the platform: web
+               browser, Windows/macOS/Linux, Android or iOS; the app version from the start page; and
+               the puzzle file if relevant),
                add `needs-info` and post ONE short, friendly comment with `gh issue comment` asking for them.
                Otherwise do not comment.
           claude_args: >-

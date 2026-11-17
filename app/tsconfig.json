@@ -1,0 +1,9 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["jest", "node"]
+  },
+  // app.config.ts and scripts/ run in Node (expo CLI), not in the app
+  "exclude": ["node_modules", "dist", "app.config.ts", "scripts"]
+}
