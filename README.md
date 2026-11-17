@@ -80,7 +80,7 @@ To cut a release:
 ```
 npm version minor --no-git-tag-version   # or patch / major
 git commit -am "Release vX.Y.Z"          # via a pull request
-git tag vX.Y.Z && git push origin vX.Y.Z # after merging, on master
+git tag vX.Y.Z && git push origin vX.Y.Z # after merging, on main
 ```
 Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag matches `package.json`, builds and tests the web version and publishes it on GitHub Pages, builds the desktop installers (Windows, macOS, Linux; the Linux build is started as a smoke test) and the Android APK, and publishes them as a GitHub Release. If a release for the tag already exists (for example, one you created by hand), the files are attached to it. Run the workflow manually (*Actions > Release > Run workflow*) for a dry run that only uploads build artifacts. GitHub Pages must be enabled with *GitHub Actions* as its source.
 
