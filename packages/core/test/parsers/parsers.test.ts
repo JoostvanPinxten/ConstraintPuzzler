@@ -276,6 +276,19 @@ describe('sudoku and futoshiki', () => {
     expect(new Solver(puzzle).solve()).toBe(true);
   });
 
+  it('names the futoshiki rows and columns like the sudoku ones', () => {
+    const puzzle = parseFutoshikiLines(['- - -', '- - -', '- - -']);
+    const positions = (name: string) =>
+      puzzle
+        .getConstraintGroups()
+        .find((g) => g.getName() === name)
+        ?.getCells()
+        .map((c) => (c instanceof PositionedCell ? c.getPosition().key() : null));
+    const key = (x: number, y: number) => new Position(x, y).key();
+    expect(positions('Row 2')).toEqual([key(1, 2), key(2, 2), key(3, 2)]);
+    expect(positions('Column 3')).toEqual([key(3, 1), key(3, 2), key(3, 3)]);
+  });
+
   it('refuses a malformed relation', () => {
     expect(() => parseFutoshikiLines(['- -', '- -', 'relativity', '1,1>2,1>2,2'])).toThrow();
     expect(() => parseFutoshikiLines(['- -', '- -', 'relativity', '1>2,1'])).toThrow();
