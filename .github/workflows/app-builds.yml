@@ -4,8 +4,9 @@ name: App builds
 # - web: the Expo web export, tested in Chromium (Playwright), plus the GitHub Pages site;
 # - desktop: the web export in a Tauri window, as installers for Windows, macOS and Linux;
 # - android: a debug-signed APK (expo prebuild + Gradle; no Expo account needed).
-# release.yml calls this workflow for a tag and attaches the results to the GitHub Release; on
-# pull requests (and pushes to the migration branch) it checks that everything still builds.
+# release.yml calls this workflow for a tag and attaches the results to the GitHub Release.
+# Pull requests only build and test the web version; the desktop and Android builds run on
+# pushes to main (and the migration branch), releases and manual runs.
 on:
   workflow_call:
   pull_request:
@@ -20,7 +21,7 @@ on:
       - "playwright.config.ts"
       - ".github/workflows/app-builds.yml"
   push:
-    branches: [feature/react-native]
+    branches: [main, feature/react-native]
   workflow_dispatch:
 
 permissions:
@@ -73,6 +74,7 @@ jobs:
 
   desktop:
     needs: version
+    if: github.event_name != 'pull_request'
     name: desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -131,6 +133,7 @@ jobs:
 
   android:
     needs: version
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -154,9 +157,9 @@ jobs:
       - name: Generate the native Android project
         working-directory: app
         run: npx expo prebuild --platform android --no-install
-      - name: Build the APK (release build, debug-signed; arm64 and x86_64)
+      - name: Build the APK (release build, debug-signed; arm64)
         working-directory: app/android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --no-daemon
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
       - name: Name the APK
         run: |
           mkdir -p out
