@@ -2,3 +2,8 @@
 *.png binary
 *.ico binary
 *.icns binary
+
+# Generated or frozen data: GitHub collapses these in diffs and leaves them out of the language
+# statistics (linguist).
+package-lock.json linguist-generated=true
+packages/core/fixtures/** linguist-generated=true

@@ -7,7 +7,7 @@ import { UniqueValueConstraint } from '../../src/constraints/uniquevalueconstrai
 import { parseSudokuLines } from '../../src/parsers/sudoku';
 import { Solver } from '../../src/solver/solver';
 import { ValueSource, type Cell } from '../../src/structure/cell';
-import { NAKED_SINGLE, DeductionLog, type Deduction } from '../../src/structure/deduction';
+import { NAKED_SINGLE, type Deduction } from '../../src/structure/deduction';
 import { ContradictionError } from '../../src/structure/errors';
 import type { Puzzle } from '../../src/structure/puzzle';
 import { sortedValues, stateKey, type Value } from '../../src/structure/types';
@@ -28,13 +28,12 @@ function fullFixedPoint(puzzle: Puzzle): void {
   }
 }
 
-/** The values a single deduction pass determines (the puzzle is left unchanged). */
+/** The values hints and single steps choose from (the puzzle is left unchanged). */
 function passDeductions(puzzle: Puzzle): Deduction[] {
   const state = puzzle.saveState();
-  const log = new DeductionLog();
-  puzzle.recording(log, () => new Solver(puzzle).step());
-  puzzle.restoreState(state);
-  return log.deductions.filter((d) => d.setsValue());
+  const values = new Solver(puzzle).deducibleValues();
+  expect(puzzle.saveState()).toEqual(state);
+  return values;
 }
 
 describe('deductions', () => {
