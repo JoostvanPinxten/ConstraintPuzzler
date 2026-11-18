@@ -8,8 +8,12 @@
  * step or a hint.
  */
 import type { Constraint } from '../constraints/constraint';
+import type { Technique } from '../techniques/technique';
 import { ValueSource, type Cell } from './cell';
 import { sortedValues, type Value } from './types';
+
+/** What made a change: a constraint, or a technique that combines several groups. */
+export type Cause = Constraint | Technique;
 
 /** The difficulty of a value that is the only candidate left in its cell (no constraint). */
 export const NAKED_SINGLE = 1;
@@ -24,17 +28,17 @@ export class Deduction {
     /** where a set value came from (deduced, guessed, entered, given) */
     readonly source: ValueSource | null = null,
     /**
-     * the constraint that made the change; null for a cell's own check (a single candidate
-     * left), a guess, or a change from outside the solver
+     * the constraint or technique that made the change; null for a cell's own check (a single
+     * candidate left), a guess, or a change from outside the solver
      */
-    readonly cause: Constraint | null = null,
+    readonly cause: Cause | null = null,
   ) {}
 
   setsValue(): boolean {
     return this.value !== null;
   }
 
-  /** How hard the deduction is for a person: NAKED_SINGLE, or its constraint's level. */
+  /** How hard the deduction is for a person: NAKED_SINGLE, or its cause's level. */
   difficulty(): number {
     return this.cause !== null ? this.cause.getDifficulty() : NAKED_SINGLE;
   }
@@ -62,19 +66,19 @@ export class Deduction {
 
 export class DeductionLog {
   deductions: Deduction[] = [];
-  private causes: (Constraint | null)[] = [];
+  private causes: (Cause | null)[] = [];
 
   get length(): number {
     return this.deductions.length;
   }
 
-  currentCause(): Constraint | null {
+  currentCause(): Cause | null {
     return this.causes.at(-1) ?? null;
   }
 
-  /** Attribute the changes made by fn to a constraint. */
-  cause<T>(constraint: Constraint | null, fn: () => T): T {
-    this.causes.push(constraint);
+  /** Attribute the changes made by fn to a constraint or technique. */
+  cause<T>(cause: Cause | null, fn: () => T): T {
+    this.causes.push(cause);
     try {
       return fn();
     } finally {

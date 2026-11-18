@@ -40,7 +40,7 @@ describe('deductions', () => {
   it.each(examples)('%s: agenda propagation reaches the same fixpoint', (_name, load) => {
     const agenda = load();
     const full = load();
-    new Solver(agenda).propagate();
+    new Solver(agenda, false, []).propagate(); // constraints only, like step()
     fullFixedPoint(full);
     // the cells end up the same (the sum constraints' own bookkeeping of values may differ,
     // as the passes visit the states in a different order)

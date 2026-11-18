@@ -8,6 +8,7 @@
  */
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
+import { Constraint } from '../constraints/constraint';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
 import { stateKey, type Value } from '../structure/types';
@@ -58,7 +59,7 @@ export class HintSession {
   regionCells(): Set<Cell> {
     const deduction = this.deduction;
     if (deduction === null) return new Set();
-    if (deduction.cause !== null) return new Set(deduction.cause.group.getCells());
+    if (deduction.cause instanceof Constraint) return new Set(deduction.cause.group.getCells());
     return new Set(deduction.cell.constraintGroups.flatMap((g) => g.getCells()));
   }
 
@@ -90,7 +91,8 @@ export class HintSession {
       return new Set(cell.constraintGroups.filter((g) => g.getCells().some((c) => reasons.has(c))));
     }
     const groups = new Set<ConstraintGroup>();
-    const hinted = this.deduction?.cause?.group;
+    const cause = this.deduction?.cause;
+    const hinted = cause instanceof Constraint ? cause.group : null;
     for (const [cell, reason] of this.explanation()) {
       const group = cell.constraintGroups.find(
         (g) => g !== hinted && g.getCells().includes(reason),
@@ -227,7 +229,7 @@ export class HintSession {
     if (deduction === null) return '';
     if (this.level === REGION) {
       const cause = deduction.cause;
-      if (cause === null) {
+      if (!(cause instanceof Constraint)) {
         return 'In the highlighted area, one cell has only one possible value left.';
       }
       return (

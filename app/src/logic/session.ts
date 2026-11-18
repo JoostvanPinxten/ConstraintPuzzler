@@ -21,6 +21,7 @@ import {
   VALUE,
   type Cell,
   type ConstraintGroup,
+  type Deduction,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -411,6 +412,8 @@ export class PuzzleSession {
     if (step !== null) {
       this.selection = { kind: 'cell', cell: step.cell };
       this.stepMessage = `Solver step: ${step.describe()}`;
+    } else if (changed) {
+      this.stepMessage = `Solver step: ${narrowingMessage(this.solver.log.deductions)}`;
     }
     if (!changed) {
       this.notice = {
@@ -535,4 +538,16 @@ export class PuzzleSession {
       this.changed();
     }
   }
+}
+
+/**
+ * What a step that only removed candidates did: the first reason, and how many candidates
+ * went, e.g. after an X-Wing.
+ */
+export function narrowingMessage(deductions: readonly Deduction[]): string {
+  const removed = deductions.reduce((n, d) => n + d.removed.size, 0);
+  const reasons = [...new Set(deductions.map((d) => d.reason()))];
+  const more = reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : '';
+  const what = removed === 1 ? '1 candidate' : `${removed} candidates`;
+  return `removed ${what}. ${reasons[0] ?? ''}${more}.`;
 }

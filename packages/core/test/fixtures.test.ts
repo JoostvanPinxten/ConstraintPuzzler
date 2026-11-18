@@ -70,7 +70,8 @@ describe('golden fixtures from the Python engine', () => {
 
     it('propagates to the same fixpoint without guessing', () => {
       const puzzle = loadExample(fixture.type, fixture.file);
-      const solved = new Solver(puzzle).solve();
+      // the Python engine had no techniques that combine groups (X-Wing, ...)
+      const solved = new Solver(puzzle, false, []).solve();
       expect(fixture.propagated).not.toBeNull();
       expect({
         solved,
