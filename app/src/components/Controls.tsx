@@ -96,7 +96,7 @@ export function Toolbar({ session }: { session: PuzzleSession }) {
   );
 }
 
-function Toggle({
+export function Toggle({
   label,
   value,
   onChange,

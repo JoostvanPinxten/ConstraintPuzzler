@@ -4,7 +4,7 @@ import { CELL, PUZZLE_TYPES, REGION, VALUE, type Cell } from '@constraintpuzzler
 
 import { openExample, openText } from '../puzzles/open';
 import { HighlightRole } from './highlight';
-import { PuzzleSession } from './session';
+import { DEFAULT_SETTINGS, PuzzleSession } from './session';
 
 const EASY = (): PuzzleSession => openExample('sudoku', 'Easy');
 const cellAt = (session: PuzzleSession, x: number, y: number): Cell =>
@@ -44,6 +44,59 @@ describe('entering values', () => {
     session.pressKey('7');
     session.pressKey('0'); // 0 is not a sudoku value: it clears
     expect(topLeft.hasValue()).toBe(false);
+  });
+
+  it('counts the open cells that are filled in', () => {
+    const session = EASY();
+    const start = session.progress();
+    const givens = session.puzzle
+      .getGrid()
+      .getCells()
+      .filter((c) => c.isGiven()).length;
+    expect(start).toEqual({ filled: 0, total: 81 - givens });
+    session.selectCell(cellAt(session, 0, 0));
+    session.pressKey('4');
+    expect(session.progress().filled).toBe(1);
+    session.pressKey('Backspace');
+    expect(session.progress().filled).toBe(0);
+    session.selectCell(cellAt(session, 1, 0)); // given: not counted
+    session.pressKey('3');
+    expect(session.progress()).toEqual(start);
+  });
+
+  it('counts finishing the puzzle by typing or Step, not by Solve or undo/redo', async () => {
+    const session = EASY();
+    const solved = EASY();
+    await solved.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
+    const open = session.puzzle
+      .getGrid()
+      .getCells()
+      .filter((c) => !c.hasValue());
+    const last = open.pop() as Cell;
+    const solutionOf = (cell: Cell) =>
+      solved.puzzle.getGrid().getCells()[session.puzzle.getGrid().getCells().indexOf(cell)];
+    for (const cell of open) {
+      session.selectCell(cell);
+      session.typeDigit(solutionOf(cell)?.getValue() as number);
+    }
+    expect(session.finishedCount).toBe(0);
+    session.selectCell(last);
+    session.typeDigit(solutionOf(last)?.getValue() as number);
+    expect(session.finishedCount).toBe(1);
+    expect(session.inputMessage).toBe('Solved!');
+
+    session.undo();
+    session.redo();
+    expect(session.finishedCount).toBe(1);
+    session.undo();
+    session.solveStep();
+    expect(session.puzzle.isSolved()).toBe(true);
+    expect(session.finishedCount).toBe(2);
+
+    const bySolve = EASY();
+    await bySolve.solve(DEFAULT_SETTINGS);
+    expect(bySolve.puzzle.isSolved()).toBe(true);
+    expect(bySolve.finishedCount).toBe(0);
   });
 
   it('ignores keys without a selected cell', () => {
@@ -243,7 +296,7 @@ describe('solving in the background', () => {
   it('leaves the shown puzzle alone while it runs', async () => {
     const session = openExample('sudoku', 'Hard');
     const before = session.puzzle.saveState();
-    const solving = session.solve({ showHints: false, allowGuessing: true });
+    const solving = session.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
     expect(session.solving).toBe('solve');
     session.selectCell(cellAt(session, 0, 0));
     session.typeDigit(1);
@@ -255,7 +308,7 @@ describe('solving in the background', () => {
 
   it('gets stuck without guessing on the hard sudoku', async () => {
     const session = openExample('sudoku', 'Hard');
-    await session.solve({ showHints: false, allowGuessing: false });
+    await session.solve(DEFAULT_SETTINGS);
     expect(session.puzzle.isSolved()).toBe(false);
     expect(session.stepMessage).toMatch(/Allow guessing/);
   });
@@ -263,7 +316,7 @@ describe('solving in the background', () => {
   it('can be cancelled', async () => {
     const session = openExample('sudoku', 'Hard');
     const before = session.puzzle.saveState();
-    const solving = session.solve({ showHints: false, allowGuessing: true });
+    const solving = session.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
     void session.solve(); // pressing Solve again cancels
     await solving;
     expect(session.stepMessage).toBe('Solving was cancelled.');
@@ -278,7 +331,7 @@ describe('solving in the background', () => {
     session.typeDigit(right === 4 ? 7 : 4); // fits the rules, but leaves no solution
     expect(session.game.isMistake(cellAt(session, 0, 0))).toBe(false);
     const before = session.puzzle.saveState();
-    await session.solve({ showHints: false, allowGuessing: true });
+    await session.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
     expect(session.notice?.title).toBe('Puzzle cannot be solved');
     expect(session.puzzle.saveState()).toEqual(before);
   });

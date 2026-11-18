@@ -6,8 +6,9 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { PuzzleSession } from '../logic/session';
 import { openErrorMessage, openExample, pickPuzzleFile } from '../puzzles/open';
+import { useSettings } from '../settings';
 import { COLORS } from '../theme';
-import { Button } from './Controls';
+import { Button, Toggle } from './Controls';
 
 export function appVersion(): string {
   return Constants.expoConfig?.version ?? 'unknown';
@@ -15,6 +16,7 @@ export function appVersion(): string {
 
 export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void }) {
   const [error, setError] = useState<string | null>(null);
+  const { settings, update } = useSettings();
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title} accessibilityRole="header">
@@ -53,6 +55,14 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
           </View>
         </View>
       ))}
+      <View style={styles.type}>
+        <Text style={styles.typeTitle}>Settings</Text>
+        <Toggle
+          label="Confetti when you finish a puzzle"
+          value={settings.celebrate}
+          onChange={(celebrate) => update({ celebrate })}
+        />
+      </View>
       <Text style={styles.about}>
         {`Version ${appVersion()} · Puzzles are described as constraints over a grid of cells, and solved by propagating them.`}
       </Text>

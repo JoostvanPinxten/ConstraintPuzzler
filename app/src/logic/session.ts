@@ -31,10 +31,16 @@ export interface Settings {
   readonly showHints: boolean;
   /** let Solve guess (with backtracking) when deduction gets stuck */
   readonly allowGuessing: boolean;
+  /** a confetti burst when the user finishes a puzzle */
+  readonly celebrate: boolean;
 }
 
 /** Like the desktop app: no candidates shown, and no guessing, until the user turns them on. */
-export const DEFAULT_SETTINGS: Settings = { showHints: false, allowGuessing: false };
+export const DEFAULT_SETTINGS: Settings = {
+  showHints: false,
+  allowGuessing: false,
+  celebrate: true,
+};
 
 /** A message for the user, shown as a dialog; with `confirm`, the dialog offers an action. */
 export interface Notice {
@@ -68,6 +74,11 @@ export class PuzzleSession {
   solving: SolvingJob | null = null;
   /** increases on every change, for useSyncExternalStore */
   version = 0;
+  /**
+   * Increases each time the user finishes the puzzle (by typing or with Step, not with Solve),
+   * for the confetti.
+   */
+  finishedCount = 0;
 
   private abort: AbortController | null = null;
   private listeners = new Set<() => void>();
@@ -108,6 +119,21 @@ export class PuzzleSession {
       this.violationsCache = { revision, cells: this.game.violations() };
     }
     return this.violationsCache.cells;
+  }
+
+  /**
+   * How far the puzzle is filled in: the cells that were open when it was loaded (not given)
+   * and how many of them show a value now (entered, deduced or a mistake).
+   */
+  progress(): { filled: number; total: number } {
+    let filled = 0;
+    let total = 0;
+    for (const cell of this.puzzle.getGrid().getCells()) {
+      if (cell.isGiven()) continue;
+      total++;
+      if (this.game.valueOf(cell) !== null) filled++;
+    }
+    return { filled, total };
   }
 
   /** The role of every highlighted cell: the selection, the hint region and Check marks. */
@@ -244,6 +270,7 @@ export class PuzzleSession {
       this.changed();
       return;
     }
+    const wasSolved = this.game.isSolved(this.violations());
     try {
       change(cell);
       this.inputMessage = null;
@@ -251,7 +278,10 @@ export class PuzzleSession {
       if (!(error instanceof EntryError)) throw error;
       this.inputMessage = error.message;
     }
-    if (this.game.isSolved(this.violations())) this.inputMessage = 'Solved!';
+    if (this.game.isSolved(this.violations())) {
+      this.inputMessage = 'Solved!';
+      if (!wasSolved) this.finishedCount++;
+    }
     this.changed();
   }
 
@@ -362,6 +392,8 @@ export class PuzzleSession {
             : ' Turn on Allow guessing and use Solve to continue.'),
       };
     }
+    // solveStep returns early on a solved puzzle, so this step finished it
+    if (this.game.isSolved(this.violations())) this.finishedCount++;
     this.changed();
   }
 
