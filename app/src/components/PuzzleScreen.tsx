@@ -6,11 +6,14 @@ import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } fro
 import type { PuzzleSession } from '../logic/session';
 import { COLORS } from '../theme';
 import { useSession } from '../useSession';
+import { useSettings } from '../settings';
 import { Board } from './Board';
+import { Confetti } from './Confetti';
 import { ConstraintTree } from './ConstraintTree';
 import { Button, NumberPad, Toolbar } from './Controls';
 import { InfoPanel } from './InfoPanel';
 import { NoticeDialog } from './NoticeDialog';
+import { ProgressBar } from './ProgressBar';
 
 /** Typing on a hardware keyboard (web and desktop): values, notes, arrows, undo and redo. */
 function useKeyboard(session: PuzzleSession, active: boolean) {
@@ -54,6 +57,9 @@ export function PuzzleScreen({
       <Board session={session} />
     </View>
   );
+  const { settings } = useSettings();
+  const progress = <ProgressBar session={session} />;
+  const confetti = <Confetti burst={session.finishedCount} enabled={settings.celebrate} />;
   const controls = (
     <View style={styles.controls}>
       <Toolbar session={session} />
@@ -66,37 +72,44 @@ export function PuzzleScreen({
       <View style={styles.wide}>
         <View style={styles.main}>
           {controls}
+          {progress}
           {board}
         </View>
         <View style={styles.side}>
           <InfoPanel session={session} />
           <ConstraintTree session={session} />
         </View>
+        {confetti}
         <NoticeDialog session={session} />
       </View>
     );
   }
   return (
-    <ScrollView contentContainerStyle={styles.narrow}>
-      {board}
-      {controls}
-      <InfoPanel session={session} />
-      <Button
-        label={showParts ? 'Hide groups and rules' : 'Show groups and rules'}
-        onPress={() => setShowParts(!showParts)}
-      />
-      {showParts && (
-        <View style={styles.treeNarrow}>
-          <ConstraintTree session={session} />
-        </View>
-      )}
-      <Text style={styles.footer}>{session.title}</Text>
+    <View style={styles.fill}>
+      <ScrollView contentContainerStyle={styles.narrow}>
+        {progress}
+        {board}
+        {controls}
+        <InfoPanel session={session} />
+        <Button
+          label={showParts ? 'Hide groups and rules' : 'Show groups and rules'}
+          onPress={() => setShowParts(!showParts)}
+        />
+        {showParts && (
+          <View style={styles.treeNarrow}>
+            <ConstraintTree session={session} />
+          </View>
+        )}
+        <Text style={styles.footer}>{session.title}</Text>
+      </ScrollView>
+      {confetti}
       <NoticeDialog session={session} />
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   wide: { flex: 1, flexDirection: 'row', gap: 12, padding: 12 },
   main: { flex: 3, gap: 10 },
   side: { flex: 2, maxWidth: 420, gap: 10 },
