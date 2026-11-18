@@ -1,9 +1,11 @@
 // Hints revealed in levels: region, cell, value.
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { ExactCoverConstraint } from '../../src/constraints/exactcoverconstraint';
 import { parseSudokuLines } from '../../src/parsers/sudoku';
 import { CELL, HintSession, REGION, VALUE } from '../../src/solver/hints';
 import { Solver } from '../../src/solver/solver';
+import type { Cell } from '../../src/structure/cell';
 import type { Deduction } from '../../src/structure/deduction';
 import type { Puzzle } from '../../src/structure/puzzle';
 import { EASY, seeded } from '../helpers';
@@ -78,6 +80,37 @@ describe('HintSession', () => {
     expect(nakedSingles).toBeGreaterThan(0);
   });
 
+  it('shows the numbers that rule the value out of the rest of an exact cover group', () => {
+    const sharesGroup = (a: Cell, b: Cell): boolean =>
+      a.constraintGroups.some((g) => b.constraintGroups.includes(g));
+    let exactCover = 0;
+    for (const hint of solver.deducibleValues()) {
+      session.deduction = hint;
+      session.level = VALUE;
+      const reasons = session.reasonCells();
+      if (!(hint.cause instanceof ExactCoverConstraint)) {
+        expect(reasons.size).toBe(0);
+        continue;
+      }
+      exactCover++;
+      const group = hint.cause.group;
+      const others = group.getCells().filter((c) => c !== hint.cell && !c.hasValue());
+      expect(reasons.size).toBeGreaterThan(0);
+      expect(reasons.size).toBeLessThanOrEqual(others.length);
+      for (const reason of reasons) {
+        expect(reason.getValue()).toBe(hint.value);
+        expect(group.getCells()).not.toContain(reason);
+      }
+      // every other open cell lost the value to a placed number, and one of those is shown
+      for (const other of others) {
+        expect([...reasons].some((r) => sharesGroup(r, other))).toBe(true);
+      }
+      // the same numbers every time
+      expect(session.reasonCells()).toEqual(reasons);
+    }
+    expect(exactCover).toBeGreaterThan(0);
+  });
+
   it('forgets the hint when reset', () => {
     session.advance(solver);
     session.reset();
@@ -85,6 +118,7 @@ describe('HintSession', () => {
     expect(session.level).toBe(0);
     expect(session.message()).toBe('');
     expect(session.regionCells()).toEqual(new Set());
+    expect(session.reasonCells()).toEqual(new Set());
   });
 
   it('returns null when nothing can be deduced', () => {

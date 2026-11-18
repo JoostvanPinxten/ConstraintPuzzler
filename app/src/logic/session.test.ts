@@ -1,6 +1,13 @@
 // Playing a puzzle through a PuzzleSession: the behaviour of the desktop window layers
 // (as the former PySide6 GUI smoke tests checked them), without rendering.
-import { CELL, PUZZLE_TYPES, REGION, VALUE, type Cell } from '@constraintpuzzler/core';
+import {
+  CELL,
+  ExactCoverConstraint,
+  PUZZLE_TYPES,
+  REGION,
+  VALUE,
+  type Cell,
+} from '@constraintpuzzler/core';
 
 import { openExample, openText } from '../puzzles/open';
 import { HighlightRole } from './highlight';
@@ -232,6 +239,31 @@ describe('hints', () => {
     expect(session.hints.level).toBe(VALUE);
     expect(session.stepMessage).toBe(`Hint: ${deduction.describe()}`);
     expect(deduction.cell.hasValue()).toBe(false); // nothing is filled in
+  });
+
+  it('shows the numbers that lead to an exact cover value with the value', () => {
+    const session = EASY();
+    const deduction = session.solver
+      .deducibleValues()
+      .find((d) => d.cause instanceof ExactCoverConstraint)!;
+    // reveal this deduction: the cell first, then the value
+    session.hint();
+    session.hints.deduction = deduction;
+    session.hints.level = CELL;
+    expect(session.hintReasons.size).toBe(0);
+    session.hint();
+    expect(session.hints.level).toBe(VALUE);
+    expect(session.hintReasons.size).toBeGreaterThan(0);
+    const roles = session.highlight();
+    for (const reason of session.hintReasons) {
+      expect(reason.getValue()).toBe(deduction.value);
+      expect(roles.get(reason)).toBe(HighlightRole.REASON);
+    }
+    expect(session.hintRegion).toEqual(new Set(deduction.cause!.group.getCells()));
+    expect(roles.get(deduction.cell)).toBe(HighlightRole.SELECTED);
+
+    session.typeDigit(deduction.value!);
+    expect(session.hintReasons.size).toBe(0);
   });
 
   it('forgets the hint when a value is entered', () => {

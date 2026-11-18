@@ -18,6 +18,7 @@ import {
   CELL,
   SolveCancelled,
   Solver,
+  VALUE,
   type Cell,
   type Puzzle,
   type PuzzleType,
@@ -63,6 +64,8 @@ export class PuzzleSession {
   notesMode = false;
   /** where a hint says to look */
   hintRegion = new Set<Cell>();
+  /** the placed numbers that lead to the hint's value (shown with the value) */
+  hintReasons = new Set<Cell>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -140,6 +143,7 @@ export class PuzzleSession {
   highlight(): Map<Cell, HighlightRole> {
     const roles = highlightRoles(this.puzzle, this.selection);
     mergeRole(roles, this.hintRegion, HighlightRole.HINT);
+    mergeRole(roles, this.hintReasons, HighlightRole.REASON);
     mergeRole(roles, this.checkMarks, HighlightRole.WRONG);
     return roles;
   }
@@ -194,6 +198,7 @@ export class PuzzleSession {
   private resetGuidance(): void {
     this.hints.reset();
     this.hintRegion = new Set();
+    this.hintReasons = new Set();
     this.checkMarks = new Set();
   }
 
@@ -353,8 +358,11 @@ export class PuzzleSession {
       // show the area without giving away the cell
       this.selection = null;
       this.hintRegion = this.hints.regionCells();
+      this.hintReasons = new Set();
     } else {
-      this.hintRegion = new Set();
+      // with the value, show the numbers that rule it out of the rest of the region
+      this.hintReasons = this.hints.level === VALUE ? this.hints.reasonCells() : new Set();
+      this.hintRegion = this.hintReasons.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: hint.cell };
     }
     this.inputMessage = null;

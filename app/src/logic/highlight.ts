@@ -23,10 +23,12 @@ export const HighlightRole = {
   LESSER: 5,
   /** the larger cell of a greater-than constraint */
   GREATER: 6,
+  /** a placed number that leads to the hint's value (rules it out of the other cells) */
+  REASON: 7,
   /** a value or notes that Check found to be wrong */
-  WRONG: 7,
+  WRONG: 8,
   /** the selected cell itself */
-  SELECTED: 8,
+  SELECTED: 9,
 } as const;
 export type HighlightRole = (typeof HighlightRole)[keyof typeof HighlightRole];
 
@@ -39,6 +41,7 @@ const ROLE_RGBA: Record<HighlightRole, [number, number, number, number]> = {
   [HighlightRole.SOLVED]: [90, 200, 90, 110],
   [HighlightRole.LESSER]: [70, 140, 255, 130],
   [HighlightRole.GREATER]: [255, 130, 30, 140],
+  [HighlightRole.REASON]: [0, 170, 190, 120],
   [HighlightRole.WRONG]: [230, 40, 40, 120],
   [HighlightRole.SELECTED]: [255, 190, 0, 190],
 };
@@ -50,6 +53,7 @@ export const ROLE_LABELS: Partial<Record<HighlightRole, string>> = {
   [HighlightRole.SOLVED]: 'solved cell',
   [HighlightRole.LESSER]: 'smaller cell',
   [HighlightRole.GREATER]: 'larger cell',
+  [HighlightRole.REASON]: 'rules the value out of the other cells',
   [HighlightRole.WRONG]: 'wrong according to Check',
   [HighlightRole.SELECTED]: 'selected cell',
 };
