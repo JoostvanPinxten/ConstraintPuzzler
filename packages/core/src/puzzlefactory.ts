@@ -83,14 +83,15 @@ export function createFutoshikiPuzzle(size: number): Puzzle {
   for (let y = 1; y <= size; y++) {
     for (let x = 1; x <= size; x++) grid.addCell(new Position(x, y));
   }
-  for (let x = 0; x < size; x++) {
-    const row = puzzle.addConstraintGroup(`Row ${x}`);
+  for (let i = 0; i < size; i++) {
+    const row = puzzle.addConstraintGroup(`Row ${i + 1}`);
     row.addConstraint(ExactCoverConstraint);
-    const column = puzzle.addConstraintGroup(`Column ${x}`);
+    const column = puzzle.addConstraintGroup(`Column ${i + 1}`);
     column.addConstraint(ExactCoverConstraint);
-    for (let y = 0; y < size; y++) {
-      row.addCell(grid.getCellFromSquareGrid(x, y));
-      column.addCell(grid.getCellFromSquareGrid(y, x));
+    for (let j = 0; j < size; j++) {
+      // getCellFromSquareGrid takes (x, y): x is the column, y the row
+      row.addCell(grid.getCellFromSquareGrid(j, i));
+      column.addCell(grid.getCellFromSquareGrid(i, j));
     }
   }
   return puzzle;
