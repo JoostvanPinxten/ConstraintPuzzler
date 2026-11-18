@@ -90,9 +90,11 @@ describe('HintSession', () => {
       const reasons = session.reasonCells();
       const ruledOut = session.ruledOutCells();
       if (!(hint.cause instanceof ExactCoverConstraint)) {
-        expect(reasons.size).toBe(0);
         expect(ruledOut.size).toBe(0);
-        expect(session.reasonGroups().size).toBe(0);
+        if (hint.cause !== null) {
+          expect(reasons.size).toBe(0);
+          expect(session.reasonGroups().size).toBe(0);
+        }
         continue;
       }
       exactCover++;
@@ -131,6 +133,28 @@ describe('HintSession', () => {
       expect(session.reasonCells()).toEqual(reasons);
     }
     expect(exactCover).toBeGreaterThan(0);
+  });
+
+  it('shows every placed number around the only candidate left in a cell', () => {
+    // cell 5, 7 can only be 4: row 7, column 5 and block 8 hold every other value
+    const hint = solver.deducibleValues().find((d) => d.cell.getName() === '5, 7') as Deduction;
+    expect(hint.cause).toBeNull();
+    expect(hint.value).toBe(4);
+    session.deduction = hint;
+    session.level = VALUE;
+    const reasons = session.reasonCells();
+    const peers = new Set(hint.cell.constraintGroups.flatMap((g) => g.getCells()));
+    const placed = [...peers].filter((c) => c !== hint.cell && c.hasValue());
+    expect(reasons).toEqual(new Set(placed));
+    expect(new Set([...reasons].map((c) => c.getValue()))).toEqual(
+      new Set([1, 2, 3, 5, 6, 7, 8, 9]),
+    );
+    expect([...session.reasonGroups()].map((g) => g.getName()).sort()).toEqual([
+      'Block 8',
+      'Column 5',
+      'Row 7',
+    ]);
+    expect(session.ruledOutCells().size).toBe(0);
   });
 
   it('forgets the hint when reset', () => {

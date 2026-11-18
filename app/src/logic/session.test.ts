@@ -289,6 +289,33 @@ describe('hints', () => {
     expect(session.hintReasonGroups.size).toBe(0);
   });
 
+  it('shows the numbers around the only candidate left in a cell with the value', () => {
+    const session = EASY();
+    const deduction = session.solver.deducibleValues().find((d) => d.cell.getName() === '5, 7')!;
+    session.hint();
+    session.hints.deduction = deduction;
+    session.hints.level = CELL;
+    session.hint();
+    expect(session.hints.level).toBe(VALUE);
+    expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintRegion.size).toBe(0);
+    expect([...session.hintReasonGroups].map((g) => g.getName()).sort()).toEqual([
+      'Block 8',
+      'Column 5',
+      'Row 7',
+    ]);
+    const roles = session.highlight();
+    expect(session.hintReasons.size).toBe(10); // 4 in row 7, 3 in column 5, 3 more in block 8
+    for (const cell of session.hintReasons) expect(roles.get(cell)).toBe(HighlightRole.REASON);
+    for (const group of session.hintReasonGroups) {
+      for (const cell of group.getCells()) {
+        if (!cell.hasValue() && cell !== deduction.cell) {
+          expect(roles.get(cell)).toBe(HighlightRole.REASON_GROUP);
+        }
+      }
+    }
+  });
+
   it('forgets the hint when a value is entered', () => {
     const session = EASY();
     session.hint();

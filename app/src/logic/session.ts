@@ -377,12 +377,14 @@ export class PuzzleSession {
       this.hintRuledOut = new Set();
       this.hintReasonGroups = new Set();
     } else {
-      // with the value, show the numbers that rule it out of the rest of the region
+      // with the value, show the numbers that lead to it, and the groups they are in
       const value = this.hints.level === VALUE;
       this.hintRuledOut = value ? this.hints.ruledOutCells() : new Set();
       this.hintReasonGroups = value ? this.hints.reasonGroups() : new Set();
       this.hintReasons = value ? this.hints.reasonCells() : new Set();
-      this.hintRegion = this.hintReasons.size > 0 ? this.hints.regionCells() : new Set();
+      // for an exact cover hint, the group with its ruled-out cells; a naked single's groups
+      // are the reason groups themselves
+      this.hintRegion = this.hintRuledOut.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: hint.cell };
     }
     this.inputMessage = null;

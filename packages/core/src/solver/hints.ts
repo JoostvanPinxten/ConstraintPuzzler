@@ -63,21 +63,32 @@ export class HintSession {
   }
 
   /**
-   * The placed numbers that lead to the hint: for a value that fits only one cell of an exact
-   * cover group, the cells holding that value which rule it out of the group's other open
-   * cells (through a row, column, box, ... they share). As few as cover those cells, picked in
-   * a fixed order. Empty for other hints, and for open cells that lost the value another way.
+   * The placed numbers that lead to the hint:
+   * - for a value that fits only one cell of an exact cover group, the cells holding that
+   *   value which rule it out of the group's other open cells (through a row, column, box,
+   *   ... they share); as few as cover those cells, picked in a fixed order. Open cells that
+   *   lost the value another way get none.
+   * - for the only candidate left in a cell, every placed number in the cell's groups: each
+   *   rules its value out of the cell.
+   * Empty for other hints.
    */
   reasonCells(): Set<Cell> {
+    if (this.isNakedSingle()) return new Set(this.nakedSingleReasons().keys());
     return new Set(this.explanation().values());
   }
 
   /**
    * The groups through which the reasonCells rule the value out: per ruled-out cell, the
    * first group it shares with the number that rules it out (e.g. the column or box that
-   * overlaps the hint's row). In the order of the ruled-out cells.
+   * overlaps the hint's row). In the order of the ruled-out cells. For the only candidate
+   * left in a cell: the cell's groups that hold a placed number.
    */
   reasonGroups(): Set<ConstraintGroup> {
+    if (this.isNakedSingle()) {
+      const cell = (this.deduction as Deduction).cell;
+      const reasons = this.nakedSingleReasons();
+      return new Set(cell.constraintGroups.filter((g) => g.getCells().some((c) => reasons.has(c))));
+    }
     const groups = new Set<ConstraintGroup>();
     const hinted = this.deduction?.cause?.group;
     for (const [cell, reason] of this.explanation()) {
@@ -95,6 +106,27 @@ export class HintSession {
    */
   ruledOutCells(): Set<Cell> {
     return new Set(this.blockers().keys());
+  }
+
+  /** A value that is the only candidate left in its cell (no constraint decides it). */
+  private isNakedSingle(): boolean {
+    return this.deduction?.value != null && this.deduction.cause === null;
+  }
+
+  /**
+   * For a naked single: the placed cells in the cell's groups, in the order of the groups,
+   * each with the group it is found through first.
+   */
+  private nakedSingleReasons(): Map<Cell, ConstraintGroup> {
+    const result = new Map<Cell, ConstraintGroup>();
+    const deduction = this.deduction;
+    if (deduction === null) return result;
+    for (const group of deduction.cell.constraintGroups) {
+      for (const c of group.getCells()) {
+        if (c !== deduction.cell && c.hasValue() && !result.has(c)) result.set(c, group);
+      }
+    }
+    return result;
   }
 
   /**

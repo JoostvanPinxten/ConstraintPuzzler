@@ -25,7 +25,7 @@ export const HighlightRole = {
   LESSER: 6,
   /** the larger cell of a greater-than constraint */
   GREATER: 7,
-  /** a placed number that leads to the hint's value (rules it out of the other cells) */
+  /** a placed number that leads to the hint's value (rules a value out of a cell) */
   REASON: 8,
   /** a value or notes that Check found to be wrong */
   WRONG: 9,
@@ -56,7 +56,7 @@ export const ROLE_LABELS: Partial<Record<HighlightRole, string>> = {
   [HighlightRole.SOLVED]: 'solved cell',
   [HighlightRole.LESSER]: 'smaller cell',
   [HighlightRole.GREATER]: 'larger cell',
-  [HighlightRole.REASON]: 'rules the value out of the other cells',
+  [HighlightRole.REASON]: 'number that leads to the hint',
   [HighlightRole.WRONG]: 'wrong according to Check',
   [HighlightRole.SELECTED]: 'selected cell',
 };
@@ -67,7 +67,7 @@ export const RULED_OUT_LABEL = 'value ruled out by a highlighted number';
 export const RULED_OUT_COLOR = '#4a5560';
 
 /** The legend label and colour of the border around the groups behind a hint. */
-export const REASON_GROUP_LABEL = 'group that rules the value out';
+export const REASON_GROUP_LABEL = 'group through which a number rules a value out';
 export const REASON_GROUP_COLOR = '#00869a';
 
 /** The opaque colour (#rrggbb) a role shows on the white board. */
