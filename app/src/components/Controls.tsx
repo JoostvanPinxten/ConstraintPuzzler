@@ -47,7 +47,7 @@ export function Button({
   );
 }
 
-export function Toolbar({ session }: { session: PuzzleSession }) {
+export function Toolbar({ session, onHelp }: { session: PuzzleSession; onHelp: () => void }) {
   useSession(session);
   const { settings, update } = useSettings();
   const busy = session.solving !== null;
@@ -91,6 +91,7 @@ export function Toolbar({ session }: { session: PuzzleSession }) {
           value={settings.allowGuessing}
           onChange={(allowGuessing) => update({ allowGuessing })}
         />
+        <Button label="?" onPress={onHelp} accessibilityLabel="How to play" testID="help-open" />
       </View>
     </View>
   );
@@ -159,7 +160,13 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: COLORS.text, fontSize: 15 },
   buttonTextActive: { color: COLORS.accentText },
-  switches: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginLeft: 6 },
+  switches: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 6,
+  },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   toggleText: { color: COLORS.text, fontSize: 14 },
 });
