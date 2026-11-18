@@ -88,8 +88,10 @@ describe('HintSession', () => {
       session.deduction = hint;
       session.level = VALUE;
       const reasons = session.reasonCells();
+      const ruledOut = session.ruledOutCells();
       if (!(hint.cause instanceof ExactCoverConstraint)) {
         expect(reasons.size).toBe(0);
+        expect(ruledOut.size).toBe(0);
         continue;
       }
       exactCover++;
@@ -105,6 +107,9 @@ describe('HintSession', () => {
       for (const other of others) {
         expect([...reasons].some((r) => sharesGroup(r, other))).toBe(true);
       }
+      // ... and those are the cells marked as ruled out (never the hint's cell)
+      expect([...ruledOut]).toEqual(others);
+      expect(ruledOut.has(hint.cell)).toBe(false);
       // the same numbers every time
       expect(session.reasonCells()).toEqual(reasons);
     }
@@ -119,6 +124,7 @@ describe('HintSession', () => {
     expect(session.message()).toBe('');
     expect(session.regionCells()).toEqual(new Set());
     expect(session.reasonCells()).toEqual(new Set());
+    expect(session.ruledOutCells()).toEqual(new Set());
   });
 
   it('returns null when nothing can be deduced', () => {

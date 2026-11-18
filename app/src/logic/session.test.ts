@@ -251,6 +251,7 @@ describe('hints', () => {
     session.hints.deduction = deduction;
     session.hints.level = CELL;
     expect(session.hintReasons.size).toBe(0);
+    expect(session.hintRuledOut.size).toBe(0);
     session.hint();
     expect(session.hints.level).toBe(VALUE);
     expect(session.hintReasons.size).toBeGreaterThan(0);
@@ -261,9 +262,18 @@ describe('hints', () => {
     }
     expect(session.hintRegion).toEqual(new Set(deduction.cause!.group.getCells()));
     expect(roles.get(deduction.cell)).toBe(HighlightRole.SELECTED);
+    // the other open cells of the region are marked as ruled out
+    expect(session.hintRuledOut).toEqual(session.hints.ruledOutCells());
+    expect(session.hintRuledOut.size).toBeGreaterThan(0);
+    for (const cell of session.hintRuledOut) {
+      expect(session.hintRegion.has(cell)).toBe(true);
+      expect(cell.hasValue()).toBe(false);
+    }
+    expect(session.hintRuledOut.has(deduction.cell)).toBe(false);
 
     session.typeDigit(deduction.value!);
     expect(session.hintReasons.size).toBe(0);
+    expect(session.hintRuledOut.size).toBe(0);
   });
 
   it('forgets the hint when a value is entered', () => {

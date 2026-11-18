@@ -3,9 +3,9 @@
 import type { Cell, Value } from '@constraintpuzzler/core';
 import { memo, useMemo, useState } from 'react';
 import { Platform, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { G, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, { Defs, G, Line, Pattern, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
-import { HighlightRole, roleColor } from '../logic/highlight';
+import { HighlightRole, roleColor, RULED_OUT_COLOR } from '../logic/highlight';
 import { hintGrid, LAYOUTS, type BoardLayout, type CellShape, type Point } from '../logic/layout';
 import type { PuzzleSession } from '../logic/session';
 import { useSettings } from '../settings';
@@ -18,6 +18,9 @@ const FONT = Platform.select({
   android: 'sans-serif',
   default: undefined,
 });
+
+/** the id of the dashed hatching drawn over the cells a hint rules out */
+const RULED_OUT = 'ruled-out';
 
 const pointsAttribute = (points: readonly Point[]): string =>
   points.map((p) => `${p.x},${p.y}`).join(' ');
@@ -32,6 +35,8 @@ interface CellViewProps {
   readonly notes: string;
   readonly candidates: string;
   readonly fill: string;
+  /** hatched: a hint's number rules the value out of this cell */
+  readonly ruledOut: boolean;
   readonly onPress: (cell: Cell) => void;
 }
 
@@ -43,6 +48,7 @@ const CellView = memo(function CellView({
   notes,
   candidates,
   fill,
+  ruledOut,
   onPress,
 }: CellViewProps) {
   const noteSet = new Set(notes.split(',').filter(Boolean).map(Number));
@@ -58,6 +64,13 @@ const CellView = memo(function CellView({
         stroke="#000000"
         strokeWidth={shape.strokeWidth}
       />
+      {ruledOut && (
+        <Polygon
+          points={pointsAttribute(shape.outline)}
+          fill={`url(#${RULED_OUT})`}
+          testID={`ruled-out-${shape.cell.getName()}`}
+        />
+      )}
       {value !== null ? (
         <SvgText
           x={shape.valueCenter.x}
@@ -94,6 +107,31 @@ const CellView = memo(function CellView({
     </G>
   );
 });
+
+/** Dashed diagonal lines, spaced to the cell size, that fill the ruled-out cells. */
+function RuledOutPattern({ spacing }: { spacing: number }) {
+  return (
+    <Defs>
+      <Pattern
+        id={RULED_OUT}
+        patternUnits="userSpaceOnUse"
+        width={spacing}
+        height={spacing}
+        patternTransform="rotate(45)"
+      >
+        <Line
+          x1={spacing / 2}
+          y1={0}
+          x2={spacing / 2}
+          y2={spacing}
+          stroke={RULED_OUT_COLOR}
+          strokeWidth={spacing / 7}
+          strokeDasharray={`${spacing / 2} ${spacing / 2}`}
+        />
+      </Pattern>
+    </Defs>
+  );
+}
 
 function Decorations({ layout }: { layout: BoardLayout }) {
   return (
@@ -155,6 +193,8 @@ export function Board({ session }: { session: PuzzleSession }) {
   const roles = session.highlight();
   const onPress = useMemo(() => (cell: Cell) => session.selectCell(cell), [session]);
   const { bounds } = layout;
+  // about six lines across a cell
+  const hatchSpacing = (layout.cells[0]?.valueFontSize ?? 10) / 3.3;
 
   return (
     <View
@@ -168,6 +208,7 @@ export function Board({ session }: { session: PuzzleSession }) {
           height={size.height}
           viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
         >
+          <RuledOutPattern spacing={hatchSpacing} />
           {layout.cells.map((shape) => {
             const cell = shape.cell;
             const shown = game.valueOf(cell);
@@ -193,6 +234,7 @@ export function Board({ session }: { session: PuzzleSession }) {
                 notes={[...game.notesOf(cell)].sort((a, b) => a - b).join(',')}
                 candidates={candidates}
                 fill={roleColor(roles.get(cell) ?? HighlightRole.NONE)}
+                ruledOut={session.hintRuledOut.has(cell)}
                 onPress={onPress}
               />
             );

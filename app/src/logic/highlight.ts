@@ -58,6 +58,11 @@ export const ROLE_LABELS: Partial<Record<HighlightRole, string>> = {
   [HighlightRole.SELECTED]: 'selected cell',
 };
 
+/** The legend label of the hatched cells (see PuzzleSession.hintRuledOut). */
+export const RULED_OUT_LABEL = 'value ruled out by a highlighted number';
+/** The colour of the hatching. */
+export const RULED_OUT_COLOR = '#4a5560';
+
 /** The opaque colour (#rrggbb) a role shows on the white board. */
 export function roleColor(role: HighlightRole): string {
   const [r, g, b, a] = ROLE_RGBA[role];

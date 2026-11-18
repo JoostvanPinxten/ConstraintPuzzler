@@ -66,6 +66,8 @@ export class PuzzleSession {
   hintRegion = new Set<Cell>();
   /** the placed numbers that lead to the hint's value (shown with the value) */
   hintReasons = new Set<Cell>();
+  /** the cells of the hint's region those numbers rule the value out of (drawn hatched) */
+  hintRuledOut = new Set<Cell>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -199,6 +201,7 @@ export class PuzzleSession {
     this.hints.reset();
     this.hintRegion = new Set();
     this.hintReasons = new Set();
+    this.hintRuledOut = new Set();
     this.checkMarks = new Set();
   }
 
@@ -359,9 +362,11 @@ export class PuzzleSession {
       this.selection = null;
       this.hintRegion = this.hints.regionCells();
       this.hintReasons = new Set();
+      this.hintRuledOut = new Set();
     } else {
       // with the value, show the numbers that rule it out of the rest of the region
       this.hintReasons = this.hints.level === VALUE ? this.hints.reasonCells() : new Set();
+      this.hintRuledOut = this.hints.level === VALUE ? this.hints.ruledOutCells() : new Set();
       this.hintRegion = this.hintReasons.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: hint.cell };
     }

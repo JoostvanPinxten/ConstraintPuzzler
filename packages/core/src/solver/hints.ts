@@ -68,25 +68,7 @@ export class HintSession {
    * a fixed order. Empty for other hints, and for open cells that lost the value another way.
    */
   reasonCells(): Set<Cell> {
-    const deduction = this.deduction;
-    if (deduction?.value == null || !(deduction.cause instanceof ExactCoverConstraint)) {
-      return new Set();
-    }
-    const value = deduction.value;
-    const group = deduction.cause.group;
-    // per other open cell of the group: the placed cells with the value that rule it out
-    const blockersOf = new Map<Cell, Cell[]>();
-    for (const cell of group.getCells()) {
-      if (cell === deduction.cell || cell.hasValue()) continue;
-      const blockers: Cell[] = [];
-      for (const other of cell.constraintGroups) {
-        if (other === group) continue;
-        for (const c of other.getCells()) {
-          if (c.getValue() === value && !blockers.includes(c)) blockers.push(c);
-        }
-      }
-      if (blockers.length > 0) blockersOf.set(cell, blockers);
-    }
+    const blockersOf = this.blockers();
     // greedily take the number that rules the value out of most of the remaining cells
     const result = new Set<Cell>();
     while (blockersOf.size > 0) {
@@ -106,6 +88,40 @@ export class HintSession {
       }
     }
     return result;
+  }
+
+  /**
+   * The other open cells of the hint's exact cover group that a placed number (reasonCells)
+   * rules the value out of, in the group's order. Empty when reasonCells is.
+   */
+  ruledOutCells(): Set<Cell> {
+    return new Set(this.blockers().keys());
+  }
+
+  /**
+   * Per other open cell of the hint's exact cover group: the placed cells with the hint's
+   * value that rule it out (in a group they share). Cells without such a number are left out.
+   */
+  private blockers(): Map<Cell, Cell[]> {
+    const deduction = this.deduction;
+    const blockersOf = new Map<Cell, Cell[]>();
+    if (deduction?.value == null || !(deduction.cause instanceof ExactCoverConstraint)) {
+      return blockersOf;
+    }
+    const value = deduction.value;
+    const group = deduction.cause.group;
+    for (const cell of group.getCells()) {
+      if (cell === deduction.cell || cell.hasValue()) continue;
+      const blockers: Cell[] = [];
+      for (const other of cell.constraintGroups) {
+        if (other === group) continue;
+        for (const c of other.getCells()) {
+          if (c.getValue() === value && !blockers.includes(c)) blockers.push(c);
+        }
+      }
+      if (blockers.length > 0) blockersOf.set(cell, blockers);
+    }
+    return blockersOf;
   }
 
   /** What the hint says at its current level. */
