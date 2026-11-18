@@ -44,7 +44,7 @@ test('taps a cell and uses the number pad and notes', async ({ page }) => {
   await page.getByTestId('notes').click();
   await page.getByTestId('pad-4').click();
   await page.getByTestId('pad-7').click();
-  await expect(page.getByText(/^Notes mode/)).toBeVisible();
+  await expect(page.getByLabel('Notes mode on')).toBeVisible();
   await page.getByTestId('notes').click();
   await page.getByTestId('pad-7').click();
   await expect(page.getByText('Value: 7 (entered)')).toBeVisible();

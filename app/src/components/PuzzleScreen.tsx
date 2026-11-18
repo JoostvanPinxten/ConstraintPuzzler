@@ -11,6 +11,7 @@ import { Board } from './Board';
 import { Confetti } from './Confetti';
 import { ConstraintTree } from './ConstraintTree';
 import { Button, NumberPad, Toolbar } from './Controls';
+import { HelpDialog } from './HelpDialog';
 import { InfoPanel } from './InfoPanel';
 import { NoticeDialog } from './NoticeDialog';
 import { ProgressBar } from './ProgressBar';
@@ -47,10 +48,12 @@ export function PuzzleScreen({
   active?: boolean;
 }) {
   useSession(session);
-  useKeyboard(session, active);
+  const [showParts, setShowParts] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  useKeyboard(session, active && !showHelp);
   const { width } = useWindowDimensions();
   const wide = width >= 900;
-  const [showParts, setShowParts] = useState(false);
+  const help = <HelpDialog visible={showHelp} onClose={() => setShowHelp(false)} />;
 
   const board = (
     <View style={wide ? styles.boardWide : styles.boardNarrow}>
@@ -62,7 +65,7 @@ export function PuzzleScreen({
   const confetti = <Confetti burst={session.finishedCount} enabled={settings.celebrate} />;
   const controls = (
     <View style={styles.controls}>
-      <Toolbar session={session} />
+      <Toolbar session={session} onHelp={() => setShowHelp(true)} />
       <NumberPad session={session} />
     </View>
   );
@@ -81,6 +84,7 @@ export function PuzzleScreen({
         </View>
         {confetti}
         <NoticeDialog session={session} />
+        {help}
       </View>
     );
   }
@@ -104,6 +108,7 @@ export function PuzzleScreen({
       </ScrollView>
       {confetti}
       <NoticeDialog session={session} />
+      {help}
     </View>
   );
 }

@@ -1,4 +1,4 @@
-// Explains the selection: its description, how to type, a broken rule, messages, and the
+// Explains the selection: its description, a broken rule, messages, and the
 // legend of the highlight colours. (The label below the tree in the desktop app.)
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -34,13 +34,6 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
         </Text>
       )}
       {selection !== null && <Description session={session} showHints={settings.showHints} />}
-      {cell !== null && !cell.isGiven() && (
-        <Text style={styles.italic}>
-          {session.notesMode
-            ? 'Notes mode: type a number to note it, again to remove it (N ends notes mode).'
-            : 'Type a number to enter it; Delete clears the cell. Ctrl+number (or notes mode, N) notes a candidate.'}
-        </Text>
-      )}
       {note !== null && <Text style={styles.error}>{note}</Text>}
       {session.inputMessage !== null && <Text style={styles.error}>{session.inputMessage}</Text>}
       {session.stepMessage !== null && <Text style={styles.italic}>{session.stepMessage}</Text>}
