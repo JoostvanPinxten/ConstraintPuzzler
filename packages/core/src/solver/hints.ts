@@ -10,7 +10,7 @@ import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
-import { stateKey } from '../structure/types';
+import { stateKey, type Value } from '../structure/types';
 import type { Solver } from './solver';
 
 export const REGION = 1;
@@ -114,14 +114,47 @@ export class HintSession {
   }
 
   /**
-   * For a naked single: the placed cells in the cell's groups, in the order of the groups,
-   * each with the group it is found through first.
+   * For the only candidate left in a cell: which numbers each of the cell's groups rules out,
+   * e.g. "Row 7 has 5, 7, 6 and 8; Column 5 has 6, 9 and 3; Block 8 also has 1, 5 and 2."
+   * A number is named once, in the first group (see nakedSingleReasons); "also" marks a
+   * group whose other numbers were named before. Empty for other hints.
+   */
+  exclusions(): string {
+    if (!this.isNakedSingle()) return '';
+    const reasons = this.nakedSingleReasons();
+    const byGroup = new Map<ConstraintGroup, Value[]>();
+    for (const [cell, group] of reasons) {
+      const values = byGroup.get(group) ?? [];
+      values.push(cell.getValue() as Value);
+      byGroup.set(group, values);
+    }
+    // "also" when some of the group's numbers were named for an earlier group
+    const parts = [...byGroup].map(([group, values]) => {
+      const named = group.getCells().some((c) => reasons.has(c) && reasons.get(c) !== group);
+      return `${group.getName()}${named ? ' also' : ''} has ${listing(values)}`;
+    });
+    return parts.length > 0 ? `${parts.join('; ')}.` : '';
+  }
+
+  /**
+   * For a naked single: the placed cells in the cell's groups, each with the first group it
+   * is found in. The groups that overlap the cell's other groups least come first (a row and
+   * a column before the box that overlaps both), so each group adds what the others miss.
    */
   private nakedSingleReasons(): Map<Cell, ConstraintGroup> {
     const result = new Map<Cell, ConstraintGroup>();
     const deduction = this.deduction;
     if (deduction === null) return result;
-    for (const group of deduction.cell.constraintGroups) {
+    const groups = deduction.cell.constraintGroups;
+    const overlap = (group: ConstraintGroup): number =>
+      groups
+        .filter((g) => g !== group)
+        .reduce((n, g) => n + group.getCells().filter((c) => g.getCells().includes(c)).length, 0);
+    const ordered = groups
+      .map((group, index) => ({ group, index, overlap: overlap(group) }))
+      .sort((a, b) => a.overlap - b.overlap || a.index - b.index)
+      .map((entry) => entry.group);
+    for (const group of ordered) {
       for (const c of group.getCells()) {
         if (c !== deduction.cell && c.hasValue() && !result.has(c)) result.set(c, group);
       }
@@ -203,6 +236,13 @@ export class HintSession {
       );
     }
     if (this.level === CELL) return `Look at cell ${deduction.cell.getName()}.`;
-    return deduction.describe();
+    const exclusions = this.exclusions();
+    return exclusions === '' ? deduction.describe() : `${deduction.describe()} ${exclusions}`;
   }
+}
+
+/** "5, 7, 6 and 8": the values in the order given. */
+function listing(values: readonly Value[]): string {
+  if (values.length <= 1) return values.join('');
+  return `${values.slice(0, -1).join(', ')} and ${String(values.at(-1))}`;
 }

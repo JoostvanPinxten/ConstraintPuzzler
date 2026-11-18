@@ -237,7 +237,8 @@ describe('hints', () => {
 
     session.hint();
     expect(session.hints.level).toBe(VALUE);
-    expect(session.stepMessage).toBe(`Hint: ${deduction.describe()}`);
+    expect(session.stepMessage).toBe(`Hint: ${session.hints.message()}`);
+    expect(session.stepMessage).toContain(deduction.describe());
     expect(deduction.cell.hasValue()).toBe(false); // nothing is filled in
   });
 
@@ -306,6 +307,9 @@ describe('hints', () => {
     ]);
     const roles = session.highlight();
     expect(session.hintReasons.size).toBe(10); // 4 in row 7, 3 in column 5, 3 more in block 8
+    expect(session.stepMessage).toContain(
+      'Row 7 has 5, 7, 6 and 8; Column 5 has 6, 9 and 3; Block 8 also has 1, 5 and 2.',
+    );
     for (const cell of session.hintReasons) expect(roles.get(cell)).toBe(HighlightRole.REASON);
     for (const group of session.hintReasonGroups) {
       for (const cell of group.getCells()) {

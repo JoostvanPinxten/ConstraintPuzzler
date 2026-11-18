@@ -33,7 +33,7 @@ describe('HintSession', () => {
     expect(session.message().replace(name, '')).not.toContain(String(first.value));
     expect(session.advance(solver)).toBe(first);
     expect(session.level).toBe(VALUE);
-    expect(session.message()).toBe(first.describe());
+    expect(session.message()).toBe(`${first.describe()} ${session.exclusions()}`.trim());
     // it stays at the value
     expect(session.advance(solver)).toBe(first);
     expect(session.level).toBe(VALUE);
@@ -129,6 +129,7 @@ describe('HintSession', () => {
           ),
         ).toBe(true);
       }
+      expect(session.exclusions()).toBe('');
       // the same numbers every time
       expect(session.reasonCells()).toEqual(reasons);
     }
@@ -155,6 +156,10 @@ describe('HintSession', () => {
       'Row 7',
     ]);
     expect(session.ruledOutCells().size).toBe(0);
+    expect(session.message()).toBe(
+      'cell 5, 7 is 4: 4 is the only candidate left in this cell.' +
+        ' Row 7 has 5, 7, 6 and 8; Column 5 has 6, 9 and 3; Block 8 also has 1, 5 and 2.',
+    );
   });
 
   it('forgets the hint when reset', () => {
