@@ -18,7 +18,9 @@ import {
   CELL,
   SolveCancelled,
   Solver,
+  VALUE,
   type Cell,
+  type ConstraintGroup,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -63,6 +65,12 @@ export class PuzzleSession {
   notesMode = false;
   /** where a hint says to look */
   hintRegion = new Set<Cell>();
+  /** the placed numbers that lead to the hint's value (shown with the value) */
+  hintReasons = new Set<Cell>();
+  /** the cells of the hint's region those numbers rule the value out of (drawn hatched) */
+  hintRuledOut = new Set<Cell>();
+  /** the groups through which those numbers rule the value out (drawn with a border) */
+  hintReasonGroups = new Set<ConstraintGroup>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -136,10 +144,19 @@ export class PuzzleSession {
     return { filled, total };
   }
 
-  /** The role of every highlighted cell: the selection, the hint region and Check marks. */
+  /**
+   * The role of every highlighted cell: the selection, the hint (its region, the numbers and
+   * groups that lead to it) and Check marks.
+   */
   highlight(): Map<Cell, HighlightRole> {
     const roles = highlightRoles(this.puzzle, this.selection);
+    mergeRole(
+      roles,
+      [...this.hintReasonGroups].flatMap((g) => g.getCells()),
+      HighlightRole.REASON_GROUP,
+    );
     mergeRole(roles, this.hintRegion, HighlightRole.HINT);
+    mergeRole(roles, this.hintReasons, HighlightRole.REASON);
     mergeRole(roles, this.checkMarks, HighlightRole.WRONG);
     return roles;
   }
@@ -194,6 +211,9 @@ export class PuzzleSession {
   private resetGuidance(): void {
     this.hints.reset();
     this.hintRegion = new Set();
+    this.hintReasons = new Set();
+    this.hintRuledOut = new Set();
+    this.hintReasonGroups = new Set();
     this.checkMarks = new Set();
   }
 
@@ -353,8 +373,18 @@ export class PuzzleSession {
       // show the area without giving away the cell
       this.selection = null;
       this.hintRegion = this.hints.regionCells();
+      this.hintReasons = new Set();
+      this.hintRuledOut = new Set();
+      this.hintReasonGroups = new Set();
     } else {
-      this.hintRegion = new Set();
+      // with the value, show the numbers that lead to it, and the groups they are in
+      const value = this.hints.level === VALUE;
+      this.hintRuledOut = value ? this.hints.ruledOutCells() : new Set();
+      this.hintReasonGroups = value ? this.hints.reasonGroups() : new Set();
+      this.hintReasons = value ? this.hints.reasonCells() : new Set();
+      // for an exact cover hint, the group with its ruled-out cells; a naked single's groups
+      // are the reason groups themselves
+      this.hintRegion = this.hintRuledOut.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: hint.cell };
     }
     this.inputMessage = null;

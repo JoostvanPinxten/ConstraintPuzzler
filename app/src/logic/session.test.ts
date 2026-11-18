@@ -1,6 +1,13 @@
 // Playing a puzzle through a PuzzleSession: the behaviour of the desktop window layers
 // (as the former PySide6 GUI smoke tests checked them), without rendering.
-import { CELL, PUZZLE_TYPES, REGION, VALUE, type Cell } from '@constraintpuzzler/core';
+import {
+  CELL,
+  ExactCoverConstraint,
+  PUZZLE_TYPES,
+  REGION,
+  VALUE,
+  type Cell,
+} from '@constraintpuzzler/core';
 
 import { openExample, openText } from '../puzzles/open';
 import { HighlightRole } from './highlight';
@@ -230,8 +237,87 @@ describe('hints', () => {
 
     session.hint();
     expect(session.hints.level).toBe(VALUE);
-    expect(session.stepMessage).toBe(`Hint: ${deduction.describe()}`);
+    expect(session.stepMessage).toBe(`Hint: ${session.hints.message()}`);
+    expect(session.stepMessage).toContain(deduction.describe());
     expect(deduction.cell.hasValue()).toBe(false); // nothing is filled in
+  });
+
+  it('shows the numbers that lead to an exact cover value with the value', () => {
+    const session = EASY();
+    const deduction = session.solver
+      .deducibleValues()
+      .find((d) => d.cause instanceof ExactCoverConstraint)!;
+    // reveal this deduction: the cell first, then the value
+    session.hint();
+    session.hints.deduction = deduction;
+    session.hints.level = CELL;
+    expect(session.hintReasons.size).toBe(0);
+    expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintReasonGroups.size).toBe(0);
+    session.hint();
+    expect(session.hints.level).toBe(VALUE);
+    expect(session.hintReasons.size).toBeGreaterThan(0);
+    const roles = session.highlight();
+    for (const reason of session.hintReasons) {
+      expect(reason.getValue()).toBe(deduction.value);
+      expect(roles.get(reason)).toBe(HighlightRole.REASON);
+    }
+    expect(session.hintRegion).toEqual(new Set(deduction.cause!.group.getCells()));
+    expect(roles.get(deduction.cell)).toBe(HighlightRole.SELECTED);
+    // the other open cells of the region are marked as ruled out
+    expect(session.hintRuledOut).toEqual(session.hints.ruledOutCells());
+    expect(session.hintRuledOut.size).toBeGreaterThan(0);
+    for (const cell of session.hintRuledOut) {
+      expect(session.hintRegion.has(cell)).toBe(true);
+      expect(cell.hasValue()).toBe(false);
+    }
+    expect(session.hintRuledOut.has(deduction.cell)).toBe(false);
+    expect(session.hintReasonGroups).toEqual(session.hints.reasonGroups());
+    expect(session.hintReasonGroups.size).toBeGreaterThan(0);
+    // their cells are filled, except where a stronger role (the region, a number) shows
+    for (const group of session.hintReasonGroups) {
+      for (const cell of group.getCells()) {
+        expect(roles.get(cell)).toBeGreaterThanOrEqual(HighlightRole.REASON_GROUP);
+        if (!session.hintRegion.has(cell) && !session.hintReasons.has(cell)) {
+          if (cell !== deduction.cell) expect(roles.get(cell)).toBe(HighlightRole.REASON_GROUP);
+        }
+      }
+    }
+
+    session.typeDigit(deduction.value!);
+    expect(session.hintReasons.size).toBe(0);
+    expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintReasonGroups.size).toBe(0);
+  });
+
+  it('shows the numbers around the only candidate left in a cell with the value', () => {
+    const session = EASY();
+    const deduction = session.solver.deducibleValues().find((d) => d.cell.getName() === '5, 7')!;
+    session.hint();
+    session.hints.deduction = deduction;
+    session.hints.level = CELL;
+    session.hint();
+    expect(session.hints.level).toBe(VALUE);
+    expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintRegion.size).toBe(0);
+    expect([...session.hintReasonGroups].map((g) => g.getName()).sort()).toEqual([
+      'Block 8',
+      'Column 5',
+      'Row 7',
+    ]);
+    const roles = session.highlight();
+    expect(session.hintReasons.size).toBe(10); // 4 in row 7, 3 in column 5, 3 more in block 8
+    expect(session.stepMessage).toContain(
+      'Row 7 has 5, 7, 6 and 8; Column 5 has 6, 9 and 3; Block 8 also has 1, 5 and 2.',
+    );
+    for (const cell of session.hintReasons) expect(roles.get(cell)).toBe(HighlightRole.REASON);
+    for (const group of session.hintReasonGroups) {
+      for (const cell of group.getCells()) {
+        if (!cell.hasValue() && cell !== deduction.cell) {
+          expect(roles.get(cell)).toBe(HighlightRole.REASON_GROUP);
+        }
+      }
+    }
   });
 
   it('forgets the hint when a value is entered', () => {

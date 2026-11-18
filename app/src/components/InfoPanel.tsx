@@ -2,7 +2,15 @@
 // legend of the highlight colours. (The label below the tree in the desktop app.)
 import { StyleSheet, Text, View } from 'react-native';
 
-import { legend } from '../logic/highlight';
+import {
+  HighlightRole,
+  legend,
+  REASON_GROUP_COLOR,
+  REASON_GROUP_LABEL,
+  roleColor,
+  RULED_OUT_COLOR,
+  RULED_OUT_LABEL,
+} from '../logic/highlight';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
 import { useSettings } from '../settings';
@@ -41,7 +49,7 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
           {session.solving === 'solve' ? 'Solving…' : 'Finding the solution…'}
         </Text>
       )}
-      {entries.length > 0 && (
+      {(entries.length > 0 || session.hintRuledOut.size > 0) && (
         <View style={styles.legend}>
           {entries.map(({ color, label }) => (
             <View key={label} style={styles.legendEntry}>
@@ -49,6 +57,18 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
               <Text style={styles.legendText}>{label}</Text>
             </View>
           ))}
+          {session.hintReasonGroups.size > 0 && (
+            <View style={styles.legendEntry}>
+              <View style={[styles.swatch, styles.reasonGroupSwatch]} />
+              <Text style={styles.legendText}>{REASON_GROUP_LABEL}</Text>
+            </View>
+          )}
+          {session.hintRuledOut.size > 0 && (
+            <View style={styles.legendEntry}>
+              <View style={[styles.swatch, styles.ruledOutSwatch]} />
+              <Text style={styles.legendText}>{RULED_OUT_LABEL}</Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -96,5 +116,15 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   swatch: { width: 12, height: 12, borderWidth: 1, borderColor: COLORS.border },
+  ruledOutSwatch: {
+    borderStyle: 'dashed',
+    borderColor: RULED_OUT_COLOR,
+    backgroundColor: '#ffffff',
+  },
+  reasonGroupSwatch: {
+    borderWidth: 2,
+    borderColor: REASON_GROUP_COLOR,
+    backgroundColor: roleColor(HighlightRole.REASON_GROUP),
+  },
   legendText: { color: COLORS.text, fontSize: 13 },
 });

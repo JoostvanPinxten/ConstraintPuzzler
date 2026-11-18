@@ -13,6 +13,7 @@ import {
   hintGrid,
   inequalitySign,
   LAYOUTS,
+  outlineEdges,
   type Point,
 } from './layout';
 
@@ -145,5 +146,40 @@ describe('sumbrero', () => {
       expect(used.has(wedge)).toBe(false);
       used.add(wedge);
     }
+  });
+});
+
+describe('group outlines', () => {
+  const puzzle = openExample('sudoku').puzzle;
+  const layout = LAYOUTS.sudoku(puzzle);
+  const outline = (name: string) => {
+    const group = puzzle.getConstraintGroups().find((g) => g.getName() === name)!;
+    const cells = new Set(group.getCells());
+    return outlineEdges(layout.cells.filter((s) => cells.has(s.cell)));
+  };
+
+  it('draw the border of a box', () => {
+    expect(outline('Block 5')).toHaveLength(12);
+  });
+
+  it('draw a column across the gaps between the blocks', () => {
+    // two long sides of 9 cell edges each, plus the top and the bottom
+    const edges = outline('Column 4');
+    expect(edges).toHaveLength(20);
+    const horizontal = edges.filter(([a, b]) => a.y === b.y);
+    expect(horizontal).toHaveLength(2);
+  });
+
+  it('draw a Futoshiki row across the room for the signs', () => {
+    const futoshiki = openExample('futoshiki').puzzle;
+    const shapes = LAYOUTS.futoshiki(futoshiki).cells;
+    const row = futoshiki.getConstraintGroups().find((g) => g.getName() === 'Row 1')!;
+    const cells = new Set(row.getCells());
+    const size = row.getCells().length;
+    expect(outlineEdges(shapes.filter((s) => cells.has(s.cell)))).toHaveLength(2 * size + 2);
+  });
+
+  it('draw every edge of a single cell', () => {
+    expect(outlineEdges([layout.cells[0]!])).toHaveLength(4);
   });
 });
