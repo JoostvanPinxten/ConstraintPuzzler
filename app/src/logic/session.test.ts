@@ -273,6 +273,15 @@ describe('hints', () => {
     expect(session.hintRuledOut.has(deduction.cell)).toBe(false);
     expect(session.hintReasonGroups).toEqual(session.hints.reasonGroups());
     expect(session.hintReasonGroups.size).toBeGreaterThan(0);
+    // their cells are filled, except where a stronger role (the region, a number) shows
+    for (const group of session.hintReasonGroups) {
+      for (const cell of group.getCells()) {
+        expect(roles.get(cell)).toBeGreaterThanOrEqual(HighlightRole.REASON_GROUP);
+        if (!session.hintRegion.has(cell) && !session.hintReasons.has(cell)) {
+          if (cell !== deduction.cell) expect(roles.get(cell)).toBe(HighlightRole.REASON_GROUP);
+        }
+      }
+    }
 
     session.typeDigit(deduction.value!);
     expect(session.hintReasons.size).toBe(0);

@@ -3,9 +3,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
+  HighlightRole,
   legend,
   REASON_GROUP_COLOR,
   REASON_GROUP_LABEL,
+  roleColor,
   RULED_OUT_COLOR,
   RULED_OUT_LABEL,
 } from '../logic/highlight';
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
   reasonGroupSwatch: {
     borderWidth: 2,
     borderColor: REASON_GROUP_COLOR,
-    backgroundColor: '#ffffff',
+    backgroundColor: roleColor(HighlightRole.REASON_GROUP),
   },
   legendText: { color: COLORS.text, fontSize: 13 },
 });

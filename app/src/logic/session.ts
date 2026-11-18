@@ -144,9 +144,17 @@ export class PuzzleSession {
     return { filled, total };
   }
 
-  /** The role of every highlighted cell: the selection, the hint region and Check marks. */
+  /**
+   * The role of every highlighted cell: the selection, the hint (its region, the numbers and
+   * groups that lead to it) and Check marks.
+   */
   highlight(): Map<Cell, HighlightRole> {
     const roles = highlightRoles(this.puzzle, this.selection);
+    mergeRole(
+      roles,
+      [...this.hintReasonGroups].flatMap((g) => g.getCells()),
+      HighlightRole.REASON_GROUP,
+    );
     mergeRole(roles, this.hintRegion, HighlightRole.HINT);
     mergeRole(roles, this.hintReasons, HighlightRole.REASON);
     mergeRole(roles, this.checkMarks, HighlightRole.WRONG);
