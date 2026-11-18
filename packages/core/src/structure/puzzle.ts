@@ -1,7 +1,7 @@
 import type { Constraint } from '../constraints/constraint';
 import { ConstraintGroup } from '../constraints/constraintgroup';
 import type { Cell } from './cell';
-import type { DeductionLog } from './deduction';
+import type { Cause, DeductionLog } from './deduction';
 import { Grid } from './grid';
 import { sortedValues, type CellState, type PuzzleState, type Value } from './types';
 
@@ -43,10 +43,10 @@ export class Puzzle {
     }
   }
 
-  /** Attribute the changes made by fn to a constraint (while recording). */
-  causedBy<T>(constraint: Constraint | null, fn: () => T): T {
+  /** Attribute the changes made by fn to a constraint or technique (while recording). */
+  causedBy<T>(cause: Cause | null, fn: () => T): T {
     const log = this.deductionLog;
-    return log === null ? fn() : log.cause(constraint, fn);
+    return log === null ? fn() : log.cause(cause, fn);
   }
 
   getGrid(): Grid {

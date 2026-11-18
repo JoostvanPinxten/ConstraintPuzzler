@@ -3,6 +3,8 @@ import { ValueSource, type Cell } from '../structure/cell';
 import { Deduction, DeductionLog } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
+import type { Technique, TechniqueClass } from '../techniques/technique';
+import { TECHNIQUES } from '../techniques/techniques';
 import { sortedValues, statesEqual, type PuzzleState } from '../structure/types';
 
 /** Solving was stopped (shouldStop returned true, or the AbortSignal fired); the puzzle is restored. */
@@ -59,7 +61,8 @@ async function runAsync<T>(steps: Steps<T>, options: AsyncSolveOptions = {}): Pr
  *
  * Every change is recorded as a Deduction in `log`, with the constraint that made it.
  * Propagation only re-applies the constraint groups of the cells that changed in the previous
- * pass.
+ * pass. When the constraints no longer change anything, the techniques that combine several
+ * groups (intersection removal, X-Wing, ...) are tried, the easiest first, one finding at a time.
  */
 export class Solver {
   /** picks the cell that solveStep() fills in; returns a number in [0, 1) */
@@ -68,17 +71,36 @@ export class Solver {
   log = new DeductionLog();
   /** the value filled in by the last solveStep(), if any */
   lastStep: Deduction | null = null;
+  /** the techniques tried when the constraints get stuck, easiest first */
+  readonly techniques: Technique[];
 
   constructor(
     readonly puzzle: Puzzle,
     /** when deduction gets stuck, try values (depth-first, with backtracking) */
     public allowGuessing = false,
-  ) {}
+    /** the techniques that combine several constraint groups ([] for constraints only) */
+    techniques: readonly TechniqueClass[] = TECHNIQUES,
+  ) {
+    this.techniques = [...techniques]
+      .sort((a, b) => a.difficulty - b.difficulty)
+      .map((technique) => new technique(puzzle));
+  }
 
   /** A single deduction pass over the given cells and constraint groups (default: all). */
   step(groups?: Iterable<ConstraintGroup>, cells?: Iterable<Cell>): void {
     for (const cell of cells ?? this.puzzle.getGrid().getCells()) cell.checkForSinglePossibility();
     for (const group of groups ?? this.puzzle.getConstraintGroups()) group.applyConstraints();
+  }
+
+  /**
+   * Apply the easiest technique that changes something (a single finding of it). Returns
+   * whether the puzzle changed.
+   */
+  applyTechnique(): boolean {
+    for (const technique of this.techniques) {
+      if (this.puzzle.causedBy(technique, () => technique.apply())) return true;
+    }
+    return false;
   }
 
   /**
@@ -172,7 +194,7 @@ export class Solver {
    * values that follow directly from the current state (lastStep tells which, and why), the
    * cell and value of `preferred` (e.g. the hint shown last) if it is one of them, else one of
    * the easiest. When no value follows directly, the candidates are narrowed down instead, so
-   * the next step can progress (see narrow()).
+   * the next step can progress (see narrow()); `log` then holds the removals.
    *
    * Returns whether the puzzle changed. Throws ContradictionError if a deduction pass detects
    * that the puzzle has no solution; the puzzle is then restored to the state it had before.
@@ -202,10 +224,15 @@ export class Solver {
    * Narrow down the candidates when no value follows directly from `state` (the current
    * state): keep what a deduction pass removes before it determines its first value. Every
    * kept removal follows from the state and the removals before it; the first value of the
-   * pass then follows directly, so the next step fills it in.
+   * pass then follows directly, so the next step fills it in. When the pass changes nothing,
+   * the easiest technique that applies removes candidates instead.
    */
   private narrow(state: PuzzleState): void {
     this.record(() => this.step());
+    if (this.log.length === 0) {
+      this.record(() => this.applyTechnique());
+      return;
+    }
     const first = this.log.deductions.findIndex((d) => d.setsValue());
     if (first < 0) return; // the pass only removed candidates: keep all of it
     const removals = this.log.deductions.slice(0, first);
@@ -231,7 +258,9 @@ export class Solver {
 
   /**
    * Repeat deduction passes until a pass no longer changes anything. The first pass applies
-   * every constraint; later passes only the constraint groups of the cells that changed.
+   * every constraint; later passes only the constraint groups of the cells that changed. When
+   * a pass changes nothing, a technique is tried (see applyTechnique); if it changes the
+   * puzzle, the passes continue with the groups of the cells it changed.
    */
   propagate(): void {
     runSync(this.propagateSteps());
@@ -246,8 +275,11 @@ export class Solver {
         yield;
         const start = this.log.length;
         this.step(groups, cells);
-        const changed = this.log.changedCells(start);
-        if (changed.size === 0) return;
+        let changed = this.log.changedCells(start);
+        if (changed.size === 0) {
+          if (!this.applyTechnique()) return;
+          changed = this.log.changedCells(start);
+        }
         const touched = new Set<ConstraintGroup>();
         for (const cell of changed) for (const g of cell.constraintGroups) touched.add(g);
         // keep the puzzle's order, so the passes are deterministic

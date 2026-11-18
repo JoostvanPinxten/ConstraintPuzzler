@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ExactCoverConstraint } from '../../src/constraints/exactcoverconstraint';
+import { Constraint } from '../../src/constraints/constraint';
 import { parseSudokuLines } from '../../src/parsers/sudoku';
 import { CELL, HintSession, REGION, VALUE } from '../../src/solver/hints';
 import { Solver } from '../../src/solver/solver';
@@ -58,7 +59,7 @@ describe('HintSession', () => {
     const hint = session.advance(solver) as Deduction;
     const region = session.regionCells();
     expect(region.has(hint.cell)).toBe(true);
-    if (hint.cause !== null) {
+    if (hint.cause instanceof Constraint) {
       expect(region).toEqual(new Set(hint.cause.group.getCells()));
     } else {
       expect(region).toEqual(new Set(hint.cell.constraintGroups.flatMap((g) => g.getCells())));
@@ -178,7 +179,10 @@ describe('HintSession', () => {
     // block 1 needs 1 at (3, 2): the 1 of row 3 and the 1 of column 1 rule out the others
     const hint = solver
       .deducibleValues()
-      .find((d) => d.cause?.group.getName() === 'Block 1' && d.value === 1) as Deduction;
+      .find(
+        (d) =>
+          d.cause instanceof Constraint && d.cause.group.getName() === 'Block 1' && d.value === 1,
+      ) as Deduction;
     session.deduction = hint;
     session.level = VALUE;
     expect(hint.cell.getName()).toBe('3, 2');

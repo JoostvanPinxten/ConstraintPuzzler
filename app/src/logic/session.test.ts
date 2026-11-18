@@ -262,7 +262,9 @@ describe('hints', () => {
       expect(reason.getValue()).toBe(deduction.value);
       expect(roles.get(reason)).toBe(HighlightRole.REASON);
     }
-    expect(session.hintRegion).toEqual(new Set(deduction.cause!.group.getCells()));
+    expect(session.hintRegion).toEqual(
+      new Set((deduction.cause as ExactCoverConstraint).group.getCells()),
+    );
     expect(roles.get(deduction.cell)).toBe(HighlightRole.SELECTED);
     // the other open cells of the region are marked as ruled out
     expect(session.hintRuledOut).toEqual(session.hints.ruledOutCells());
@@ -390,6 +392,20 @@ describe('solving in the background', () => {
     expect(session.puzzle.saveState()).toEqual(before);
     await solving;
     expect(session.puzzle.isSolved()).toBe(true);
+  });
+
+  it('explains a step that only removes candidates, e.g. an X-Wing', () => {
+    const session = openExample('sudoku', 'Hard');
+    const messages: string[] = [];
+    for (let i = 0; i < 200 && session.notice === null; i++) {
+      session.solveStep();
+      if (session.solver.lastStep === null && session.stepMessage !== null) {
+        messages.push(session.stepMessage);
+      }
+    }
+    expect(
+      messages.some((m) => /^Solver step: removed \d+ candidates?\. X-Wing on \d/.test(m)),
+    ).toBe(true);
   });
 
   it('gets stuck without guessing on the hard sudoku', async () => {

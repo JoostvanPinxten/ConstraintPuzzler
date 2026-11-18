@@ -71,7 +71,9 @@ Constraints get two chances to deduce something:
    group. Constraints that need to look at the whole group (sums, hidden singles, pairs) do
    their work here.
 
-`Solver.propagate()` repeats these passes until a pass changes nothing. If the puzzle is still
+`Solver.propagate()` repeats these passes until a pass changes nothing. It then tries the
+[techniques that combine groups](#techniques-that-combine-groups), and continues with the
+passes if one of them removed candidates. If the puzzle is still
 not solved and guessing is enabled (*Allow guessing*), the solver picks the open cell with the
 fewest possibilities, tries a value, and propagates again. A `ContradictionError` thrown by any
 constraint means the guess was wrong: the solver restores the saved state and tries the next
@@ -80,6 +82,35 @@ value.
 Because propagation and contradictions are all a constraint has to provide, a constraint does
 not need to be complete: deducing *some* values is enough, as long as it never removes a value
 that could still be correct.
+
+## Techniques that combine groups
+
+A constraint only sees its own group. Some deductions need several groups at once; they live in
+`packages/core/src/techniques/` as subclasses of `Technique`. They work on the groups that
+have an `ExactCoverConstraint`, so they apply to any puzzle built from such groups (Sudoku,
+Futoshiki), not only to Sudoku.
+
+| Technique | Difficulty | Rule |
+|---|---|---|
+| `IntersectionRemoval` | 3 | If group A can hold a value only in the cells it shares with group B, B cannot hold the value anywhere else (pointing pairs/triples, box-line reduction) |
+| `XWing` | 6 | If 2 parallel lines hold a value only in cells of the same 2 crossing lines, the rest of those crossing lines cannot hold it |
+| `Swordfish` | 7 | The same with 3 lines |
+| `Jellyfish` | 8 | The same with 4 lines |
+
+Two lines *cross* when they share exactly one cell (Sudoku rows and columns, but not a row and
+a block); the base lines of a fish must not overlap.
+
+The solver applies techniques only when the constraints no longer change anything, the easiest
+first and one finding at a time, and then goes back to the constraints. A technique only removes
+candidates. It is the cause of its removals in the deduction log and explains them, e.g.
+"X-Wing on 7: Row 2 and Row 6 can only hold 7 in cells of Column 4 and Column 8; ...". A
+single *Step* that finds no value uses a technique when the constraints cannot narrow down the
+candidates.
+
+`new Solver(puzzle, allowGuessing, [])` solves with the constraints only (the golden fixtures
+of the Python engine are checked that way). To add a technique, subclass `Technique` (set
+`static difficulty`, implement `getType()` and `apply()`, remove candidates with
+`removeWithReason`) and add it to `TECHNIQUES` in `techniques/techniques.ts`.
 
 ## Constraint types at a glance
 
