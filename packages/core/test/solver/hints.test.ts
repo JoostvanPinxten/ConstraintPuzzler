@@ -92,6 +92,7 @@ describe('HintSession', () => {
       if (!(hint.cause instanceof ExactCoverConstraint)) {
         expect(reasons.size).toBe(0);
         expect(ruledOut.size).toBe(0);
+        expect(session.reasonGroups().size).toBe(0);
         continue;
       }
       exactCover++;
@@ -110,6 +111,22 @@ describe('HintSession', () => {
       // ... and those are the cells marked as ruled out (never the hint's cell)
       expect([...ruledOut]).toEqual(others);
       expect(ruledOut.has(hint.cell)).toBe(false);
+      // the groups that connect them: each overlaps the hint's group, holds a shown number,
+      // and every ruled-out cell lies in one of them together with a shown number
+      const groups = [...session.reasonGroups()];
+      expect(groups.length).toBeGreaterThan(0);
+      for (const g of groups) {
+        expect(g).not.toBe(group);
+        expect(g.getCells().some((c) => reasons.has(c))).toBe(true);
+        expect(g.getCells().some((c) => group.getCells().includes(c))).toBe(true);
+      }
+      for (const cell of ruledOut) {
+        expect(
+          groups.some(
+            (g) => g.getCells().includes(cell) && g.getCells().some((c) => reasons.has(c)),
+          ),
+        ).toBe(true);
+      }
       // the same numbers every time
       expect(session.reasonCells()).toEqual(reasons);
     }
@@ -125,6 +142,22 @@ describe('HintSession', () => {
     expect(session.regionCells()).toEqual(new Set());
     expect(session.reasonCells()).toEqual(new Set());
     expect(session.ruledOutCells()).toEqual(new Set());
+    expect(session.reasonGroups()).toEqual(new Set());
+  });
+
+  it('names the column and box behind a hidden single in the first box', () => {
+    // block 1 needs 1 at (3, 2): the 1 of row 3 and the 1 of column 1 rule out the others
+    const hint = solver
+      .deducibleValues()
+      .find((d) => d.cause?.group.getName() === 'Block 1' && d.value === 1) as Deduction;
+    session.deduction = hint;
+    session.level = VALUE;
+    expect(hint.cell.getName()).toBe('3, 2');
+    expect([...session.reasonCells()].map((c) => c.getName()).sort()).toEqual(['1, 6', '9, 3']);
+    expect([...session.reasonGroups()].map((g) => g.getName()).sort()).toEqual([
+      'Column 1',
+      'Row 3',
+    ]);
   });
 
   it('returns null when nothing can be deduced', () => {

@@ -63,6 +63,10 @@ export const RULED_OUT_LABEL = 'value ruled out by a highlighted number';
 /** The colour of the hatching. */
 export const RULED_OUT_COLOR = '#4a5560';
 
+/** The legend label and colour of the border around the groups behind a hint. */
+export const REASON_GROUP_LABEL = 'group that rules the value out';
+export const REASON_GROUP_COLOR = '#00869a';
+
 /** The opaque colour (#rrggbb) a role shows on the white board. */
 export function roleColor(role: HighlightRole): string {
   const [r, g, b, a] = ROLE_RGBA[role];

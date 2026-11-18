@@ -252,6 +252,7 @@ describe('hints', () => {
     session.hints.level = CELL;
     expect(session.hintReasons.size).toBe(0);
     expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintReasonGroups.size).toBe(0);
     session.hint();
     expect(session.hints.level).toBe(VALUE);
     expect(session.hintReasons.size).toBeGreaterThan(0);
@@ -270,10 +271,13 @@ describe('hints', () => {
       expect(cell.hasValue()).toBe(false);
     }
     expect(session.hintRuledOut.has(deduction.cell)).toBe(false);
+    expect(session.hintReasonGroups).toEqual(session.hints.reasonGroups());
+    expect(session.hintReasonGroups.size).toBeGreaterThan(0);
 
     session.typeDigit(deduction.value!);
     expect(session.hintReasons.size).toBe(0);
     expect(session.hintRuledOut.size).toBe(0);
+    expect(session.hintReasonGroups.size).toBe(0);
   });
 
   it('forgets the hint when a value is entered', () => {

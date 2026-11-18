@@ -2,7 +2,13 @@
 // legend of the highlight colours. (The label below the tree in the desktop app.)
 import { StyleSheet, Text, View } from 'react-native';
 
-import { legend, RULED_OUT_COLOR, RULED_OUT_LABEL } from '../logic/highlight';
+import {
+  legend,
+  REASON_GROUP_COLOR,
+  REASON_GROUP_LABEL,
+  RULED_OUT_COLOR,
+  RULED_OUT_LABEL,
+} from '../logic/highlight';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
 import { useSettings } from '../settings';
@@ -49,6 +55,12 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
               <Text style={styles.legendText}>{label}</Text>
             </View>
           ))}
+          {session.hintReasonGroups.size > 0 && (
+            <View style={styles.legendEntry}>
+              <View style={[styles.swatch, styles.reasonGroupSwatch]} />
+              <Text style={styles.legendText}>{REASON_GROUP_LABEL}</Text>
+            </View>
+          )}
           {session.hintRuledOut.size > 0 && (
             <View style={styles.legendEntry}>
               <View style={[styles.swatch, styles.ruledOutSwatch]} />
@@ -105,6 +117,11 @@ const styles = StyleSheet.create({
   ruledOutSwatch: {
     borderStyle: 'dashed',
     borderColor: RULED_OUT_COLOR,
+    backgroundColor: '#ffffff',
+  },
+  reasonGroupSwatch: {
+    borderWidth: 2,
+    borderColor: REASON_GROUP_COLOR,
     backgroundColor: '#ffffff',
   },
   legendText: { color: COLORS.text, fontSize: 13 },

@@ -5,8 +5,15 @@ import { memo, useMemo, useState } from 'react';
 import { Platform, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, G, Line, Pattern, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
-import { HighlightRole, roleColor, RULED_OUT_COLOR } from '../logic/highlight';
-import { hintGrid, LAYOUTS, type BoardLayout, type CellShape, type Point } from '../logic/layout';
+import { HighlightRole, REASON_GROUP_COLOR, roleColor, RULED_OUT_COLOR } from '../logic/highlight';
+import {
+  hintGrid,
+  LAYOUTS,
+  outlineEdges,
+  type BoardLayout,
+  type CellShape,
+  type Point,
+} from '../logic/layout';
 import type { PuzzleSession } from '../logic/session';
 import { useSettings } from '../settings';
 import { useSession } from '../useSession';
@@ -181,6 +188,37 @@ function Decorations({ layout }: { layout: BoardLayout }) {
   );
 }
 
+/** A border around each group through which a hint's numbers rule the value out. */
+function ReasonGroups({ session, layout }: { session: PuzzleSession; layout: BoardLayout }) {
+  const groups = [...session.hintReasonGroups];
+  if (groups.length === 0) return null;
+  const width = (layout.cells[0]?.valueFontSize ?? 10) / 7;
+  return (
+    <>
+      {groups.map((group) => {
+        const cells = new Set(group.getCells());
+        const edges = outlineEdges(layout.cells.filter((s) => cells.has(s.cell)));
+        return (
+          <G key={group.getName()} testID={`reason-group-${group.getName()}`}>
+            {edges.map(([a, b], i) => (
+              <Line
+                key={i}
+                x1={a.x}
+                y1={a.y}
+                x2={b.x}
+                y2={b.y}
+                stroke={REASON_GROUP_COLOR}
+                strokeWidth={width}
+                strokeLinecap="square"
+              />
+            ))}
+          </G>
+        );
+      })}
+    </>
+  );
+}
+
 export function Board({ session }: { session: PuzzleSession }) {
   useSession(session);
   const { settings } = useSettings();
@@ -240,6 +278,7 @@ export function Board({ session }: { session: PuzzleSession }) {
             );
           })}
           <Decorations layout={layout} />
+          <ReasonGroups session={session} layout={layout} />
         </Svg>
       )}
     </View>

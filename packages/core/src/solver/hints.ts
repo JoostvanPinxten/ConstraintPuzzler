@@ -6,6 +6,7 @@
  * value), then the cell, then the value with its reason. After the puzzle changes, the next
  * hint is a new one.
  */
+import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
@@ -68,26 +69,24 @@ export class HintSession {
    * a fixed order. Empty for other hints, and for open cells that lost the value another way.
    */
   reasonCells(): Set<Cell> {
-    const blockersOf = this.blockers();
-    // greedily take the number that rules the value out of most of the remaining cells
-    const result = new Set<Cell>();
-    while (blockersOf.size > 0) {
-      const counts = new Map<Cell, number>();
-      for (const blockers of blockersOf.values()) {
-        for (const b of blockers) counts.set(b, (counts.get(b) ?? 0) + 1);
-      }
-      let best: Cell | null = null;
-      let bestCount = 0;
-      for (const [b, count] of counts) {
-        if (count > bestCount) [best, bestCount] = [b, count];
-      }
-      if (best === null) break;
-      result.add(best);
-      for (const [cell, blockers] of [...blockersOf]) {
-        if (blockers.includes(best)) blockersOf.delete(cell);
-      }
+    return new Set(this.explanation().values());
+  }
+
+  /**
+   * The groups through which the reasonCells rule the value out: per ruled-out cell, the
+   * first group it shares with the number that rules it out (e.g. the column or box that
+   * overlaps the hint's row). In the order of the ruled-out cells.
+   */
+  reasonGroups(): Set<ConstraintGroup> {
+    const groups = new Set<ConstraintGroup>();
+    const hinted = this.deduction?.cause?.group;
+    for (const [cell, reason] of this.explanation()) {
+      const group = cell.constraintGroups.find(
+        (g) => g !== hinted && g.getCells().includes(reason),
+      );
+      if (group !== undefined) groups.add(group);
     }
-    return result;
+    return groups;
   }
 
   /**
@@ -96,6 +95,39 @@ export class HintSession {
    */
   ruledOutCells(): Set<Cell> {
     return new Set(this.blockers().keys());
+  }
+
+  /**
+   * Per ruled-out cell: the reasonCell that rules the value out of it. The numbers are picked
+   * greedily, the one that rules the value out of most of the remaining cells first.
+   */
+  private explanation(): Map<Cell, Cell> {
+    const blockersOf = this.blockers();
+    const remaining = new Map(blockersOf);
+    const chosen: Cell[] = [];
+    while (remaining.size > 0) {
+      const counts = new Map<Cell, number>();
+      for (const blockers of remaining.values()) {
+        for (const b of blockers) counts.set(b, (counts.get(b) ?? 0) + 1);
+      }
+      let best: Cell | null = null;
+      let bestCount = 0;
+      for (const [b, count] of counts) {
+        if (count > bestCount) [best, bestCount] = [b, count];
+      }
+      if (best === null) break;
+      chosen.push(best);
+      for (const [cell, blockers] of [...remaining]) {
+        if (blockers.includes(best)) remaining.delete(cell);
+      }
+    }
+    // each ruled-out cell gets the first chosen number that rules it out
+    const result = new Map<Cell, Cell>();
+    for (const [cell, blockers] of blockersOf) {
+      const reason = chosen.find((c) => blockers.includes(c));
+      if (reason !== undefined) result.set(cell, reason);
+    }
+    return result;
   }
 
   /**

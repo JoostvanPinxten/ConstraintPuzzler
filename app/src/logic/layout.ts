@@ -429,3 +429,49 @@ export const LAYOUTS: Readonly<Record<PuzzleTypeName, (puzzle: Puzzle) => BoardL
   futoshiki: futoshikiLayout,
   sumbrero: sumbreroLayout,
 };
+
+// --- group outlines --------------------------------------------------------------------------
+
+function insideConvex(point: Point, polygon: readonly Point[]): boolean {
+  let sign = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i] as Point;
+    const b = polygon[(i + 1) % polygon.length] as Point;
+    const cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
+    if (cross === 0) continue;
+    if (sign === 0) sign = Math.sign(cross);
+    else if (Math.sign(cross) !== sign) return false;
+  }
+  return true;
+}
+
+/**
+ * The outer edges of a set of cells (e.g. a row, column or box), to draw the border of the
+ * group. An edge is inner when just beyond it (half its length out) lies another cell
+ * of the set, so the gaps between Sudoku blocks and Futoshiki cells do not break the border.
+ */
+export function outlineEdges(shapes: readonly CellShape[]): [Point, Point][] {
+  const edges: [Point, Point][] = [];
+  for (const shape of shapes) {
+    const outline = shape.outline;
+    const center = {
+      x: outline.reduce((s, p) => s + p.x, 0) / outline.length,
+      y: outline.reduce((s, p) => s + p.y, 0) / outline.length,
+    };
+    for (let i = 0; i < outline.length; i++) {
+      const a = outline[i] as Point;
+      const b = outline[(i + 1) % outline.length] as Point;
+      const length = Math.hypot(b.x - a.x, b.y - a.y);
+      if (length === 0) continue;
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      // the normal of the edge, pointing away from the cell's centre
+      let nx = -(b.y - a.y) / length;
+      let ny = (b.x - a.x) / length;
+      if (nx * (mid.x - center.x) + ny * (mid.y - center.y) < 0) [nx, ny] = [-nx, -ny];
+      const beyond = { x: mid.x + (nx * length) / 2, y: mid.y + (ny * length) / 2 };
+      const inner = shapes.some((other) => other !== shape && insideConvex(beyond, other.outline));
+      if (!inner) edges.push([a, b]);
+    }
+  }
+  return edges;
+}

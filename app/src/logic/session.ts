@@ -20,6 +20,7 @@ import {
   Solver,
   VALUE,
   type Cell,
+  type ConstraintGroup,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -68,6 +69,8 @@ export class PuzzleSession {
   hintReasons = new Set<Cell>();
   /** the cells of the hint's region those numbers rule the value out of (drawn hatched) */
   hintRuledOut = new Set<Cell>();
+  /** the groups through which those numbers rule the value out (drawn with a border) */
+  hintReasonGroups = new Set<ConstraintGroup>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -202,6 +205,7 @@ export class PuzzleSession {
     this.hintRegion = new Set();
     this.hintReasons = new Set();
     this.hintRuledOut = new Set();
+    this.hintReasonGroups = new Set();
     this.checkMarks = new Set();
   }
 
@@ -363,10 +367,13 @@ export class PuzzleSession {
       this.hintRegion = this.hints.regionCells();
       this.hintReasons = new Set();
       this.hintRuledOut = new Set();
+      this.hintReasonGroups = new Set();
     } else {
       // with the value, show the numbers that rule it out of the rest of the region
-      this.hintReasons = this.hints.level === VALUE ? this.hints.reasonCells() : new Set();
-      this.hintRuledOut = this.hints.level === VALUE ? this.hints.ruledOutCells() : new Set();
+      const value = this.hints.level === VALUE;
+      this.hintRuledOut = value ? this.hints.ruledOutCells() : new Set();
+      this.hintReasonGroups = value ? this.hints.reasonGroups() : new Set();
+      this.hintReasons = value ? this.hints.reasonCells() : new Set();
       this.hintRegion = this.hintReasons.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: hint.cell };
     }
