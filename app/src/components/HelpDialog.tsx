@@ -33,6 +33,7 @@ const SECTIONS: readonly { title: string; lines: readonly string[] }[] = [
     lines: [
       'Show hints: show the candidates that are left in open cells and in the descriptions.',
       'Allow guessing: let Step and Solve guess when nothing follows from the rules.',
+      'Colour symbols (nonograms with several colours): draw a shape for every colour too, so colours that look alike can be told apart.',
     ],
   },
 ];

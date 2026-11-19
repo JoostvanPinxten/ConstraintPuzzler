@@ -59,6 +59,22 @@ describe('App', () => {
     expect(screen.getByTestId('blank-1, 1')).toBeTruthy();
   });
 
+  it('draws colour symbols when they are switched on', async () => {
+    await openPuzzle('open-nonogram-Cherries');
+    await fireEvent.press(screen.getByTestId('cell-1, 1'));
+    await fireEvent.press(screen.getByLabelText('red (1)'));
+    expect(screen.queryByTestId('symbol-1, 1')).toBeNull();
+    expect(screen.queryAllByTestId(/^clue-symbol-/)).toHaveLength(0);
+    await fireEvent(screen.getByLabelText('Colour symbols'), 'valueChange', true);
+    expect(screen.getByTestId('symbol-1, 1')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^clue-symbol-/).length).toBeGreaterThan(0);
+  });
+
+  it('offers colour symbols only for nonograms with several colours', async () => {
+    await openPuzzle('open-nonogram-Cup');
+    expect(screen.queryByLabelText('Colour symbols')).toBeNull();
+  });
+
   it('shows a hint and closes the tab', async () => {
     await openPuzzle('open-sudoku-Easy');
     await fireEvent.press(screen.getByTestId('hint'));

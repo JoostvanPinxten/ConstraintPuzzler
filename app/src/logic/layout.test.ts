@@ -277,9 +277,9 @@ describe('nonogram', () => {
     expect(layout.palette).toEqual(
       new Map([
         [0, '#ffffff'],
-        [1, '#d62728'],
-        [2, '#2ca02c'],
-        [3, '#8c564b'],
+        [1, '#d55e00'],
+        [2, '#009e73'],
+        [3, '#4d2b0c'],
       ]),
     );
     expect(LAYOUTS.sudoku(openExample('sudoku').puzzle).palette).toBeUndefined();
@@ -307,6 +307,13 @@ describe('nonogram', () => {
     expect(clue.map((t) => t.text)).toEqual(['2', '3', '5']);
     const boxes = layout.decorations.filter((d) => d.kind === 'polygon');
     expect(boxes.length).toBe(texts('Cherries').length);
+  });
+
+  it('marks where the symbol of every clue block goes, in a coloured nonogram only', () => {
+    const coloured = LAYOUTS.nonogram(openExample('nonogram', 'Cherries').puzzle);
+    expect(coloured.clueSymbols?.length).toBe(texts('Cherries').length);
+    expect(new Set(coloured.clueSymbols?.map((m) => m.value))).toEqual(new Set([1, 2, 3]));
+    expect(LAYOUTS.nonogram(openExample('nonogram', 'Cup').puzzle).clueSymbols).toEqual([]);
   });
 
   it('draws thick lines every five cells', () => {

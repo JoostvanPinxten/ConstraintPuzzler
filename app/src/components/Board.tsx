@@ -1,6 +1,6 @@
 // The puzzle drawn with react-native-svg: the cells (value, or notes and candidates), their
 // highlight, and the decorations of the puzzle type. Tapping a cell selects it.
-import { BLANK, type Cell, type Value } from '@constraintpuzzler/core';
+import { BLANK, paletteOf, type Cell, type Value } from '@constraintpuzzler/core';
 import { memo, useMemo, useState } from 'react';
 import { Platform, View, type LayoutChangeEvent } from 'react-native';
 import Svg, {
@@ -16,10 +16,12 @@ import Svg, {
 } from 'react-native-svg';
 
 import { HighlightRole, REASON_GROUP_COLOR, roleColor, RULED_OUT_COLOR } from '../logic/highlight';
+import { colorSymbols, symbolPoints, type ColorSymbol } from '../logic/symbols';
 import {
   hintGrid,
   LAYOUTS,
   outlineEdges,
+  textColorOn,
   type BoardLayout,
   type CellShape,
   type Point,
@@ -56,6 +58,8 @@ interface CellViewProps {
   readonly ruledOut: boolean;
   /** the values are colours (a nonogram): value -> CSS colour */
   readonly palette: ReadonlyMap<Value, string> | undefined;
+  /** with colour symbols on: the shape of every colour (value -> shape) */
+  readonly symbols: ReadonlyMap<Value, ColorSymbol> | undefined;
   readonly onPress: (cell: Cell) => void;
 }
 
@@ -63,15 +67,42 @@ interface CellViewProps {
  * A value as a colour: a filled square (inset, so the highlight of the cell shows around it), or
  * a dot for BLANK; `color` marks how it got there (a mistake: a red cross over it).
  */
+/** The shape of a colour, filled in the colour that reads well on it (colour-blind help). */
+function SymbolMark({
+  symbol,
+  center,
+  size,
+  on,
+  testID,
+}: {
+  symbol: ColorSymbol | undefined;
+  center: Point;
+  size: number;
+  /** the colour it is drawn on */
+  on: string;
+  testID?: string;
+}) {
+  if (symbol === undefined) return null;
+  return (
+    <Polygon
+      points={pointsAttribute(symbolPoints(symbol, center, size))}
+      fill={textColorOn(on)}
+      testID={testID}
+    />
+  );
+}
+
 function ColorValue({
   shape,
   value,
   palette,
+  symbols,
   color,
 }: {
   shape: CellShape;
   value: Value;
   palette: ReadonlyMap<Value, string>;
+  symbols: ReadonlyMap<Value, ColorSymbol> | undefined;
   color: string;
 }) {
   const area = shape.hintArea;
@@ -91,6 +122,15 @@ function ColorValue({
           height={area.height - 2 * inset}
           fill={palette.get(value) ?? '#000000'}
           testID={`color-${shape.cell.getName()}`}
+        />
+      )}
+      {value !== BLANK && (
+        <SymbolMark
+          symbol={symbols?.get(value)}
+          center={shape.valueCenter}
+          size={Math.min(area.width, area.height) * 0.42}
+          on={palette.get(value) ?? '#000000'}
+          testID={`symbol-${shape.cell.getName()}`}
         />
       )}
       {mistake && (
@@ -116,6 +156,7 @@ const CellView = memo(function CellView({
   fill,
   ruledOut,
   palette,
+  symbols,
   onPress,
 }: CellViewProps) {
   const noteSet = new Set(notes.split(',').filter(Boolean).map(Number));
@@ -139,7 +180,13 @@ const CellView = memo(function CellView({
         />
       )}
       {value !== null && palette !== undefined ? (
-        <ColorValue shape={shape} value={value} palette={palette} color={valueColor} />
+        <ColorValue
+          shape={shape}
+          value={value}
+          palette={palette}
+          symbols={symbols}
+          color={valueColor}
+        />
       ) : value !== null ? (
         <SvgText
           x={shape.valueCenter.x}
@@ -171,16 +218,23 @@ const CellView = memo(function CellView({
                 strokeWidth={isNote ? half / 2.5 : half / 4}
               />
             ) : (
-              <Rect
-                key={v}
-                x={x - half}
-                y={y - half}
-                width={2 * half}
-                height={2 * half}
-                fill={palette.get(v) ?? '#000000'}
-                stroke={isNote ? COLORS.note : 'none'}
-                strokeWidth={half / 2.5}
-              />
+              <G key={v}>
+                <Rect
+                  x={x - half}
+                  y={y - half}
+                  width={2 * half}
+                  height={2 * half}
+                  fill={palette.get(v) ?? '#000000'}
+                  stroke={isNote ? COLORS.note : 'none'}
+                  strokeWidth={half / 2.5}
+                />
+                <SymbolMark
+                  symbol={symbols?.get(v)}
+                  center={{ x, y }}
+                  size={half * 1.3}
+                  on={palette.get(v) ?? '#000000'}
+                />
+              </G>
             );
           }
           return (
@@ -233,7 +287,7 @@ function cellFill(role: HighlightRole, background: string | undefined): string {
   return role === HighlightRole.NONE && background !== undefined ? background : roleColor(role);
 }
 
-function Decorations({ layout }: { layout: BoardLayout }) {
+function Decorations({ layout, symbols }: { layout: BoardLayout; symbols: boolean }) {
   return (
     <>
       {layout.decorations.map((d, i) => {
@@ -264,7 +318,7 @@ function Decorations({ layout }: { layout: BoardLayout }) {
             return (
               <SvgText
                 key={i}
-                x={d.at.x}
+                x={(symbols ? (d.atWithSymbol ?? d.at) : d.at).x}
                 y={d.at.y + d.fontSize * 0.35}
                 fontSize={d.fontSize}
                 fill={d.fill}
@@ -318,6 +372,11 @@ export function Board({ session }: { session: PuzzleSession }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const layout = useMemo(() => LAYOUTS[session.type.name](session.puzzle), [session]);
   const values = useMemo(() => session.puzzle.getValues(), [session]);
+  // the colour-blind friendly shapes, when they are switched on (and there are several colours)
+  const symbols = useMemo(
+    () => (settings.colorSymbols ? colorSymbols(paletteOf(session.puzzle)) : undefined),
+    [session, settings.colorSymbols],
+  );
 
   const { game } = session;
   const violations = session.violations();
@@ -367,11 +426,23 @@ export function Board({ session }: { session: PuzzleSession }) {
                 fill={cellFill(roles.get(cell) ?? HighlightRole.NONE, shape.background)}
                 ruledOut={session.hintRuledOut.has(cell)}
                 palette={layout.palette}
+                symbols={symbols}
                 onPress={onPress}
               />
             );
           })}
-          <Decorations layout={layout} />
+          <Decorations layout={layout} symbols={symbols !== undefined} />
+          {symbols !== undefined &&
+            layout.clueSymbols?.map((mark, i) => (
+              <SymbolMark
+                key={i}
+                symbol={symbols.get(mark.value)}
+                center={mark.center}
+                size={mark.size}
+                on={layout.palette?.get(mark.value) ?? '#000000'}
+                testID={`clue-symbol-${i}`}
+              />
+            ))}
           <ReasonGroups session={session} layout={layout} />
         </Svg>
       )}

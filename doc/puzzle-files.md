@@ -285,9 +285,9 @@ The file has up to three sections, each started by a line with its name:
 ```
 # Two cherries (comments start with #)
 colors
-r red #d62728
-g green #2ca02c
-n brown #8c564b
+r red #d55e00
+g green #009e73
+n brown #4d2b0c
 rows
 2n 3g
 ...
@@ -299,6 +299,11 @@ columns
 - `colors` (optional): one colour per line, `code name #rrggbb`: a one-letter code for the clues,
   a name for the explanations, and how the colour is drawn. Without this section the puzzle is
   black and white.
+  Pick colours that colour-blind players can tell apart, e.g. from the Okabe-Ito palette
+  (`#e69f00`, `#56b4e9`, `#009e73`, `#f0e442`, `#0072b2`, `#d55e00`, `#cc79a7`), and avoid pairs
+  like red and green that differ only in hue. The app's *Colour symbols* switch also draws a
+  shape for every colour (in the order listed: circle, triangle, square, diamond, plus, star,
+  hexagon, upside-down triangle).
 - `rows`: the clue of every row, from top to bottom; the number of lines is the height.
 - `columns`: the clue of every column, from left to right; the number of lines is the width.
 

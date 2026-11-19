@@ -76,6 +76,8 @@ export type Decoration =
       readonly fontSize: number;
       readonly fill: string;
       readonly bold?: boolean;
+      /** where the text goes instead while colour symbols are drawn (next to the symbol) */
+      readonly atWithSymbol?: Point;
     };
 
 export interface BoardLayout {
@@ -89,6 +91,18 @@ export interface BoardLayout {
    * filled square, BLANK as a dot, instead of as a number
    */
   readonly palette?: ReadonlyMap<Value, string>;
+  /**
+   * where the colour-blind friendly symbols of the clues go (see symbols.ts): one per block of a
+   * clue, drawn only when the "Colour symbols" setting is on
+   */
+  readonly clueSymbols?: readonly ClueSymbol[];
+}
+
+/** The symbol of a clue block's colour: its centre and size (in the corner of the clue box). */
+export interface ClueSymbol {
+  readonly value: Value;
+  readonly center: Point;
+  readonly size: number;
 }
 
 const BLACK = '#000000';
@@ -606,10 +620,11 @@ export function textColorOn(hex: string): string {
  */
 export function nonogramLayout(puzzle: Puzzle): BoardLayout {
   const cellSize = 45;
-  const slot = cellSize * 0.72; // the room for one block of a clue
   const palette = paletteOf(puzzle) ?? [];
   const hexOf = new Map(palette.map((c) => [c.value, c.hex]));
   const coloured = palette.filter((c) => c.value !== BLANK).length > 1;
+  // the room for one block of a clue (wider with several colours: a symbol fits next to the number)
+  const slot = cellSize * (coloured ? 0.92 : 0.72);
   const cells = puzzle
     .getGrid()
     .getPositionedCells()
@@ -625,6 +640,7 @@ export function nonogramLayout(puzzle: Puzzle): BoardLayout {
   const height = Math.max(0, ...cells.map((c) => (c.outline[2] as Point).y));
 
   const decorations: Decoration[] = [];
+  const clueSymbols: ClueSymbol[] = [];
   const clue = (runs: readonly Run[], at: (i: number) => Point): void => {
     // an empty line shows a 0, like a printed nonogram
     if (runs.length === 0) {
@@ -637,6 +653,11 @@ export function nonogramLayout(puzzle: Puzzle): BoardLayout {
       if (coloured) {
         const box = slot * 0.88;
         const { x, y } = { x: center.x - box / 2, y: center.y - box / 2 };
+        clueSymbols.push({
+          value: run.color,
+          center: { x: x + box * 0.27, y: center.y },
+          size: box * 0.36,
+        });
         decorations.push({
           kind: 'polygon',
           points: [
@@ -654,9 +675,10 @@ export function nonogramLayout(puzzle: Puzzle): BoardLayout {
         kind: 'text',
         at: center,
         text: String(run.length),
-        fontSize: slot * 0.6,
+        fontSize: coloured ? slot * 0.5 : slot * 0.6,
         fill: coloured ? textColorOn(hex) : BLACK,
         bold: true,
+        ...(coloured ? { atWithSymbol: { x: center.x + slot * 0.17, y: center.y } } : {}),
       });
     });
   };
@@ -713,7 +735,7 @@ export function nonogramLayout(puzzle: Puzzle): BoardLayout {
     decorations.push({ kind: 'polyline', points: [from, to], stroke: BLACK, strokeWidth: 2.5 });
   }
   const layout = finish(cells, decorations, slot * 0.6);
-  return { ...layout, palette: hexOf };
+  return { ...layout, palette: hexOf, clueSymbols };
 }
 
 export const LAYOUTS: Readonly<Record<PuzzleTypeName, (puzzle: Puzzle) => BoardLayout>> = {

@@ -37,7 +37,7 @@ To follow the solver instead of letting it finish the puzzle:
 - **Step** fills in one such cell (the hinted one, if a hint is showing) and explains the deduction, for example "these three cells can only hold 1, 2 and 3 between them, so no other cell in the row can".
 - **Check** compares your values and notes with the solution and offers to mark the wrong cells.
 
-The solver's candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Turn on *Show hints* to show them in the cells and in the explanations. The settings are remembered.
+The solver's candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Turn on *Show hints* to show them in the cells and in the explanations. In a nonogram with several colours, *Colour symbols* draws a shape for every colour too (on the cells, the clues and the colour buttons), for players who cannot tell some colours apart. The settings are remembered.
 
 Selecting a cell, constraint group or rule in the list of groups and rules highlights the corresponding cells, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the info panel explains the selection. Every change is undoable, including a Solve: *Undo* and *Redo* (Ctrl+Z / Ctrl+Y on a keyboard).
 

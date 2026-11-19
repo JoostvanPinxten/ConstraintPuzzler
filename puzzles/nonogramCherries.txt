@@ -1,8 +1,9 @@
 # Two cherries (10 x 10, three colours).
+# Colours from the Okabe-Ito palette, so they stay apart for colour-blind players.
 colors
-r red #d62728
-g green #2ca02c
-n brown #8c564b
+r red #d55e00
+g green #009e73
+n brown #4d2b0c
 rows
 2n 3g
 2n 2g

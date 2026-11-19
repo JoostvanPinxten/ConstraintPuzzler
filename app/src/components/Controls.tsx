@@ -1,6 +1,10 @@
 // Buttons and switches: the toolbar of a puzzle and the number pad.
 import { paletteOf } from '@constraintpuzzler/core';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import Svg, { Polygon } from 'react-native-svg';
+
+import { textColorOn } from '../logic/layout';
+import { colorSymbols, hasSeveralColors, symbolPoints, type ColorSymbol } from '../logic/symbols';
 
 import type { PuzzleSession } from '../logic/session';
 import { useSettings } from '../settings';
@@ -18,6 +22,32 @@ interface ButtonProps {
   readonly accessibilityLabel?: string;
   /** a colour shown in the button, next to the label (the colours of a nonogram) */
   readonly swatch?: string;
+  /** the colour-blind friendly shape drawn on the swatch */
+  readonly swatchSymbol?: ColorSymbol;
+}
+
+const SWATCH = 18;
+
+/** A colour square, with the shape of the colour on it when colour symbols are on. */
+function Swatch({ color, symbol }: { color: string; symbol: ColorSymbol | undefined }) {
+  return (
+    <View style={[styles.swatch, { backgroundColor: color }]}>
+      {symbol !== undefined && (
+        <Svg width={SWATCH - 2} height={SWATCH - 2} viewBox={`0 0 ${SWATCH - 2} ${SWATCH - 2}`}>
+          <Polygon
+            points={symbolPoints(
+              symbol,
+              { x: (SWATCH - 2) / 2, y: (SWATCH - 2) / 2 },
+              SWATCH * 0.55,
+            )
+              .map((p) => `${p.x},${p.y}`)
+              .join(' ')}
+            fill={textColorOn(color)}
+          />
+        </Svg>
+      )}
+    </View>
+  );
 }
 
 export function Button({
@@ -29,6 +59,7 @@ export function Button({
   testID,
   accessibilityLabel,
   swatch,
+  swatchSymbol,
 }: ButtonProps) {
   const highlighted = active || primary;
   return (
@@ -47,7 +78,7 @@ export function Button({
       ]}
     >
       <View style={styles.buttonContent}>
-        {swatch !== undefined && <View style={[styles.swatch, { backgroundColor: swatch }]} />}
+        {swatch !== undefined && <Swatch color={swatch} symbol={swatchSymbol} />}
         <Text style={[styles.buttonText, highlighted && styles.buttonTextActive]}>{label}</Text>
       </View>
     </Pressable>
@@ -98,6 +129,13 @@ export function Toolbar({ session, onHelp }: { session: PuzzleSession; onHelp: (
           value={settings.allowGuessing}
           onChange={(allowGuessing) => update({ allowGuessing })}
         />
+        {hasSeveralColors(paletteOf(session.puzzle)) && (
+          <Toggle
+            label="Colour symbols"
+            value={settings.colorSymbols}
+            onChange={(colorSymbols) => update({ colorSymbols })}
+          />
+        )}
         <Button label="?" onPress={onHelp} accessibilityLabel="How to play" testID="help-open" />
       </View>
     </View>
@@ -128,6 +166,8 @@ export function NumberPad({ session }: { session: PuzzleSession }) {
   const disabled = cell === null || cell.isGiven();
   // a nonogram: a swatch per colour, with its digit (for the keyboard) and name
   const palette = paletteOf(session.puzzle);
+  const { settings } = useSettings();
+  const symbols = settings.colorSymbols ? colorSymbols(palette) : undefined;
   return (
     <View style={styles.row}>
       {session.puzzle.getValues().map((value) => {
@@ -141,7 +181,11 @@ export function NumberPad({ session }: { session: PuzzleSession }) {
             testID={`pad-${value}`}
             {...(color === undefined
               ? {}
-              : { swatch: color.hex, accessibilityLabel: `${color.name} (${value})` })}
+              : {
+                  swatch: color.hex,
+                  accessibilityLabel: `${color.name} (${value})`,
+                  ...(symbols?.has(value) ? { swatchSymbol: symbols.get(value) } : {}),
+                })}
           />
         );
       })}
@@ -172,8 +216,10 @@ const styles = StyleSheet.create({
   },
   buttonContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   swatch: {
-    width: 18,
-    height: 18,
+    width: SWATCH,
+    height: SWATCH,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 3,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -189,6 +235,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginLeft: 6,
+    // wrap the switches on a narrow (phone) screen instead of running off it
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   toggleText: { color: COLORS.text, fontSize: 14 },
