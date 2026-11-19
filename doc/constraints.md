@@ -17,6 +17,7 @@ it deduces, and how to use it. For the grid types and the puzzle file formats, s
 - [ExactCoverConstraint](#exactcoverconstraint)
 - [TotalSumValueConstraint](#totalsumvalueconstraint)
 - [CellGreaterThanCellConstraint](#cellgreaterthancellconstraint)
+- [RunsConstraint](#runsconstraint)
 - [How the puzzles combine constraints](#how-the-puzzles-combine-constraints)
 - [Writing your own constraint](#writing-your-own-constraint)
 
@@ -120,6 +121,7 @@ of the Python engine are checked that way). To add a technique, subclass `Techni
 | `ExactCoverConstraint` | Every value appears exactly once in the group | Sudoku rows/columns/blocks, Futoshiki rows/columns | none |
 | `TotalSumValueConstraint` | The values in the group add up to a total | Kakuro clues, Sumbrero sums | `setTotalValue(n)` |
 | `CellGreaterThanCellConstraint` | One cell is smaller than another | Futoshiki `<` / `>` signs | `setLesserCell`, `setGreaterCell` |
+| `RunsConstraint` | The cells, in order, hold these blocks of colours | Nonogram rows and columns | `setRuns(runs, palette)` |
 
 ## UniqueValueConstraint
 
@@ -250,6 +252,50 @@ constraint.setLesserCell(lesserCell);
 In a Futoshiki or Jidoku file the relation is written as `x,y>x,y` (1-based) below a line
 `relativity`; `parseFutoshikiLines` and `parseJidokuLines` create these groups (`addRelation`).
 
+## RunsConstraint
+
+`packages/core/src/constraints/runsconstraint.ts`
+
+**Rule:** the cells of the group, *in the order they were added*, hold exactly the given blocks
+(`Run`: a colour and a length), in that order: a nonogram row or column. Every other cell is
+`BLANK` (`0`). Two consecutive blocks of the same colour have at least one blank cell between
+them; blocks of different colours may touch. With one colour (`1`) this is the classic
+black-and-white nonogram clue; with more colours, a coloured nonogram.
+
+**Deductions:** `applyConstraint` goes over all placements of the blocks that fit the current
+candidates of the cells at once (one pass backwards for which states can still be completed, one
+forwards for which can be reached; the time grows with cells x blocks x block length). A value
+stays possible in a cell exactly when some placement gives it that value, so nothing that follows
+from the line alone is missed. A cell with one value left gets it (`inferValue`), so hints and
+single steps can show it as this rule's deduction. If no placement fits, the puzzle is
+contradictory.
+
+Every deduction is rated by the easiest technique that explains it (`techniqueOf(deduction)`,
+`difficultyOf(deduction)`), so hints show the easy ones first:
+
+| Technique | Difficulty | Example explanation |
+|---|---|---|
+| `wholeLine` | 2 | the blocks of Row 7 (5 red, 4 red) and the gaps they need fill the whole line |
+| `overlap` | 3 | block 1 of Row 1 (4) starts somewhere in cells 1-3, so it always covers cells 3-4: this cell is black |
+| `reach` | 3 | no red block of Row 1 can reach this cell |
+| `placements` | 5 | of all ways to place the blocks of Row 1 (1 1) that fit the cells known so far, every one makes this cell blank |
+
+`overlap` and `reach` use the first and the last possible start of every block (taking the known
+cells into account); anything else needs `placements`.
+
+**Setup:**
+
+```ts
+const row = puzzle.addConstraintGroup('Row 1');
+const constraint = row.addConstraint(RunsConstraint);
+for (const cell of cellsLeftToRight) row.addCell(cell); // the order matters
+constraint.setRuns([{ color: 1, length: 3 }, { color: 2, length: 1 }], palette);
+```
+
+The puzzle's values must include `BLANK` and every colour. The palette (`PaletteColor`: value,
+name, `#rrggbb`) names the colours in explanations and tells the app how to draw them;
+`paletteOf(puzzle)` returns it. Without one, `BLACK_AND_WHITE` is used.
+
 ## How the puzzles combine constraints
 
 | Puzzle | Groups and constraints |
@@ -259,6 +305,7 @@ In a Futoshiki or Jidoku file the relation is written as `x,y>x,y` (1-based) bel
 | Jidoku | As Sudoku (each row, column and 3x3 block: `ExactCoverConstraint`), plus a two-cell group with `CellGreaterThanCellConstraint` per clue. |
 | Kakuro | Each horizontal or vertical line of white cells: `UniqueValueConstraint` + `TotalSumValueConstraint` with the clue. |
 | Sumbrero | Each column and diagonal row with a clue: `UniqueValueConstraint` + `TotalSumValueConstraint`. |
+| Nonogram | Each row and column: `RunsConstraint` with its clue. |
 
 The power comes from cells being in several groups at once. In Kakuro, the horizontal line
 narrows a cell to `{1, 3}` and the vertical line to `{3, 5, 7}`, so the cell must be 3, which in
@@ -283,7 +330,8 @@ The `/new-constraint` Claude Code skill scaffolds a new constraint with tests. B
 | `violations(valueOf)` | The app checks the values shown | Return the cells that break the rule (drawn in red). |
 
 Also set `static override difficulty`: how hard a deduction of your rule is for a person (hints
-and single steps show the easiest deduction first).
+and single steps show the easiest deduction first). If one rule makes both easy and hard
+deductions, override `difficultyOf(deduction)` too (as `RunsConstraint` does).
 
 Rules of thumb:
 

@@ -16,7 +16,9 @@ import {
   inequalitySign,
   JIDOKU_BOX_SHADE,
   LAYOUTS,
+  NONOGRAM_BLOCK,
   outlineEdges,
+  textColorOn,
   type Point,
 } from './layout';
 
@@ -247,5 +249,63 @@ describe('group outlines', () => {
 
   it('draw every edge of a single cell', () => {
     expect(outlineEdges([layout.cells[0]!])).toHaveLength(4);
+  });
+});
+
+describe('nonogram', () => {
+  const texts = (type: 'Cup' | 'Cherries') =>
+    LAYOUTS.nonogram(openExample('nonogram', type).puzzle).decorations.filter(
+      (d): d is Extract<typeof d, { kind: 'text' }> => d.kind === 'text',
+    );
+
+  it('draws the values as colours', () => {
+    const layout = LAYOUTS.nonogram(openExample('nonogram', 'Cherries').puzzle);
+    expect(layout.palette).toEqual(
+      new Map([
+        [0, '#ffffff'],
+        [1, '#d62728'],
+        [2, '#2ca02c'],
+        [3, '#8c564b'],
+      ]),
+    );
+    expect(LAYOUTS.sudoku(openExample('sudoku').puzzle).palette).toBeUndefined();
+  });
+
+  it('puts the clue of a row to its left, the last block next to the grid', () => {
+    // row 1 of the cup is 1 1
+    const layout = LAYOUTS.nonogram(openExample('nonogram', 'Cup').puzzle);
+    const row1 = layout.cells[0]!.valueCenter.y;
+    const clue = texts('Cup')
+      .filter((t) => Math.abs(t.at.y - row1) < 1e-9)
+      .sort((a, b) => a.at.x - b.at.x);
+    expect(clue.map((t) => t.text)).toEqual(['1', '1']);
+    expect(clue.every((t) => t.at.x < 0)).toBe(true);
+  });
+
+  it('puts the clue of a column above it, in boxes of the colours', () => {
+    const puzzle = openExample('nonogram', 'Cherries').puzzle;
+    const layout = LAYOUTS.nonogram(puzzle);
+    // column 9: 2 green, 3 brown, 5 red, from the top down
+    const x = layout.cells[8]!.valueCenter.x;
+    const clue = texts('Cherries')
+      .filter((t) => Math.abs(t.at.x - x) < 1e-9 && t.at.y < 0)
+      .sort((a, b) => a.at.y - b.at.y);
+    expect(clue.map((t) => t.text)).toEqual(['2', '3', '5']);
+    const boxes = layout.decorations.filter((d) => d.kind === 'polygon');
+    expect(boxes.length).toBe(texts('Cherries').length);
+  });
+
+  it('draws thick lines every five cells', () => {
+    const layout = LAYOUTS.nonogram(openExample('nonogram', 'Cup').puzzle);
+    const lines = layout.decorations.filter((d) => d.kind === 'polyline');
+    // 10 x 10: x = 0, 5, 10 and y = 0, 5, 10, plus the outer edges again
+    expect(lines.length).toBe(2 * (10 / NONOGRAM_BLOCK + 1) + 2);
+  });
+
+  it('picks a readable text colour', () => {
+    expect(textColorOn('#000000')).toBe('#ffffff');
+    expect(textColorOn('#ffff00')).toBe('#000000');
+    expect(textColorOn('#fff')).toBe('#000000');
+    expect(textColorOn('#d62728')).toBe('#ffffff');
   });
 });

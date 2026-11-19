@@ -1,9 +1,19 @@
 // The puzzle drawn with react-native-svg: the cells (value, or notes and candidates), their
 // highlight, and the decorations of the puzzle type. Tapping a cell selects it.
-import type { Cell, Value } from '@constraintpuzzler/core';
+import { BLANK, type Cell, type Value } from '@constraintpuzzler/core';
 import { memo, useMemo, useState } from 'react';
 import { Platform, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Defs, G, Line, Pattern, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  G,
+  Line,
+  Pattern,
+  Polygon,
+  Polyline,
+  Rect,
+  Text as SvgText,
+} from 'react-native-svg';
 
 import { HighlightRole, REASON_GROUP_COLOR, roleColor, RULED_OUT_COLOR } from '../logic/highlight';
 import {
@@ -44,7 +54,56 @@ interface CellViewProps {
   readonly fill: string;
   /** hatched: a hint's number rules the value out of this cell */
   readonly ruledOut: boolean;
+  /** the values are colours (a nonogram): value -> CSS colour */
+  readonly palette: ReadonlyMap<Value, string> | undefined;
   readonly onPress: (cell: Cell) => void;
+}
+
+/**
+ * A value as a colour: a filled square (inset, so the highlight of the cell shows around it), or
+ * a dot for BLANK; `color` marks how it got there (a mistake: a red cross over it).
+ */
+function ColorValue({
+  shape,
+  value,
+  palette,
+  color,
+}: {
+  shape: CellShape;
+  value: Value;
+  palette: ReadonlyMap<Value, string>;
+  color: string;
+}) {
+  const area = shape.hintArea;
+  const inset = Math.min(area.width, area.height) * 0.08;
+  const mistake = color === COLORS.violation;
+  const { x, y } = shape.valueCenter;
+  const r = Math.min(area.width, area.height) * 0.3;
+  return (
+    <>
+      {value === BLANK ? (
+        <Circle cx={x} cy={y} r={r * 0.25} fill={color} testID={`blank-${shape.cell.getName()}`} />
+      ) : (
+        <Rect
+          x={area.x + inset}
+          y={area.y + inset}
+          width={area.width - 2 * inset}
+          height={area.height - 2 * inset}
+          fill={palette.get(value) ?? '#000000'}
+          testID={`color-${shape.cell.getName()}`}
+        />
+      )}
+      {mistake && (
+        <Polyline
+          points={`${x - r},${y - r} ${x + r},${y + r} ${x},${y} ${x + r},${y - r} ${x - r},${y + r}`}
+          fill="none"
+          stroke={COLORS.violation}
+          strokeWidth={r / 4}
+          strokeLinecap="round"
+        />
+      )}
+    </>
+  );
 }
 
 const CellView = memo(function CellView({
@@ -56,6 +115,7 @@ const CellView = memo(function CellView({
   candidates,
   fill,
   ruledOut,
+  palette,
   onPress,
 }: CellViewProps) {
   const noteSet = new Set(notes.split(',').filter(Boolean).map(Number));
@@ -78,7 +138,9 @@ const CellView = memo(function CellView({
           testID={`ruled-out-${shape.cell.getName()}`}
         />
       )}
-      {value !== null ? (
+      {value !== null && palette !== undefined ? (
+        <ColorValue shape={shape} value={value} palette={palette} color={valueColor} />
+      ) : value !== null ? (
         <SvgText
           x={shape.valueCenter.x}
           y={shape.valueCenter.y + shape.valueFontSize * 0.35}
@@ -95,6 +157,32 @@ const CellView = memo(function CellView({
           if (!isNote && !candidateSet.has(v)) return null;
           const x = area.x + ((index % columns) + 0.5) * (area.width / columns);
           const y = area.y + (Math.floor(index / columns) + 0.5) * (area.height / rows);
+          if (palette !== undefined) {
+            // a small swatch per colour (a ring for BLANK); a note gets a green border
+            const half = smallSize * 0.45;
+            return v === BLANK ? (
+              <Circle
+                key={v}
+                cx={x}
+                cy={y}
+                r={half * 0.8}
+                fill="none"
+                stroke={isNote ? COLORS.note : COLORS.candidate}
+                strokeWidth={isNote ? half / 2.5 : half / 4}
+              />
+            ) : (
+              <Rect
+                key={v}
+                x={x - half}
+                y={y - half}
+                width={2 * half}
+                height={2 * half}
+                fill={palette.get(v) ?? '#000000'}
+                stroke={isNote ? COLORS.note : 'none'}
+                strokeWidth={half / 2.5}
+              />
+            );
+          }
           return (
             <SvgText
               key={v}
@@ -278,6 +366,7 @@ export function Board({ session }: { session: PuzzleSession }) {
                 candidates={candidates}
                 fill={cellFill(roles.get(cell) ?? HighlightRole.NONE, shape.background)}
                 ruledOut={session.hintRuledOut.has(cell)}
+                palette={layout.palette}
                 onPress={onPress}
               />
             );

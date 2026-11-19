@@ -15,6 +15,7 @@ define a puzzle that has no file format yet, directly in TypeScript. The example
 - [Jidoku](#jidoku)
 - [Kakuro](#kakuro)
 - [Sumbrero](#sumbrero)
+- [Nonogram](#nonogram)
 - [Opening your own puzzle file](#opening-your-own-puzzle-file)
 - [Defining a puzzle in code](#defining-a-puzzle-in-code)
 - [Adding a new puzzle type](#adding-a-new-puzzle-type)
@@ -266,6 +267,52 @@ faces along the line:
 | upper right (NE) | `row_ascending`, running up-right |
 
 So one black hexagon can hold up to three sums, and every line has its own wedge.
+
+## Nonogram
+
+Parser: `parseNonogramLines` (`parsers/nonogram.ts`). Examples: `nonogramCup.txt` (black and
+white) and `nonogramCherries.txt` (three colours).
+
+A nonogram is a rectangular grid of cells that are blank or have a colour; the clue of every row
+and column lists its blocks of consecutive same-coloured cells, in order. Between two blocks of
+the same colour there is at least one blank cell; blocks of different colours may touch. The
+values of the cells are colours: `0` is blank and `1`, `2`, ... are the colours in the order
+they are listed (in a black-and-white nonogram, `1` is black). Cells have the positions `(x, y)`
+from `(1, 1)` at the top left.
+
+The file has up to three sections, each started by a line with its name:
+
+```
+# Two cherries (comments start with #)
+colors
+r red #d62728
+g green #2ca02c
+n brown #8c564b
+rows
+2n 3g
+...
+columns
+3r
+...
+```
+
+- `colors` (optional): one colour per line, `code name #rrggbb`: a one-letter code for the clues,
+  a name for the explanations, and how the colour is drawn. Without this section the puzzle is
+  black and white.
+- `rows`: the clue of every row, from top to bottom; the number of lines is the height.
+- `columns`: the clue of every column, from left to right; the number of lines is the width.
+
+A clue is a list of blocks separated by spaces: `3` (in a black-and-white nonogram) or `3r` (three
+cells of the colour with code `r`). A line without blocks is `-` or `0`.
+
+The parser reports (with the line number): a line outside a section, a section given twice, a
+missing `rows` or `columns` section, a malformed colour line or a colour code used twice, a block
+without a colour when there are several colours, an unknown colour code, blocks that do not fit
+in their line, and a colour that has a different number of cells in the rows than in the
+columns.
+
+Every row and every column is a group with a `RunsConstraint` (see
+[constraints.md](constraints.md#runsconstraint)).
 
 ## Opening your own puzzle file
 
