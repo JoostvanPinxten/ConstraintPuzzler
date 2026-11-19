@@ -37,6 +37,8 @@ describe('App', () => {
     ['kakuro', 'Medium'],
     ['futoshiki', '7x7'],
     ['sumbrero', 'Simple'],
+    ['nonogram', 'Cup'],
+    ['nonogram', 'Cherries'],
   ])(
     'opens the %s example %s in a tab and draws its cells',
     async (type: string, label: string) => {
@@ -54,6 +56,32 @@ describe('App', () => {
     expect(screen.getByText('Value: 4 (entered)')).toBeTruthy();
     await fireEvent.press(screen.getByText('Undo'));
     expect(screen.queryByText('Value: 4 (entered)')).toBeNull();
+  });
+
+  it('enters a colour in a nonogram with the colour pad', async () => {
+    await openPuzzle('open-nonogram-Cherries');
+    await fireEvent.press(screen.getByTestId('cell-1, 1'));
+    await fireEvent.press(screen.getByLabelText('red (1)'));
+    expect(screen.getByTestId('color-1, 1')).toBeTruthy();
+    expect(screen.getByText('Value: red (entered)')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('pad-0'));
+    expect(screen.getByTestId('blank-1, 1')).toBeTruthy();
+  });
+
+  it('draws colour symbols when they are switched on', async () => {
+    await openPuzzle('open-nonogram-Cherries');
+    await fireEvent.press(screen.getByTestId('cell-1, 1'));
+    await fireEvent.press(screen.getByLabelText('red (1)'));
+    expect(screen.queryByTestId('symbol-1, 1')).toBeNull();
+    expect(screen.queryAllByTestId(/^clue-symbol-/)).toHaveLength(0);
+    await fireEvent(screen.getByLabelText('Colour symbols'), 'valueChange', true);
+    expect(screen.getByTestId('symbol-1, 1')).toBeTruthy();
+    expect(screen.queryAllByTestId(/^clue-symbol-/).length).toBeGreaterThan(0);
+  });
+
+  it('offers colour symbols only for nonograms with several colours', async () => {
+    await openPuzzle('open-nonogram-Cup');
+    expect(screen.queryByLabelText('Colour symbols')).toBeNull();
   });
 
   it('shows a hint and closes the tab', async () => {

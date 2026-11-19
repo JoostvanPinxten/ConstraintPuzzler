@@ -8,6 +8,8 @@ const EXAMPLES = [
   ['futoshiki', '7x7', 49],
   ['jidoku', 'Medium', 81],
   ['sumbrero', 'Simple', 16],
+  ['nonogram', 'Cup', 100],
+  ['nonogram', 'Cherries', 100],
 ] as const;
 
 async function open(page: Page, type: string, label: string): Promise<void> {

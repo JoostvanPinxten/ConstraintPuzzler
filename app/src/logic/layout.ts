@@ -1,7 +1,7 @@
 /**
  * Where everything of a puzzle is drawn: the cells (as polygons, with the area for the small
  * candidate values and the place of the big value) and the decorations around them (Sudoku
- * block lines, Kakuro clue triangles, Sumbrero clue hexagons). The inequalities of Futoshiki and
+ * block lines, Kakuro clue triangles, Sumbrero clue hexagons, nonogram clues). The inequalities of Futoshiki and
  * Jidoku are not decorations but bent cell edges, as in O'Sullivan & Horan, "Generating and Solving
  * Logic Puzzles through Constraint Satisfaction" (AAAI 2007), Figure 1.
  *
@@ -10,18 +10,23 @@
  * rendering; components/Board.tsx draws it with react-native-svg.
  */
 import {
+  BLANK,
   CellGreaterThanCellConstraint,
   clueAnchor,
   LINE_DIRECTIONS,
   lineKind,
   neighbour,
+  paletteOf,
   PositionedCell,
+  RunsConstraint,
   TotalSumValueConstraint,
   type Cell,
   type Direction,
   type Position,
   type Puzzle,
   type PuzzleTypeName,
+  type Run,
+  type Value,
 } from '@constraintpuzzler/core';
 
 export interface Point {
@@ -71,6 +76,8 @@ export type Decoration =
       readonly fontSize: number;
       readonly fill: string;
       readonly bold?: boolean;
+      /** where the text goes instead while colour symbols are drawn (next to the symbol) */
+      readonly atWithSymbol?: Point;
     };
 
 export interface BoardLayout {
@@ -79,6 +86,23 @@ export interface BoardLayout {
   readonly cells: readonly CellShape[];
   /** drawn on top of the cells */
   readonly decorations: readonly Decoration[];
+  /**
+   * when set, the values are colours (value -> CSS colour; a nonogram): a value is drawn as a
+   * filled square, BLANK as a dot, instead of as a number
+   */
+  readonly palette?: ReadonlyMap<Value, string>;
+  /**
+   * where the colour-blind friendly symbols of the clues go (see symbols.ts): one per block of a
+   * clue, drawn only when the "Colour symbols" setting is on
+   */
+  readonly clueSymbols?: readonly ClueSymbol[];
+}
+
+/** The symbol of a clue block's colour: its centre and size (in the corner of the clue box). */
+export interface ClueSymbol {
+  readonly value: Value;
+  readonly center: Point;
+  readonly size: number;
 }
 
 const BLACK = '#000000';
@@ -572,12 +596,155 @@ export function sumbreroLayout(puzzle: Puzzle): BoardLayout {
   return finish(cells, decorations, 2);
 }
 
+// --- Nonogram -------------------------------------------------------------------------------
+
+/** the thick grid lines of a nonogram are every this many cells */
+export const NONOGRAM_BLOCK = 5;
+
+/** Black or white, whichever reads better on the background colour ('#rrggbb' or '#rgb'). */
+export function textColorOn(hex: string): string {
+  const digits = hex.replace('#', '');
+  const full = digits.length === 3 ? [...digits].map((d) => d + d).join('') : digits;
+  const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(full.slice(i, i + 2), 16) / 255) as [
+    number,
+    number,
+    number,
+  ];
+  // the perceived brightness (ITU-R BT.601)
+  return 0.299 * r + 0.587 * g + 0.114 * b > 0.6 ? BLACK : WHITE;
+}
+
+/**
+ * The grid of a nonogram, with the clue of every row to its left and of every column above it.
+ * In a nonogram with several colours every block of a clue is a box of its colour.
+ */
+export function nonogramLayout(puzzle: Puzzle): BoardLayout {
+  const cellSize = 45;
+  const palette = paletteOf(puzzle) ?? [];
+  const hexOf = new Map(palette.map((c) => [c.value, c.hex]));
+  const coloured = palette.filter((c) => c.value !== BLANK).length > 1;
+  // the room for one block of a clue (wider with several colours: a symbol fits next to the number)
+  const slot = cellSize * (coloured ? 0.92 : 0.72);
+  const cells = puzzle
+    .getGrid()
+    .getPositionedCells()
+    .map((c) =>
+      square(
+        c,
+        (c.getPosition().x() - 1) * cellSize,
+        (c.getPosition().y() - 1) * cellSize,
+        cellSize,
+      ),
+    );
+  const width = Math.max(0, ...cells.map((c) => (c.outline[2] as Point).x));
+  const height = Math.max(0, ...cells.map((c) => (c.outline[2] as Point).y));
+
+  const decorations: Decoration[] = [];
+  const clueSymbols: ClueSymbol[] = [];
+  const clue = (runs: readonly Run[], at: (i: number) => Point): void => {
+    // an empty line shows a 0, like a printed nonogram
+    if (runs.length === 0) {
+      decorations.push({ kind: 'text', at: at(0), text: '0', fontSize: slot * 0.6, fill: BLACK });
+      return;
+    }
+    runs.forEach((run, i) => {
+      const center = at(runs.length - 1 - i);
+      const hex = hexOf.get(run.color) ?? BLACK;
+      if (coloured) {
+        const box = slot * 0.88;
+        const { x, y } = { x: center.x - box / 2, y: center.y - box / 2 };
+        clueSymbols.push({
+          value: run.color,
+          center: { x: x + box * 0.27, y: center.y },
+          size: box * 0.36,
+        });
+        decorations.push({
+          kind: 'polygon',
+          points: [
+            { x, y },
+            { x: x + box, y },
+            { x: x + box, y: y + box },
+            { x, y: y + box },
+          ],
+          fill: hex,
+          stroke: '#7a7a7a',
+          strokeWidth: 0.5,
+        });
+      }
+      decorations.push({
+        kind: 'text',
+        at: center,
+        text: String(run.length),
+        fontSize: coloured ? slot * 0.5 : slot * 0.6,
+        fill: coloured ? textColorOn(hex) : BLACK,
+        bold: true,
+        ...(coloured ? { atWithSymbol: { x: center.x + slot * 0.17, y: center.y } } : {}),
+      });
+    });
+  };
+  for (const group of puzzle.getConstraintGroups()) {
+    const constraint = group.getConstraints().find((c) => c instanceof RunsConstraint);
+    const first = group.getPositionedCells()[0];
+    if (!(constraint instanceof RunsConstraint) || first === undefined) continue;
+    const cellsOf = group.getPositionedCells();
+    const isRow = cellsOf.every((c) => c.getPosition().y() === first.getPosition().y());
+    const x = (first.getPosition().x() - 1) * cellSize;
+    const y = (first.getPosition().y() - 1) * cellSize;
+    // the last block next to the grid, the earlier ones further out (i = 0 is the last block)
+    clue(
+      constraint.getRuns(),
+      isRow
+        ? (i) => ({ x: -slot * (i + 0.5) - cellSize * 0.1, y: y + cellSize / 2 })
+        : (i) => ({ x: x + cellSize / 2, y: -slot * (i + 0.5) - cellSize * 0.1 }),
+    );
+  }
+
+  // thick lines every NONOGRAM_BLOCK cells and around the grid
+  for (let x = 0; x <= width + 1e-9; x += cellSize * NONOGRAM_BLOCK) {
+    decorations.push({
+      kind: 'polyline',
+      points: [
+        { x, y: 0 },
+        { x, y: height },
+      ],
+      stroke: BLACK,
+      strokeWidth: 2.5,
+    });
+  }
+  for (let y = 0; y <= height + 1e-9; y += cellSize * NONOGRAM_BLOCK) {
+    decorations.push({
+      kind: 'polyline',
+      points: [
+        { x: 0, y },
+        { x: width, y },
+      ],
+      stroke: BLACK,
+      strokeWidth: 2.5,
+    });
+  }
+  for (const [from, to] of [
+    [
+      { x: width, y: 0 },
+      { x: width, y: height },
+    ],
+    [
+      { x: 0, y: height },
+      { x: width, y: height },
+    ],
+  ] as const) {
+    decorations.push({ kind: 'polyline', points: [from, to], stroke: BLACK, strokeWidth: 2.5 });
+  }
+  const layout = finish(cells, decorations, slot * 0.6);
+  return { ...layout, palette: hexOf, clueSymbols };
+}
+
 export const LAYOUTS: Readonly<Record<PuzzleTypeName, (puzzle: Puzzle) => BoardLayout>> = {
   sudoku: sudokuLayout,
   kakuro: kakuroLayout,
   futoshiki: futoshikiLayout,
   jidoku: jidokuLayout,
   sumbrero: sumbreroLayout,
+  nonogram: nonogramLayout,
 };
 
 // --- group outlines --------------------------------------------------------------------------

@@ -39,6 +39,8 @@ export interface Settings {
   readonly allowGuessing: boolean;
   /** a confetti burst when the user finishes a puzzle */
   readonly celebrate: boolean;
+  /** draw a shape for every colour of a nonogram as well, for colour-blind players */
+  readonly colorSymbols: boolean;
 }
 
 /** Like the desktop app: no candidates shown, and no guessing, until the user turns them on. */
@@ -46,6 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showHints: false,
   allowGuessing: false,
   celebrate: true,
+  colorSymbols: false,
 };
 
 /** A message for the user, shown as a dialog; with `confirm`, the dialog offers an action. */

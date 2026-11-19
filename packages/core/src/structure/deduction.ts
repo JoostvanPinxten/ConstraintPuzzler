@@ -10,7 +10,7 @@
 import type { Constraint } from '../constraints/constraint';
 import type { Technique } from '../techniques/technique';
 import { ValueSource, type Cell } from './cell';
-import { sortedValues, type Value } from './types';
+import type { Value } from './types';
 
 /** What made a change: a constraint, or a technique that combines several groups. */
 export type Cause = Constraint | Technique;
@@ -38,28 +38,38 @@ export class Deduction {
     return this.value !== null;
   }
 
-  /** How hard the deduction is for a person: NAKED_SINGLE, or its cause's level. */
+  /**
+   * How hard the deduction is for a person: NAKED_SINGLE, or its cause's level for this
+   * deduction (one rule can make both easy and hard deductions, see Constraint.difficultyOf).
+   */
   difficulty(): number {
-    return this.cause !== null ? this.cause.getDifficulty() : NAKED_SINGLE;
+    return this.cause !== null ? this.cause.difficultyOf(this) : NAKED_SINGLE;
+  }
+
+  /** The value set, as the user sees it (its name, e.g. a colour, or the number). */
+  private valueText(): string {
+    return this.value === null ? '' : this.cell.getGrid().getPuzzle().valueName(this.value);
   }
 
   /** Why the change was made, in words. */
   reason(): string {
     if (this.cause !== null) return this.cause.explain(this);
-    if (this.source === ValueSource.GUESSED) return `${this.value} is a guess (backtracking)`;
+    const value = this.valueText();
+    if (this.source === ValueSource.GUESSED) return `${value} is a guess (backtracking)`;
     if (this.setsValue() && this.source === ValueSource.DEDUCED) {
-      return `${this.value} is the only candidate left in this cell`;
+      return `${value} is the only candidate left in this cell`;
     }
-    if (this.setsValue()) return `${this.value} was ${this.source ?? 'set'}`;
+    if (this.setsValue()) return `${value} was ${this.source ?? 'set'}`;
     return 'removed';
   }
 
   /** What changed and why, e.g. "cell 3, 4 is 7: ...". */
   describe(): string {
     const name = this.cell.getName();
+    const puzzle = this.cell.getGrid().getPuzzle();
     const what = this.setsValue()
-      ? `cell ${name} is ${this.value}`
-      : `cell ${name} cannot be ${sortedValues(this.removed).join(', ')}`;
+      ? `cell ${name} is ${this.valueText()}`
+      : `cell ${name} cannot be ${puzzle.formatValues(this.removed)}`;
     return `${what}: ${this.reason()}.`;
   }
 }
