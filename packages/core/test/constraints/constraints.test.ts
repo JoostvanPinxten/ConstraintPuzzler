@@ -210,6 +210,34 @@ describe('exact cover', () => {
     }
   });
 
+  it('records the technique of its deductions', () => {
+    const recorded = (
+      setUp: (cells: Cell[]) => void,
+      search?: (c: ExactCoverConstraint) => void,
+    ) => {
+      const { cells, constraint } = exactCoverGroup(6);
+      const puzzle = constraint.group.puzzle;
+      setUp(cells);
+      const log = new DeductionLog();
+      puzzle.recording(log, () =>
+        puzzle.causedBy(constraint, () => (search ?? ((c) => c.applyConstraint()))(constraint)),
+      );
+      return new Set(log.deductions.map((d) => d.techniqueId()));
+    };
+    // 6 fits only in the last cell
+    expect(recorded((cells) => cells.slice(0, 5).forEach((c) => c.remove(6)))).toContain(
+      'hiddenSingle',
+    );
+    // the first two cells hold only 1 and 2
+    const pair = (cells: Cell[]) =>
+      cells.slice(0, 2).forEach((c) => [3, 4, 5, 6].forEach((v) => c.remove(v)));
+    expect(recorded(pair, (c) => c.searchForNakedSubsets())).toEqual(new Set(['nakedSubset']));
+    // 1 and 2 fit only in the first two cells
+    const hidden = (cells: Cell[]) =>
+      cells.slice(2).forEach((c) => [1, 2].forEach((v) => c.remove(v)));
+    expect(recorded(hidden, (c) => c.searchForHiddenSubsets())).toEqual(new Set(['hiddenSubset']));
+  });
+
   it('treats too few candidates as a contradiction', () => {
     const { cells, constraint } = exactCoverGroup();
     for (const cell of cells.slice(0, 3)) for (const value of [3, 4]) cell.remove(value);

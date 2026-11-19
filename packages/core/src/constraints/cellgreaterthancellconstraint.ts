@@ -1,4 +1,6 @@
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
+import type { Deduction } from '../structure/deduction';
 import { formatValues, sortedValues, type ValueOf } from '../structure/types';
 import { Constraint } from './constraint';
 
@@ -34,6 +36,10 @@ export class CellGreaterThanCellConstraint extends Constraint {
     for (const value of sortedValues(greater.values)) {
       if (value <= minimumOfLesser) greater.remove(value);
     }
+  }
+
+  override techniqueId(_deduction: Deduction): TechniqueId {
+    return 'inequality';
   }
 
   override getType(): string {

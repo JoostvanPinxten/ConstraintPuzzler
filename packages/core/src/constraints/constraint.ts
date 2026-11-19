@@ -1,5 +1,6 @@
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
+import type { TechniqueId } from '../guide/techniques';
 import type { Value, ValueOf } from '../structure/types';
 import type { ConstraintGroup } from './constraintgroup';
 
@@ -66,6 +67,34 @@ export abstract class Constraint {
   difficultyOf(_deduction: Deduction): number {
     return this.getDifficulty();
   }
+
+  /** the technique being applied, set by withTechnique (see currentTechnique) */
+  private activeTechnique: TechniqueId | null = null;
+
+  /**
+   * The technique of the changes being made right now, or null when it follows from the kind
+   * of change (see techniqueId). The deduction log records it with every change.
+   */
+  currentTechnique(): TechniqueId | null {
+    return this.activeTechnique;
+  }
+
+  /** Run fn, recording its changes as made by the given technique (e.g. a naked pair). */
+  protected withTechnique<T>(technique: TechniqueId, fn: () => T): T {
+    const previous = this.activeTechnique;
+    this.activeTechnique = technique;
+    try {
+      return fn();
+    } finally {
+      this.activeTechnique = previous;
+    }
+  }
+
+  /**
+   * The technique, as explained to players (TECHNIQUE_GUIDE), behind a deduction of this
+   * constraint that did not record one (see currentTechnique).
+   */
+  abstract techniqueId(deduction: Deduction): TechniqueId;
 
   abstract applyConstraint(): void;
 
