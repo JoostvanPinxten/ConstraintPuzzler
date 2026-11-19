@@ -410,8 +410,11 @@ export function futoshikiLayout(puzzle: Puzzle): BoardLayout {
 
 // --- Jidoku ----------------------------------------------------------------------------------
 
-/** the shade of every other 3x3 box, as in the paper's figures */
-export const JIDOKU_BOX_SHADE = '#dcdff2';
+/**
+ * the shade of every other 3x3 box, as in the paper's figures; a neutral grey, so it does not
+ * look like a highlight (e.g. the purple of a hint's "where to look")
+ */
+export const JIDOKU_BOX_SHADE = '#e9e9ec';
 
 /**
  * A 9x9 grid without gaps; the boxes are told apart by shading every other one (as in the paper)

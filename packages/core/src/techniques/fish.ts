@@ -1,7 +1,7 @@
 import { combinations } from '../constraints/constraint';
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { Cell } from '../structure/cell';
-import { listNames, spotsFor, Technique, type TechniqueClass } from './technique';
+import { listNames, spotsFor, Technique, type Finding, type TechniqueClass } from './technique';
 
 /**
  * A "fish" of size n (X-Wing: 2, Swordfish: 3, Jellyfish: 4): when n parallel lines (e.g.
@@ -46,7 +46,7 @@ export abstract class Fish extends Technique {
     return this.linesCache;
   }
 
-  apply(): boolean {
+  find(): Finding | null {
     const n = this.getSize();
     const { lines, cells, crossing } = this.lines();
     for (const value of this.values()) {
@@ -83,11 +83,11 @@ export abstract class Fish extends Technique {
           `${this.getType()} on ${value}: ${baseNames} can only hold ${value} in cells of` +
           ` ${coverNames}; each of those gets its ${value} there, so no other cell of` +
           ` ${coverNames} can hold ${value}`;
-        this.removeWithReason(targets, value, reason);
-        return true;
+        const pattern = base.flatMap((b) => spotsOf.get(b) as Cell[]);
+        return { technique: this, value, groups: base, cover, pattern, targets, reason };
       }
     }
-    return false;
+    return null;
   }
 }
 

@@ -39,6 +39,6 @@ export { Puzzle } from './structure/puzzle';
 export { Signal } from './structure/signal';
 export { Fish, Jellyfish, Swordfish, XWing } from './techniques/fish';
 export { IntersectionRemoval } from './techniques/intersection';
-export { Technique, type TechniqueClass } from './techniques/technique';
+export { Technique, type Finding, type TechniqueClass } from './techniques/technique';
 export { TECHNIQUES } from './techniques/techniques';
 export * from './structure/types';

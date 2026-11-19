@@ -3,7 +3,7 @@ import { ValueSource, type Cell } from '../structure/cell';
 import { Deduction, DeductionLog } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
-import type { Technique, TechniqueClass } from '../techniques/technique';
+import type { Finding, Technique, TechniqueClass } from '../techniques/technique';
 import { TECHNIQUES } from '../techniques/techniques';
 import { sortedValues, statesEqual, type PuzzleState } from '../structure/types';
 
@@ -104,6 +104,19 @@ export class Solver {
   }
 
   /**
+   * The first finding of the easiest technique that applies to the puzzle as it is now (what
+   * a hint offers when no value follows directly), without changing the puzzle; null when no
+   * technique applies.
+   */
+  techniqueFinding(): Finding | null {
+    for (const technique of this.techniques) {
+      const finding = technique.find();
+      if (finding !== null) return finding;
+    }
+    return null;
+  }
+
+  /**
    * Start recording the changes in the solver's log (a fresh log, unless the puzzle is already
    * recording into it); returns the function that stops recording.
    */
@@ -194,22 +207,37 @@ export class Solver {
    * values that follow directly from the current state (lastStep tells which, and why), the
    * cell and value of `preferred` (e.g. the hint shown last) if it is one of them, else one of
    * the easiest. When no value follows directly, the candidates are narrowed down instead, so
-   * the next step can progress (see narrow()); `log` then holds the removals.
+   * the next step can progress: by `preferred` if it is a technique's finding that still
+   * applies (a hint), else see narrow(); `log` then holds the removals.
    *
    * Returns whether the puzzle changed. Throws ContradictionError if a deduction pass detects
    * that the puzzle has no solution; the puzzle is then restored to the state it had before.
    */
-  solveStep(preferred: Deduction | null = null): boolean {
+  solveStep(preferred: Deduction | Finding | null = null): boolean {
     const state = this.puzzle.saveState();
     this.lastStep = null;
     try {
       const values = this.deducibleValues();
       if (values.length > 0) {
-        const chosen = this.preferredOrEasiest(values, preferred);
+        const chosen = this.preferredOrEasiest(
+          values,
+          preferred instanceof Deduction ? preferred : null,
+        );
         this.record(() =>
           this.puzzle.causedBy(chosen.cause, () => chosen.cell.inferValue(chosen.value as number)),
         );
         this.lastStep = this.log.deductions[0] ?? null;
+      } else if (
+        preferred !== null &&
+        !(preferred instanceof Deduction) &&
+        this.techniques.includes(preferred.technique) &&
+        preferred.technique.stillApplies(preferred)
+      ) {
+        this.record(() =>
+          this.puzzle.causedBy(preferred.technique, () =>
+            preferred.technique.applyFinding(preferred),
+          ),
+        );
       } else {
         this.narrow(state);
       }
