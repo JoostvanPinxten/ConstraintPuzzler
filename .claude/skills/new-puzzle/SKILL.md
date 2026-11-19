@@ -15,8 +15,10 @@ Add a new puzzle type: $ARGUMENTS
    from `packages/core/src/index.ts`. Add a small example puzzle `puzzles/<name>.txt` and document the file
    format in `doc/puzzle-files.md`.
 3. Register the type in `packages/core/src/puzzletypes.ts`: a `definePuzzleType({...})` (name, label,
-   parseLines, fileExtensions, examples, defaultExample) added to `PUZZLE_TYPES` (and its name to
-   `PuzzleTypeName`). Then run `npm run examples -w @constraintpuzzler/app` to bundle the example into the
+   parseLines, fileExtensions, examples, defaultExample, guide) added to `PUZZLE_TYPES` (and its name to
+   `PuzzleTypeName`). Write its guide in `packages/core/src/guide/rules.ts` (goal, rules, and the
+   techniques of `TECHNIQUE_GUIDE` that help, easiest first; a new constraint that makes a new kind
+   of deduction also gets a `TECHNIQUE_GUIDE` entry). Then run `npm run examples -w @constraintpuzzler/app` to bundle the example into the
    app.
 4. Draw it: add a `<name>Layout(puzzle): BoardLayout` to `app/src/logic/layout.ts` and to `LAYOUTS`, using the
    closest existing layout as a template (square grid with givens: `sudokuLayout`; cells with sum clues:

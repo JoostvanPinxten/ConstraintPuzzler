@@ -11,6 +11,8 @@ export { ExactCoverConstraint } from './constraints/exactcoverconstraint';
 export { TotalSumValueConstraint } from './constraints/totalsumvalueconstraint';
 export * from './constraints/runsconstraint';
 export { UniqueValueConstraint } from './constraints/uniquevalueconstraint';
+export * from './guide/rules';
+export * from './guide/techniques';
 export * from './parsers/common';
 export {
   addRelation,
