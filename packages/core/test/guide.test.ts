@@ -3,7 +3,7 @@
 // guide of its puzzle type explains.
 import { describe, expect, it } from 'vitest';
 
-import { TECHNIQUE_GUIDE, type TechniqueId } from '../src/guide/techniques';
+import { parseExampleBoard, TECHNIQUE_GUIDE, type TechniqueId } from '../src/guide/techniques';
 import { NONOGRAM, PUZZLE_TYPES, SUDOKU, type PuzzleType } from '../src/puzzletypes';
 import { HintSession } from '../src/solver/hints';
 import { Solver } from '../src/solver/solver';
@@ -28,6 +28,44 @@ describe('technique guide', () => {
   it('lists every technique for some puzzle type', () => {
     const used = new Set<TechniqueId>(TYPES.flatMap((t) => t.guide.techniques));
     expect([...used].sort()).toEqual(Object.keys(TECHNIQUE_GUIDE).sort());
+  });
+});
+
+describe('example boards', () => {
+  const boards = Object.values(TECHNIQUE_GUIDE).flatMap((t) =>
+    t.board === undefined ? [] : [{ id: t.id, board: t.board }],
+  );
+
+  it('are drawn for the techniques with a pattern on the board', () => {
+    expect(boards.map((b) => b.id)).toEqual(
+      expect.arrayContaining(['nakedSubset', 'hiddenSubset', 'intersection', 'xWing', 'overlap']),
+    );
+  });
+
+  it.each(boards)('$id: is a rectangle of readable cells, with marks', ({ board }) => {
+    const rows = parseExampleBoard(board);
+    const width = rows[0]?.length ?? 0;
+    expect(width).toBeGreaterThan(0);
+    for (const row of rows) expect(row).toHaveLength(width);
+    if (board.rowLabels !== undefined) expect(board.rowLabels).toHaveLength(rows.length);
+    const cells = rows.flat();
+    expect(cells.some((c) => c.mark !== null)).toBe(true);
+    for (const cell of cells) {
+      // a crossed-out candidate is not also a candidate, and a value has no candidates
+      for (const v of cell.removed) expect(cell.candidates).not.toContain(v);
+      if (cell.value !== null) expect(cell.candidates.length + cell.removed.length).toBe(0);
+    }
+    expect(board.caption).not.toBe('');
+  });
+
+  it('reads values, candidates, crossed-out candidates and marks', () => {
+    const [given, pair, target, filled] =
+      parseExampleBoard({ rows: ['5 {27}* {38|16}! #^'], caption: '' })[0] ?? [];
+    expect(given).toEqual({ value: '5', candidates: [], removed: [], mark: null });
+    expect(pair).toEqual({ value: null, candidates: [2, 7], removed: [], mark: 'pattern' });
+    expect(target).toEqual({ value: null, candidates: [3, 8], removed: [1, 6], mark: 'target' });
+    expect(filled).toEqual({ value: '#', candidates: [], removed: [], mark: 'answer' });
+    expect(() => parseExampleBoard({ rows: ['5 ?'], caption: '' })).toThrow(/'\?'/);
   });
 });
 

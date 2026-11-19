@@ -115,6 +115,15 @@ describe('App', () => {
     expect(screen.queryByTestId('guide')).toBeNull();
   });
 
+  it('draws an example board for a technique with a pattern', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByTestId('rules-sudoku'));
+    expect(screen.queryByTestId('board-xWing')).toBeNull();
+    await fireEvent.press(screen.getByLabelText(TECHNIQUE_GUIDE.xWing.name));
+    expect(screen.getByTestId('board-xWing')).toBeTruthy();
+    expect(screen.getByText(TECHNIQUE_GUIDE.xWing.board!.caption)).toBeTruthy();
+  });
+
   it('explains the technique behind a hint', async () => {
     await openPuzzle('open-sudoku-Easy');
     await fireEvent.press(screen.getByTestId('guide-open'));

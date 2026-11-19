@@ -161,6 +161,7 @@ test('explains the rules and the technique behind a hint', async ({ page }, info
   await expect(page.getByText('Nonogram: rules and techniques')).toBeVisible();
   await page.getByRole('button', { name: 'Overlap' }).click();
   await expect(page.getByText(/^Example: A block of 7/)).toBeVisible();
+  await expect(page.getByTestId('board-overlap').locator('svg')).toBeVisible();
   await page.getByTestId('guide-close').click();
   await expect(page.getByTestId('guide')).toBeHidden();
 

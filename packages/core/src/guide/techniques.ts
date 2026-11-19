@@ -33,6 +33,66 @@ export interface TechniqueGuide {
   readonly steps: readonly string[];
   /** a small worked example, in words */
   readonly example?: string;
+  /** a small board that shows the pattern */
+  readonly board?: ExampleBoard;
+}
+
+/**
+ * A small picture of a technique: a few cells with values, candidates and marks. Every row is
+ * a string of cells separated by spaces; a cell is
+ * - `5`: a value; `.`: an empty cell; `#` and `x`: a filled and a blank nonogram cell;
+ * - `{27}`: the candidates 2 and 7; `{38|16}`: the candidates 3 and 8, and 1 and 6 crossed out;
+ * followed by a mark: `*` the pattern (where the value can still go), `!` a cell that loses a
+ * candidate, `^` a cell the technique fills in.
+ */
+export interface ExampleBoard {
+  readonly rows: readonly string[];
+  /** a thick line after every `box` columns and rows, e.g. 3 for Sudoku boxes */
+  readonly box?: number;
+  /** the text left of every row, e.g. a nonogram clue */
+  readonly rowLabels?: readonly string[];
+  /** what the board shows */
+  readonly caption: string;
+}
+
+export type ExampleMark = 'pattern' | 'target' | 'answer';
+
+export interface ExampleCell {
+  /** a value, or '#' / 'x' for a filled / blank nonogram cell; null when empty */
+  readonly value: string | null;
+  readonly candidates: readonly number[];
+  /** candidates shown crossed out */
+  readonly removed: readonly number[];
+  readonly mark: ExampleMark | null;
+}
+
+const MARKS: Readonly<Record<string, ExampleMark>> = {
+  '*': 'pattern',
+  '!': 'target',
+  '^': 'answer',
+};
+const CELL_PATTERN = /^(?:(\d|#|x|\.)|\{(\d*)(?:\|(\d+))?\})([*!^]?)$/;
+
+const digits = (text: string | undefined): number[] => [...(text ?? '')].map(Number);
+
+/** The cells of an example board, row by row (see ExampleBoard). Throws on a malformed cell. */
+export function parseExampleBoard(board: ExampleBoard): ExampleCell[][] {
+  return board.rows.map((row) =>
+    row
+      .trim()
+      .split(/\s+/)
+      .map((token): ExampleCell => {
+        const match = CELL_PATTERN.exec(token);
+        if (match === null) throw new Error(`example board: cannot read cell '${token}'`);
+        const [, value, candidates, removed, mark] = match;
+        return {
+          value: value === undefined || value === '.' ? null : value,
+          candidates: digits(candidates),
+          removed: digits(removed),
+          mark: mark === undefined || mark === '' ? null : (MARKS[mark] ?? null),
+        };
+      }),
+  );
 }
 
 function defineTechniques(
@@ -68,6 +128,10 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
     ],
     example:
       'If 4 is missing from a row and the other open cells of the row all see a 4, the 4 goes in the last cell.',
+    board: {
+      rows: ['3 {29} 6 {249}^ 7 {289} 1 5 {89}'],
+      caption: 'The row misses 2, 4, 8 and 9; only the marked cell can hold 4.',
+    },
   },
   {
     id: 'elimination',
@@ -88,6 +152,11 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'Those values must go in those cells, so remove them from the other cells of the group.',
     ],
     example: 'Two cells of a row with candidates {2, 7}: no other cell of the row can be 2 or 7.',
+    board: {
+      rows: ['{27}* {27}* {38|2}! 5 {138|7}! 4 {38} 6 9'],
+      caption:
+        'The marked cells hold 2 and 7 between them, so the other cells of the row lose 2 and 7.',
+    },
   },
   {
     id: 'hiddenSubset',
@@ -98,6 +167,11 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'Those cells hold exactly those values, so their other candidates go.',
     ],
     example: 'If 3 and 8 can only go in the same two cells of a box, those cells are {3, 8}.',
+    board: {
+      rows: ['{38|16}* {38|169}* 5 {169} 2 {16} 4 7 {69}'],
+      caption:
+        '3 and 8 fit only in the marked cells of the row, so those cells lose their other candidates.',
+    },
   },
   {
     id: 'intersection',
@@ -108,6 +182,11 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'Pointing: in a box, a value fits only in cells of one row (or column). It must go in that row there, so the row’s cells outside the box lose it.',
       'Box-line: in a row (or column), a value fits only in cells of one box. It must go in the box there, so the box’s other cells lose it.',
     ],
+    board: {
+      rows: ['{4}* {4}* 6 . {|4}! . . {|4}! .', '1 2 3 . . . . . .', '5 7 8 . . . . . .'],
+      box: 3,
+      caption: 'In the left box, 4 fits only in the top row, so the rest of the top row loses 4.',
+    },
   },
   {
     id: 'xWing',
@@ -118,6 +197,17 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'The value goes in one corner of the rectangle in each row, so it takes both columns: the other cells of those columns lose it.',
       'The same works with rows and columns swapped.',
     ],
+    board: {
+      rows: [
+        '. {7}* . . {7}*',
+        '. {|7}! . . .',
+        '. . . . {|7}!',
+        '. {7}* . . {7}*',
+        '. {|7}! . . {|7}!',
+      ],
+      caption:
+        'Rows 1 and 4 hold 7 only in columns 2 and 5, so the other cells of those columns lose 7.',
+    },
   },
   {
     id: 'swordfish',
@@ -169,6 +259,11 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'If that is the length of the line, there is only one way to place them; a 0 clue means the whole line is blank.',
     ],
     example: 'Clue 3 2 in a line of 6: 3 + 1 + 2 = 6, so the line is ■■■□■■.',
+    board: {
+      rows: ['#^ #^ #^ x^ #^ #^'],
+      rowLabels: ['3 2'],
+      caption: 'The blocks and the gap between them need all six cells.',
+    },
   },
   {
     id: 'overlap',
@@ -179,6 +274,11 @@ export const TECHNIQUE_GUIDE: Readonly<Record<TechniqueId, TechniqueGuide>> = de
       'The cells it covers in both positions are filled, wherever it ends up.',
     ],
     example: 'A block of 7 in a line of 10 can start at cell 1 to 4: cells 4–7 are always covered.',
+    board: {
+      rows: ['. . . #^ #^ #^ #^ . . .'],
+      rowLabels: ['7'],
+      caption: 'Wherever the block of 7 goes, it covers the middle four cells.',
+    },
   },
   {
     id: 'reach',
