@@ -20,3 +20,11 @@ export const COLORS = {
   accentText: '#ffffff',
   danger: '#c00000',
 } as const;
+
+// The colours of the logo (doc/logo): a navy badge with an amber piece.
+export const BRAND = {
+  navy: '#1f2a5c',
+  amber: '#ffb43a',
+  /** light text on navy */
+  mist: '#c9d2f0',
+} as const;

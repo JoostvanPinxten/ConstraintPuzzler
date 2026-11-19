@@ -23,6 +23,15 @@ describe('App', () => {
     expect(screen.getByText(/^Version /)).toBeTruthy();
   });
 
+  it('shows a preview of every type on the start page, which opens its default example', async () => {
+    await render(<App />);
+    for (const type of ['sudoku', 'kakuro', 'futoshiki', 'jidoku', 'sumbrero']) {
+      expect(screen.getByTestId(`preview-${type}`)).toBeTruthy();
+    }
+    await fireEvent.press(screen.getByLabelText('Play Kakuro (Medium)'));
+    expect(screen.getByRole('tab', { name: 'Kakuro: Medium', selected: true })).toBeTruthy();
+  });
+
   it.each([
     ['sudoku', 'Easy'],
     ['kakuro', 'Medium'],
