@@ -242,6 +242,21 @@ describe('hints', () => {
     expect(deduction.cell.hasValue()).toBe(false); // nothing is filled in
   });
 
+  it('shows the placements of a nonogram line with the value', () => {
+    const session = openExample('nonogram', 'Cup');
+    session.hint();
+    expect(session.hintPlacements).toBeNull();
+    session.hint();
+    expect(session.hintPlacements).toBeNull();
+    session.hint();
+    const diagram = session.hintPlacements!;
+    const deduction = session.hints.deduction!;
+    expect(diagram.value).toBe(deduction.value);
+    expect(diagram.rows.length).toBeGreaterThan(0);
+    // every placement shown gives the hint's cell its value
+    for (const row of diagram.rows) expect(row[diagram.index]).toBe(deduction.value);
+  });
+
   it('shows the numbers that lead to an exact cover value with the value', () => {
     const session = EASY();
     const deduction = session.solver
