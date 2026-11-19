@@ -13,6 +13,7 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import { Constraint } from '../constraints/constraint';
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
 import { listNames, type Finding } from '../techniques/technique';
@@ -62,6 +63,15 @@ export class HintSession {
       this.level = Math.min(this.level + 1, VALUE) as HintLevel;
     }
     return this.deduction ?? this.finding;
+  }
+
+  /**
+   * The technique behind the hint (its TECHNIQUE_GUIDE entry), to explain it to the player;
+   * null when there is no hint.
+   */
+  techniqueId(): TechniqueId | null {
+    if (this.finding !== null) return this.finding.technique.techniqueId();
+    return this.deduction?.techniqueId() ?? null;
   }
 
   /** Whether a hint is being revealed. */

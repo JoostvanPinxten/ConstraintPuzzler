@@ -1,3 +1,4 @@
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
@@ -252,6 +253,11 @@ export class RunsConstraint extends Constraint {
   /** The technique behind a deduction of this constraint. */
   techniqueOf(deduction: Deduction): RunsTechnique {
     return this.reasonOf(deduction).technique;
+  }
+
+  /** The nonogram techniques have the same names in TECHNIQUE_GUIDE. */
+  override techniqueId(deduction: Deduction): TechniqueId {
+    return this.techniqueOf(deduction);
   }
 
   override difficultyOf(deduction: Deduction): number {

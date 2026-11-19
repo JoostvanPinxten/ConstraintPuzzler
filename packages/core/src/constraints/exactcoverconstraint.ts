@@ -11,7 +11,9 @@ export class ExactCoverConstraint extends UniqueValueConstraint {
     const values = new Set<Value>();
     for (const c of this.group.getCells()) for (const v of c.values) values.add(v);
     const newValues = this.checkForSinglePosition(sortedValues(values));
-    for (const [cell, value] of newValues) cell.inferValue(value);
+    this.withTechnique('hiddenSingle', () => {
+      for (const [cell, value] of newValues) cell.inferValue(value);
+    });
 
     this.searchForNakedSubsets();
     this.searchForHiddenSubsets();
@@ -55,7 +57,7 @@ export class ExactCoverConstraint extends UniqueValueConstraint {
           const reason =
             `${this.group.getName()}: ${formatValues(values)} can only go in ${names}, so` +
             ` those cells cannot hold anything else (${this.summary()})`;
-          this.removeWithReason(inOrder, others, reason);
+          this.withTechnique('hiddenSubset', () => this.removeWithReason(inOrder, others, reason));
           found = true;
           break;
         }

@@ -1,4 +1,5 @@
 import type { Cell } from '../structure/cell';
+import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
 import { formatValues, sortedValues, type Value, type ValueOf } from '../structure/types';
@@ -68,6 +69,10 @@ export class TotalSumValueConstraint extends Constraint {
       for (const v of stillAllowed) allowed.add(v);
     }
     return allowed;
+  }
+
+  override techniqueId(_deduction: Deduction): TechniqueId {
+    return 'sumCombinations';
   }
 
   override getType(): string {

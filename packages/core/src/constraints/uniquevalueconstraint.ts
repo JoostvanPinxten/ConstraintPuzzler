@@ -1,4 +1,5 @@
 import type { Cell } from '../structure/cell';
+import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
 import { formatValues, sortedValues, type Value, type ValueOf } from '../structure/types';
@@ -75,7 +76,7 @@ export class UniqueValueConstraint extends Constraint {
           const reason =
             `${this.group.getName()}: ${names} can only hold ${formatValues(values)} between` +
             ` them, so no other cell can (${this.summary()})`;
-          this.removeWithReason(others, values, reason);
+          this.withTechnique('nakedSubset', () => this.removeWithReason(others, values, reason));
           found = true;
           break;
         }
@@ -99,6 +100,11 @@ export class UniqueValueConstraint extends Constraint {
 
   applyConstraint(): void {
     this.searchForNakedSubsets();
+  }
+
+  /** A placed value removed from the group, or a value that is the only one left. */
+  override techniqueId(deduction: Deduction): TechniqueId {
+    return deduction.setsValue() ? 'nakedSingle' : 'elimination';
   }
 
   override getType(): string {

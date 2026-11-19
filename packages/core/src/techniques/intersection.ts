@@ -1,4 +1,5 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import { cellNames, spotsFor, Technique, type Finding } from './technique';
 
@@ -19,6 +20,7 @@ interface Overlap {
  * Applies to every pair of exact cover groups that share two or more cells.
  */
 export class IntersectionRemoval extends Technique {
+  readonly guideId: TechniqueId = 'intersection';
   static override difficulty = 3;
 
   private overlapsCache: Overlap[] | null = null;

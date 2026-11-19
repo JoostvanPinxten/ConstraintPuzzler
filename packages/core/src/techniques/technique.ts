@@ -1,5 +1,6 @@
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import type { ConstraintGroup } from '../constraints/constraintgroup';
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
 import type { Puzzle } from '../structure/puzzle';
@@ -60,6 +61,19 @@ export abstract class Technique {
 
   /** The name of the technique, e.g. "X-Wing". */
   abstract getType(): string;
+
+  /** The technique as explained to players (its TECHNIQUE_GUIDE entry). */
+  abstract readonly guideId: TechniqueId;
+
+  /** The technique behind a deduction of this technique (or a finding): its guideId. */
+  techniqueId(_deduction: Deduction | null = null): TechniqueId {
+    return this.guideId;
+  }
+
+  /** A technique records no technique of its own while applying (see techniqueId). */
+  currentTechnique(): TechniqueId | null {
+    return null;
+  }
 
   /**
    * The first application of the technique in the current state that removes a candidate, in

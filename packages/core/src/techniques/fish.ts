@@ -1,5 +1,6 @@
 import { combinations } from '../constraints/constraint';
 import type { ConstraintGroup } from '../constraints/constraintgroup';
+import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import { listNames, spotsFor, Technique, type Finding, type TechniqueClass } from './technique';
 
@@ -107,6 +108,7 @@ function pairwiseDisjoint(
 
 /** Two lines hold a value only in the same two crossing lines. */
 export class XWing extends Fish {
+  readonly guideId: TechniqueId = 'xWing';
   static override size = 2;
   static override difficulty = 6;
 
@@ -117,6 +119,7 @@ export class XWing extends Fish {
 
 /** Three lines hold a value only in the same three crossing lines. */
 export class Swordfish extends Fish {
+  readonly guideId: TechniqueId = 'swordfish';
   static override size = 3;
   static override difficulty = 7;
 
@@ -127,6 +130,7 @@ export class Swordfish extends Fish {
 
 /** Four lines hold a value only in the same four crossing lines. */
 export class Jellyfish extends Fish {
+  readonly guideId: TechniqueId = 'jellyfish';
   static override size = 4;
   static override difficulty = 8;
 
