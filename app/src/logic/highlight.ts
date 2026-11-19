@@ -17,20 +17,22 @@ export const HighlightRole = {
   REASON_GROUP: 2,
   /** where a hint says to look */
   HINT: 3,
+  /** a cell of a technique's pattern: where the value can still go (e.g. an X-Wing's corner) */
+  PATTERN: 4,
   /** cell of the selection without a value yet */
-  OPEN: 4,
+  OPEN: 5,
   /** cell of the selection that has a value */
-  SOLVED: 5,
+  SOLVED: 6,
   /** the smaller cell of a greater-than constraint */
-  LESSER: 6,
+  LESSER: 7,
   /** the larger cell of a greater-than constraint */
-  GREATER: 7,
+  GREATER: 8,
   /** a placed number that leads to the hint's value (rules a value out of a cell) */
-  REASON: 8,
+  REASON: 9,
   /** a value or notes that Check found to be wrong */
-  WRONG: 9,
+  WRONG: 10,
   /** the selected cell itself */
-  SELECTED: 10,
+  SELECTED: 11,
 } as const;
 export type HighlightRole = (typeof HighlightRole)[keyof typeof HighlightRole];
 
@@ -40,6 +42,7 @@ const ROLE_RGBA: Record<HighlightRole, [number, number, number, number]> = {
   [HighlightRole.PEER]: [255, 255, 0, 45],
   [HighlightRole.REASON_GROUP]: [0, 170, 190, 45],
   [HighlightRole.HINT]: [150, 110, 255, 80],
+  [HighlightRole.PATTERN]: [225, 60, 160, 110],
   [HighlightRole.OPEN]: [255, 255, 0, 110],
   [HighlightRole.SOLVED]: [90, 200, 90, 110],
   [HighlightRole.LESSER]: [70, 140, 255, 130],
@@ -52,6 +55,7 @@ const ROLE_RGBA: Record<HighlightRole, [number, number, number, number]> = {
 export const ROLE_LABELS: Partial<Record<HighlightRole, string>> = {
   [HighlightRole.PEER]: 'shares a group with the cell',
   [HighlightRole.HINT]: 'where to look',
+  [HighlightRole.PATTERN]: 'where the value can still go',
   [HighlightRole.OPEN]: 'open cell',
   [HighlightRole.SOLVED]: 'solved cell',
   [HighlightRole.LESSER]: 'smaller cell',
@@ -69,6 +73,10 @@ export const RULED_OUT_COLOR = '#4a5560';
 /** The legend label and colour of the border around the groups behind a hint. */
 export const REASON_GROUP_LABEL = 'group through which a number rules a value out';
 export const REASON_GROUP_COLOR = '#00869a';
+
+/** The same, when a technique (e.g. an X-Wing) is shown: its cover groups and their targets. */
+export const TECHNIQUE_GROUP_LABEL = 'group that cannot hold the value outside the pattern';
+export const TECHNIQUE_RULED_OUT_LABEL = 'value ruled out by the pattern';
 
 /** The opaque colour (#rrggbb) a role shows on the white board. */
 export function roleColor(role: HighlightRole): string {

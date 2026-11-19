@@ -21,7 +21,9 @@ import {
   VALUE,
   type Cell,
   type ConstraintGroup,
+  Technique,
   type Deduction,
+  type Finding,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -72,6 +74,10 @@ export class PuzzleSession {
   hintRuledOut = new Set<Cell>();
   /** the groups through which those numbers rule the value out (drawn with a border) */
   hintReasonGroups = new Set<ConstraintGroup>();
+  /** the technique finding shown (by a hint or a step), e.g. an X-Wing; null for none */
+  shownFinding: Finding | null = null;
+  /** the cells of the shown finding's pattern: where its value can still go */
+  hintPattern = new Set<Cell>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -157,6 +163,7 @@ export class PuzzleSession {
       HighlightRole.REASON_GROUP,
     );
     mergeRole(roles, this.hintRegion, HighlightRole.HINT);
+    mergeRole(roles, this.hintPattern, HighlightRole.PATTERN);
     mergeRole(roles, this.hintReasons, HighlightRole.REASON);
     mergeRole(roles, this.checkMarks, HighlightRole.WRONG);
     return roles;
@@ -215,7 +222,24 @@ export class PuzzleSession {
     this.hintReasons = new Set();
     this.hintRuledOut = new Set();
     this.hintReasonGroups = new Set();
+    this.shownFinding = null;
+    this.hintPattern = new Set();
     this.checkMarks = new Set();
+  }
+
+  /**
+   * Show a technique's finding: the groups it looks at, and with `pattern` also where the
+   * value can still go, the groups that cannot hold the value elsewhere (with a border) and
+   * the cells that lose it (hatched). There is no single cell to select.
+   */
+  private showFinding(finding: Finding, pattern: boolean): void {
+    this.shownFinding = finding;
+    this.selection = null;
+    this.hintRegion = new Set(finding.groups.flatMap((g) => g.getCells()));
+    this.hintPattern = pattern ? new Set(finding.pattern) : new Set();
+    this.hintReasonGroups = pattern ? new Set(finding.cover) : new Set();
+    this.hintRuledOut = pattern ? new Set(finding.targets) : new Set();
+    this.hintReasons = new Set();
   }
 
   toggleNotesMode(): void {
@@ -413,7 +437,10 @@ export class PuzzleSession {
       this.selection = { kind: 'cell', cell: step.cell };
       this.stepMessage = `Solver step: ${step.describe()}`;
     } else if (changed) {
-      this.stepMessage = `Solver step: ${narrowingMessage(this.solver.log.deductions)}`;
+      const deductions = this.solver.log.deductions;
+      this.stepMessage = `Solver step: ${narrowingMessage(deductions)}`;
+      const finding = findingOf(deductions);
+      if (finding !== null) this.showFinding(finding, true);
     }
     if (!changed) {
       this.notice = {
@@ -550,4 +577,12 @@ export function narrowingMessage(deductions: readonly Deduction[]): string {
   const more = reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : '';
   const what = removed === 1 ? '1 candidate' : `${removed} candidates`;
   return `removed ${what}. ${reasons[0] ?? ''}${more}.`;
+}
+
+/** The technique finding behind a step's removals, if a technique made them. */
+export function findingOf(deductions: readonly Deduction[]): Finding | null {
+  for (const d of deductions) {
+    if (d.cause instanceof Technique) return d.cause.findingFor(d);
+  }
+  return null;
 }

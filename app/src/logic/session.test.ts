@@ -408,6 +408,30 @@ describe('solving in the background', () => {
     ).toBe(true);
   });
 
+  it('shows the pattern of a technique step: groups, pattern, cover and lost values', () => {
+    const session = openExample('sudoku', 'Hard');
+    for (let i = 0; i < 200 && session.shownFinding === null && session.notice === null; i++) {
+      session.solveStep();
+    }
+    const finding = session.shownFinding!;
+    expect(finding.technique.getType()).toBe('X-Wing');
+    expect(session.selection).toBeNull();
+    expect(session.hintPattern).toEqual(new Set(finding.pattern));
+    expect(session.hintReasonGroups).toEqual(new Set(finding.cover));
+    expect(session.hintRuledOut).toEqual(new Set(finding.targets));
+    // the targets lost the value
+    for (const cell of finding.targets) expect(cell.values.has(finding.value)).toBe(false);
+    const roles = session.highlight();
+    for (const cell of finding.pattern) expect(roles.get(cell)).toBe(HighlightRole.PATTERN);
+    for (const cell of finding.groups.flatMap((g) => g.getCells())) {
+      expect(roles.get(cell)).toBeGreaterThanOrEqual(HighlightRole.HINT);
+    }
+    // the next step forgets it
+    session.solveStep();
+    expect(session.shownFinding).toBeNull();
+    expect(session.hintPattern.size).toBe(0);
+  });
+
   it('gets stuck without guessing on the hard sudoku', async () => {
     const session = openExample('sudoku', 'Hard');
     await session.solve(DEFAULT_SETTINGS);

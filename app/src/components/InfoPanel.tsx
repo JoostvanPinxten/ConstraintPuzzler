@@ -10,6 +10,8 @@ import {
   roleColor,
   RULED_OUT_COLOR,
   RULED_OUT_LABEL,
+  TECHNIQUE_GROUP_LABEL,
+  TECHNIQUE_RULED_OUT_LABEL,
 } from '../logic/highlight';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
@@ -24,6 +26,7 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
   const cell = session.selectedCell();
   const note = cell !== null ? session.game.violationNote(cell, session.violations()) : null;
   const entries = legend(session.highlight().values());
+  const technique = session.shownFinding !== null;
 
   return (
     <View style={styles.panel} testID="info">
@@ -53,13 +56,17 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
           {session.hintReasonGroups.size > 0 && (
             <View style={styles.legendEntry}>
               <View style={[styles.swatch, styles.reasonGroupSwatch]} />
-              <Text style={styles.legendText}>{REASON_GROUP_LABEL}</Text>
+              <Text style={styles.legendText}>
+                {technique ? TECHNIQUE_GROUP_LABEL : REASON_GROUP_LABEL}
+              </Text>
             </View>
           )}
           {session.hintRuledOut.size > 0 && (
             <View style={styles.legendEntry}>
               <View style={[styles.swatch, styles.ruledOutSwatch]} />
-              <Text style={styles.legendText}>{RULED_OUT_LABEL}</Text>
+              <Text style={styles.legendText}>
+                {technique ? TECHNIQUE_RULED_OUT_LABEL : RULED_OUT_LABEL}
+              </Text>
             </View>
           )}
         </View>
