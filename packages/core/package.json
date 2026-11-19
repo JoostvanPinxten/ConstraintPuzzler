@@ -1,6 +1,6 @@
 {
   "name": "@constraintpuzzler/core",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "description": "The puzzle model, constraints, solver and parsers (no React / React Native)",
   "type": "module",
