@@ -11,8 +11,8 @@ import type { Value } from './structure/types';
 const range = (from: number, to: number): number[] =>
   Array.from({ length: to - from }, (_, i) => from + i);
 
-export function createEmptySudoku(): Puzzle {
-  const sudoku = new Puzzle('Sudoku', range(1, 10));
+export function createEmptySudoku(name = 'Sudoku'): Puzzle {
+  const sudoku = new Puzzle(name, range(1, 10));
   const blocks: ConstraintGroup[] = [];
   const rows: ConstraintGroup[] = [];
   const columns: ConstraintGroup[] = [];

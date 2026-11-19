@@ -10,10 +10,13 @@ import { exampleFiles } from '../src/puzzletypes';
 import { loadExample, loadFixtures } from './helpers';
 
 const fixtures = loadFixtures();
+/** examples of puzzle types added after the Python engine, so without a fixture */
+const NEWER_THAN_PYTHON = ['jidoku.txt'];
 
 describe('golden fixtures from the Python engine', () => {
-  it('cover every registered example', () => {
-    expect(fixtures.map((f) => f.file).sort()).toEqual(exampleFiles().sort());
+  it('cover every registered example of the Python era', () => {
+    const examples = exampleFiles().filter((f) => !NEWER_THAN_PYTHON.includes(f));
+    expect(fixtures.map((f) => f.file).sort()).toEqual(examples.sort());
   });
 
   describe.each(fixtures.map((f) => [f.file, f] as const))('%s', (_file, fixture) => {

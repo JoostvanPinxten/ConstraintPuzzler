@@ -5,13 +5,14 @@
  * the tests read them from the repository), so this package stays free of platform APIs.
  */
 import { parseFutoshikiLines } from './parsers/futoshiki';
+import { parseJidokuLines } from './parsers/jidoku';
 import { parseKakuroLines } from './parsers/kakuro';
 import { splitLines } from './parsers/common';
 import { parseSudokuLines } from './parsers/sudoku';
 import { parseSumbreroLines } from './parsers/sumbrero';
 import type { Puzzle } from './structure/puzzle';
 
-export type PuzzleTypeName = 'sudoku' | 'kakuro' | 'futoshiki' | 'sumbrero';
+export type PuzzleTypeName = 'sudoku' | 'kakuro' | 'futoshiki' | 'jidoku' | 'sumbrero';
 
 export interface PuzzleType {
   /** identifier, e.g. in links and as the registry key */
@@ -57,10 +58,19 @@ export const KAKURO = definePuzzleType({
 export const FUTOSHIKI = definePuzzleType({
   name: 'futoshiki',
   label: 'Futoshiki',
-  parseLines: (lines) => parseFutoshikiLines(lines),
+  parseLines: parseFutoshikiLines,
   fileExtensions: ['txt', 'fut'],
   examples: { '7x7': 'futoshiki.txt' },
   defaultExample: '7x7',
+});
+
+export const JIDOKU = definePuzzleType({
+  name: 'jidoku',
+  label: 'Jidoku',
+  parseLines: parseJidokuLines,
+  fileExtensions: ['txt', 'jid'],
+  examples: { Medium: 'jidoku.txt' },
+  defaultExample: 'Medium',
 });
 
 export const SUMBRERO = definePuzzleType({
@@ -77,6 +87,7 @@ export const PUZZLE_TYPES: Readonly<Record<PuzzleTypeName, PuzzleType>> = {
   sudoku: SUDOKU,
   kakuro: KAKURO,
   futoshiki: FUTOSHIKI,
+  jidoku: JIDOKU,
   sumbrero: SUMBRERO,
 };
 

@@ -1,6 +1,7 @@
 // The board geometry of every puzzle type (as the former PySide6 GUI smoke tests checked it).
 import {
   CellGreaterThanCellConstraint,
+  parsePuzzle,
   PUZZLE_TYPES,
   TotalSumValueConstraint,
   type PuzzleTypeName,
@@ -8,19 +9,16 @@ import {
 
 import { openExample } from '../puzzles/open';
 import {
+  BEND_DEPTH,
   clueLayout,
   framePositions,
   hintGrid,
   inequalitySign,
+  JIDOKU_BOX_SHADE,
   LAYOUTS,
   outlineEdges,
   type Point,
 } from './layout';
-
-const center = (points: readonly Point[]): Point => ({
-  x: points.reduce((s, p) => s + p.x, 0) / points.length,
-  y: points.reduce((s, p) => s + p.y, 0) / points.length,
-});
 
 describe.each(Object.keys(PUZZLE_TYPES) as PuzzleTypeName[])('%s layout', (type) => {
   const puzzle = openExample(type).puzzle;
@@ -59,7 +57,7 @@ describe.each(Object.keys(PUZZLE_TYPES) as PuzzleTypeName[])('%s layout', (type)
   });
 
   it('does not overlap cells', () => {
-    const centers = layout.cells.map((s) => center(s.outline));
+    const centers = layout.cells.map((s) => s.valueCenter);
     for (let i = 0; i < centers.length; i++) {
       for (let j = i + 1; j < centers.length; j++) {
         const a = centers[i]!;
@@ -91,32 +89,95 @@ describe('kakuro', () => {
   });
 });
 
+/** The inequalities of a puzzle. */
+const relationsOf = (type: PuzzleTypeName) => {
+  const puzzle = openExample(type).puzzle;
+  const relations = puzzle
+    .getConstraints()
+    .filter((c): c is CellGreaterThanCellConstraint => c instanceof CellGreaterThanCellConstraint);
+  return { puzzle, relations, layout: LAYOUTS[type](puzzle) };
+};
+
+describe.each(['futoshiki', 'jidoku'] as const)('%s bent edges', (type) => {
+  const { relations, layout } = relationsOf(type);
+  const shapes = new Map(layout.cells.map((s) => [s.cell, s]));
+
+  it('bends the shared edge of every inequality, its point in the lesser cell', () => {
+    expect(layout.decorations.filter((d) => d.kind === 'polyline')).toHaveLength(0);
+    for (const relation of relations) {
+      const greater = shapes.get(relation.greaterCell!)!;
+      const lesser = shapes.get(relation.lesserCell!)!;
+      const shared = greater.outline.filter((p) =>
+        lesser.outline.some((q) => Math.hypot(p.x - q.x, p.y - q.y) < 1e-9),
+      );
+      // the two corners, the two ends of the bend and its tip
+      expect(shared).toHaveLength(5);
+      const g = greater.valueCenter;
+      const l = lesser.valueCenter;
+      // the tip lies on the line between the centres, the bend depth beyond the middle
+      const tip = shared.reduce((best, p) =>
+        Math.hypot(p.x - l.x, p.y - l.y) < Math.hypot(best.x - l.x, best.y - l.y) ? p : best,
+      );
+      const size = Math.hypot(g.x - l.x, g.y - l.y);
+      expect(Math.hypot(tip.x - l.x, tip.y - l.y)).toBeCloseTo(size / 2 - BEND_DEPTH * size);
+    }
+  });
+
+  it('keeps the small values clear of the bends', () => {
+    for (const shape of layout.cells) {
+      const { hintArea, outline } = shape;
+      for (const p of outline) {
+        const inside =
+          p.x > hintArea.x + 1e-9 &&
+          p.x < hintArea.x + hintArea.width - 1e-9 &&
+          p.y > hintArea.y + 1e-9 &&
+          p.y < hintArea.y + hintArea.height - 1e-9;
+        expect(inside).toBe(false);
+      }
+    }
+  });
+});
+
 describe('futoshiki', () => {
-  it('has a sign pointing to the lesser cell for every inequality', () => {
-    const puzzle = openExample('futoshiki').puzzle;
-    const layout = LAYOUTS.futoshiki(puzzle);
-    const shapes = new Map(layout.cells.map((s) => [s.cell, s]));
-    const signs = layout.decorations.filter((d) => d.kind === 'polyline');
-    const relations = puzzle
-      .getConstraints()
-      .filter(
-        (c): c is CellGreaterThanCellConstraint => c instanceof CellGreaterThanCellConstraint,
-      );
-    expect(signs).toHaveLength(relations.length);
-    relations.forEach((relation, i) => {
-      const sign = signs[i]!;
-      if (sign.kind !== 'polyline') throw new Error('not a sign');
-      const tip = sign.points[1]!;
-      const lesser = shapes.get(relation.lesserCell!)!.valueCenter;
-      const greater = shapes.get(relation.greaterCell!)!.valueCenter;
-      expect(Math.hypot(tip.x - lesser.x, tip.y - lesser.y)).toBeLessThan(
-        Math.hypot(tip.x - greater.x, tip.y - greater.y),
-      );
-    });
+  it('draws a separate sign for an inequality between cells that do not touch', () => {
+    const puzzle = parsePuzzle(PUZZLE_TYPES.futoshiki, '- - -\n- - -\n- - -\nrelativity\n1,1>3,1');
+    const signs = LAYOUTS.futoshiki(puzzle).decorations.filter((d) => d.kind === 'polyline');
+    expect(signs).toHaveLength(1);
   });
 
   it('needs two distinct cells for a sign', () => {
     expect(() => inequalitySign({ x: 0, y: 0 }, { x: 0, y: 0 }, 5, 5)).toThrow();
+  });
+});
+
+describe('jidoku', () => {
+  const { puzzle, layout } = relationsOf('jidoku');
+
+  it('shades every other box, as in the paper', () => {
+    const shaded = layout.cells.filter((s) => s.background === JIDOKU_BOX_SHADE);
+    expect(shaded).toHaveLength(4 * 9);
+    const block = (n: number) =>
+      new Set(
+        puzzle
+          .getConstraintGroups()
+          .find((g) => g.getName() === `Block ${n}`)!
+          .getCells(),
+      );
+    for (const n of [2, 4, 6, 8]) {
+      expect(shaded.filter((s) => block(n).has(s.cell))).toHaveLength(9);
+    }
+  });
+
+  it('draws the border of a box around its bends', () => {
+    const block = new Set(
+      puzzle
+        .getConstraintGroups()
+        .find((g) => g.getName() === 'Block 1')!
+        .getCells(),
+    );
+    const edges = outlineEdges(layout.cells.filter((s) => block.has(s.cell)));
+    // clues only join cells within a box, so its border is straight: 3 edges per side
+    expect(edges).toHaveLength(12);
   });
 });
 
@@ -170,13 +231,18 @@ describe('group outlines', () => {
     expect(horizontal).toHaveLength(2);
   });
 
-  it('draw a Futoshiki row across the room for the signs', () => {
-    const futoshiki = openExample('futoshiki').puzzle;
-    const shapes = LAYOUTS.futoshiki(futoshiki).cells;
-    const row = futoshiki.getConstraintGroups().find((g) => g.getName() === 'Row 1')!;
+  it('draw a Futoshiki row along its bent edges', () => {
+    const { puzzle: futoshiki, relations, layout: futoshikiLayout } = relationsOf('futoshiki');
+    const row = futoshiki.getConstraintGroups().find((g) => g.getName() === 'Row 2')!;
     const cells = new Set(row.getCells());
     const size = row.getCells().length;
-    expect(outlineEdges(shapes.filter((s) => cells.has(s.cell)))).toHaveLength(2 * size + 2);
+    // a bend on the border of the row turns one edge into four
+    const across = relations.filter(
+      (r) => cells.has(r.greaterCell!) !== cells.has(r.lesserCell!),
+    ).length;
+    expect(across).toBeGreaterThan(0);
+    const edges = outlineEdges(futoshikiLayout.cells.filter((s) => cells.has(s.cell)));
+    expect(edges).toHaveLength(2 * size + 2 + 3 * across);
   });
 
   it('draw every edge of a single cell', () => {
