@@ -1,7 +1,7 @@
 // What the Rules dialog shows: the rules and techniques of a puzzle type, opened at a technique.
-import { PUZZLE_TYPES, TECHNIQUE_GUIDE } from '@constraintpuzzler/core';
+import { parseExampleBoard, PUZZLE_TYPES, TECHNIQUE_GUIDE } from '@constraintpuzzler/core';
 
-import { guideContent, techniqueLinkLabel, toggleTechnique } from './guide';
+import { exampleBoardLayout, guideContent, techniqueLinkLabel, toggleTechnique } from './guide';
 
 describe('guideContent', () => {
   it.each(Object.values(PUZZLE_TYPES))('$name: lists its rules and techniques', (type) => {
@@ -32,5 +32,28 @@ describe('techniques in the list', () => {
     expect(techniqueLinkLabel('hiddenSingle')).toBe(
       `About this technique: ${TECHNIQUE_GUIDE.hiddenSingle.name}`,
     );
+  });
+});
+
+describe('exampleBoardLayout', () => {
+  it('places the cells in a grid with box lines', () => {
+    const board = TECHNIQUE_GUIDE.intersection.board!;
+    const layout = exampleBoardLayout(board, parseExampleBoard(board));
+    expect(layout.width).toBe(9);
+    expect(layout.height).toBe(3);
+    expect(layout.cells).toHaveLength(27);
+    expect(layout.cells[10]).toMatchObject({ x: 1, y: 1 });
+    // the frame, and the lines between the three boxes (no row lines in three rows)
+    expect(layout.thickLines).toHaveLength(4 + 2);
+    expect(layout.labels).toEqual([]);
+  });
+
+  it('leaves room for the row labels', () => {
+    const board = TECHNIQUE_GUIDE.wholeLine.board!;
+    const layout = exampleBoardLayout(board, parseExampleBoard(board));
+    const left = layout.cells[0]!.x;
+    expect(left).toBeGreaterThan(0);
+    expect(layout.width).toBe(left + 6);
+    expect(layout.labels).toEqual([{ x: left - 0.15, y: 0.5, text: '3 2' }]);
   });
 });

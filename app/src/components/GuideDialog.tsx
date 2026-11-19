@@ -16,6 +16,7 @@ import {
 import { guideContent, toggleTechnique } from '../logic/guide';
 import { COLORS } from '../theme';
 import { Button } from './Controls';
+import { ExampleBoard } from './ExampleBoard';
 
 export function GuideDialog({
   type,
@@ -135,6 +136,9 @@ function TechniqueEntry({
           ))}
           {entry.example !== undefined && (
             <Text style={styles.example}>{`Example: ${entry.example}`}</Text>
+          )}
+          {entry.board !== undefined && (
+            <ExampleBoard board={entry.board} testID={`board-${entry.id}`} />
           )}
         </View>
       )}
