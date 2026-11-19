@@ -1,8 +1,10 @@
 // The app rendered: open puzzles from the start page, play with taps, close tabs.
 // (Testing Library 14: render and fireEvent are async.)
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { PUZZLE_TYPES } from '@constraintpuzzler/core';
 
 import App from '../App';
+import { PUZZLE_RULES } from './components/StartPage';
 
 async function openPuzzle(testID: string): Promise<void> {
   await render(<App />);
@@ -23,10 +25,15 @@ describe('App', () => {
     expect(screen.getByText(/^Version /)).toBeTruthy();
   });
 
-  it('shows a preview of every type on the start page, which opens its default example', async () => {
+  it('shows every type on the start page (preview, rule, examples), which opens its default example', async () => {
     await render(<App />);
-    for (const type of ['sudoku', 'kakuro', 'futoshiki', 'jidoku', 'sumbrero']) {
-      expect(screen.getByTestId(`preview-${type}`)).toBeTruthy();
+    for (const type of Object.values(PUZZLE_TYPES)) {
+      expect(screen.getByTestId(`preview-${type.name}`)).toBeTruthy();
+      expect(screen.getByText(type.label)).toBeTruthy();
+      expect(screen.getByText(PUZZLE_RULES[type.name])).toBeTruthy();
+      for (const label of Object.keys(type.examples)) {
+        expect(screen.getByTestId(`open-${type.name}-${label}`)).toBeTruthy();
+      }
     }
     await fireEvent.press(screen.getByLabelText('Play Kakuro (Medium)'));
     expect(screen.getByRole('tab', { name: 'Kakuro: Medium', selected: true })).toBeTruthy();

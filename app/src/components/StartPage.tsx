@@ -33,6 +33,8 @@ export const PUZZLE_RULES: Readonly<Record<PuzzleTypeName, string>> = {
   jidoku: 'Sudoku without given numbers: only < and > between neighbours in a box.',
   sumbrero:
     "Follow each clue's triangle: the hexagons in that direction add up to the clue, without repeating a digit.",
+  nonogram:
+    'Fill in cells so every row and column has blocks of the lengths of its clue, in that order.',
 };
 
 const FEATURES = ['Hints that explain why', 'Solve step by step', 'Create your own puzzles'];

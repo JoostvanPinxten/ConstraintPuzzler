@@ -46,6 +46,19 @@ export function BoardPreview({ type, height }: { type: PuzzleType; height: numbe
     >
       {layout.cells.map((shape) => {
         const value = shape.cell.isGiven() ? shape.cell.getValue() : null;
+        // a nonogram's values are colours: a given value is a filled cell
+        const colour = value !== null ? layout.palette?.get(value) : undefined;
+        if (layout.palette !== undefined) {
+          return (
+            <Polygon
+              key={`c${shape.cell.getName()}`}
+              points={pointsAttribute(shape.outline)}
+              fill={colour ?? shape.background ?? COLORS.board}
+              stroke="#000000"
+              strokeWidth={shape.strokeWidth}
+            />
+          );
+        }
         return [
           <Polygon
             key={`c${shape.cell.getName()}`}
