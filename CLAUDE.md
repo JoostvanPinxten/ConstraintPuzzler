@@ -1,6 +1,6 @@
 # ConstraintPuzzler
 
-A TypeScript / React Native app that solves number puzzles (Sudoku, Kakuro, Futoshiki and Sumbrero) by describing them as constraints over a grid of cells and then propagating those constraints. It runs on the web, as a desktop app (Windows, macOS, Linux) and on Android (iOS needs an Apple developer account). It was a PySide6 (Python) app until v0.2.0; `doc/react-native-migration.md` describes the move.
+A TypeScript / React Native app that solves number puzzles (Sudoku, Kakuro, Futoshiki, Jidoku and Sumbrero) by describing them as constraints over a grid of cells and then propagating those constraints. It runs on the web, as a desktop app (Windows, macOS, Linux) and on Android (iOS needs an Apple developer account). It was a PySide6 (Python) app until v0.2.0; `doc/react-native-migration.md` describes the move.
 
 ## Layout
 An npm workspace with three packages:

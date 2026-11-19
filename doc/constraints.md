@@ -191,7 +191,7 @@ adding the cells and the `UniqueValueConstraint`.
 `packages/core/src/constraints/cellgreaterthancellconstraint.ts`
 
 **Rule:** the value of one cell (the *lesser* cell) is strictly smaller than the value of another
-cell (the *greater* cell). This is the `<` / `>` sign between two Futoshiki cells.
+cell (the *greater* cell). This is the `<` / `>` sign between two Futoshiki or Jidoku cells.
 
 **Deductions** (bounds reasoning, once per pass):
 
@@ -216,8 +216,8 @@ constraint.setGreaterCell(greaterCell);
 constraint.setLesserCell(lesserCell);
 ```
 
-In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line `relativity`;
-`parseFutoshikiLines` creates these groups.
+In a Futoshiki or Jidoku file the relation is written as `x,y>x,y` (1-based) below a line
+`relativity`; `parseFutoshikiLines` and `parseJidokuLines` create these groups (`addRelation`).
 
 ## How the puzzles combine constraints
 
@@ -225,6 +225,7 @@ In a Futoshiki file the relation is written as `x,y>x,y` (1-based) below a line 
 |---|---|
 | Sudoku | Each row, column and 3x3 block: `ExactCoverConstraint`. |
 | Futoshiki | Each row and column: `ExactCoverConstraint`. Each inequality sign: a two-cell group with `CellGreaterThanCellConstraint`. |
+| Jidoku | As Sudoku (each row, column and 3x3 block: `ExactCoverConstraint`), plus a two-cell group with `CellGreaterThanCellConstraint` per clue. |
 | Kakuro | Each horizontal or vertical line of white cells: `UniqueValueConstraint` + `TotalSumValueConstraint` with the clue. |
 | Sumbrero | Each column and diagonal row with a clue: `UniqueValueConstraint` + `TotalSumValueConstraint`. |
 

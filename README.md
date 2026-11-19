@@ -9,7 +9,7 @@ ConstraintPuzzler - the power of deduction
 
 Many number puzzles have many similar properties which allow automatic (analytical or brute-force) solving. ConstraintPuzzler takes advantage of these similarities by allowing the user to describe the structure of the puzzle. As you can express most puzzles in terms of (combinations of) constraints on this structure, it leverages this information to automatically provide a solver that simply interprets the constraints + structure and analytically solves most cases.
 
-In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles. The supported puzzles are Sudoku, Kakuro, Futoshiki and Sumbrero.
+In short, ConstraintPuzzler uses _the power of deduction_ to solve these puzzles. The supported puzzles are Sudoku, Kakuro, Futoshiki, Jidoku and Sumbrero.
 
 [![Sudoku example](doc/sudokuExampleThumb.png)](doc/sudokuExample.png) [![Kakuro example](doc/kakuroExampleThumbnail.png)](doc/kakuroExample.png)
 

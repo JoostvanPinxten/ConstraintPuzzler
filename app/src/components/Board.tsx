@@ -140,6 +140,11 @@ function RuledOutPattern({ spacing }: { spacing: number }) {
   );
 }
 
+/** A highlight colours the cell; otherwise it shows its own background (e.g. a shaded box). */
+function cellFill(role: HighlightRole, background: string | undefined): string {
+  return role === HighlightRole.NONE && background !== undefined ? background : roleColor(role);
+}
+
 function Decorations({ layout }: { layout: BoardLayout }) {
   return (
     <>
@@ -271,7 +276,7 @@ export function Board({ session }: { session: PuzzleSession }) {
                 valueColor={valueColor}
                 notes={[...game.notesOf(cell)].sort((a, b) => a - b).join(',')}
                 candidates={candidates}
-                fill={roleColor(roles.get(cell) ?? HighlightRole.NONE)}
+                fill={cellFill(roles.get(cell) ?? HighlightRole.NONE, shape.background)}
                 ruledOut={session.hintRuledOut.has(cell)}
                 onPress={onPress}
               />

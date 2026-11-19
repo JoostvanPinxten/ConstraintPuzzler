@@ -11,7 +11,14 @@ export { ExactCoverConstraint } from './constraints/exactcoverconstraint';
 export { TotalSumValueConstraint } from './constraints/totalsumvalueconstraint';
 export { UniqueValueConstraint } from './constraints/uniquevalueconstraint';
 export * from './parsers/common';
-export { parseFutoshikiLines } from './parsers/futoshiki';
+export {
+  addRelation,
+  addRelations,
+  parseFutoshikiLines,
+  splitGridAndRelations,
+  type Relation,
+} from './parsers/futoshiki';
+export { jidokuRelationProblem, parseJidokuLines } from './parsers/jidoku';
 export { clueAnchor, parseKakuroLines } from './parsers/kakuro';
 export { parseSudokuLines, readGridValues } from './parsers/sudoku';
 export * from './parsers/sumbrero';

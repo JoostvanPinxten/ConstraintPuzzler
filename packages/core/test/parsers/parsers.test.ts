@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import type { ConstraintGroup } from '../../src/constraints/constraintgroup';
 import { parseIndex, parseRange, PuzzleFileError, splitLines } from '../../src/parsers/common';
 import { parseFutoshikiLines } from '../../src/parsers/futoshiki';
+import { parseJidokuLines } from '../../src/parsers/jidoku';
+import { CellGreaterThanCellConstraint } from '../../src/constraints/cellgreaterthancellconstraint';
 import { clueAnchor, parseKakuroLines } from '../../src/parsers/kakuro';
 import {
   ASCENDING_ROW,
@@ -292,6 +294,53 @@ describe('sudoku and futoshiki', () => {
   it('refuses a malformed relation', () => {
     expect(() => parseFutoshikiLines(['- -', '- -', 'relativity', '1,1>2,1>2,2'])).toThrow();
     expect(() => parseFutoshikiLines(['- -', '- -', 'relativity', '1>2,1'])).toThrow();
+  });
+});
+
+describe('jidoku', () => {
+  const empty = Array.from({ length: 9 }, () => '- - - - - - - - -');
+
+  it('solves the example by inference alone, with a unique solution', () => {
+    const puzzle = loadExample('jidoku', 'jidoku.txt');
+    expect(puzzle.name).toBe('Jidoku');
+    expect(
+      puzzle
+        .getGrid()
+        .getCells()
+        .filter((c) => c.hasValue()),
+    ).toHaveLength(0);
+    expect(new Solver(loadExample('jidoku', 'jidoku.txt')).countSolutions(2)).toBe(1);
+    expect(new Solver(puzzle).solve()).toBe(true);
+  });
+
+  it('builds the sudoku groups plus one relation per clue', () => {
+    const puzzle = parseJidokuLines([...empty, 'relativity', '2,1>1,1', '1,2>1,1']);
+    const relations = puzzle
+      .getConstraints()
+      .filter(
+        (c): c is CellGreaterThanCellConstraint => c instanceof CellGreaterThanCellConstraint,
+      );
+    expect(relations).toHaveLength(2);
+    const grid = puzzle.getGrid();
+    expect(relations[0]?.greaterCell).toBe(grid.getCellFromSquareGrid(1, 0));
+    expect(relations[0]?.lesserCell).toBe(grid.getCellFromSquareGrid(0, 0));
+    expect(puzzle.getConstraintGroups().filter((g) => g.getName() !== 'Relativity')).toHaveLength(
+      27,
+    );
+  });
+
+  it('only accepts clues between neighbours in the same box', () => {
+    const parse = (relation: string) => () =>
+      parseJidokuLines([...empty, 'relativity', relation], 'j.txt');
+    expectFileError(parse('3,1>4,1'), 11, 'same 3x3 box');
+    expectFileError(parse('1,1>3,1'), 11, 'orthogonal neighbours');
+    expectFileError(parse('1,1>2,2'), 11, 'orthogonal neighbours');
+    expectFileError(parse('9,9>10,9'), 11, 'within the 9x9 grid');
+    expectFileError(parse('1,1>2'), 11, 'x,y');
+  });
+
+  it('needs nine grid lines', () => {
+    expectFileError(() => parseJidokuLines(['- -', '- -'], 'j.txt'), 1, 'expected 9 grid lines');
   });
 });
 

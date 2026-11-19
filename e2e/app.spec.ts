@@ -6,6 +6,7 @@ const EXAMPLES = [
   ['sudoku', 'Easy', 81],
   ['kakuro', 'Medium', 56],
   ['futoshiki', '7x7', 49],
+  ['jidoku', 'Medium', 81],
   ['sumbrero', 'Simple', 16],
 ] as const;
 

@@ -1,7 +1,9 @@
 /**
  * Where everything of a puzzle is drawn: the cells (as polygons, with the area for the small
  * candidate values and the place of the big value) and the decorations around them (Sudoku
- * block lines, Kakuro clue triangles, Futoshiki inequality signs, Sumbrero clue hexagons).
+ * block lines, Kakuro clue triangles, Sumbrero clue hexagons). The inequalities of Futoshiki and
+ * Jidoku are not decorations but bent cell edges, as in O'Sullivan & Horan, "Generating and Solving
+ * Logic Puzzles through Constraint Satisfaction" (AAAI 2007), Figure 1.
  *
  * The geometry follows the former PySide6 windows (sudokuMain.py, kakuroMain.py, futoshikiMain.py,
  * sumbreroMain.py and gui/puzzlerepresentation, in the git history). It is pure data, so it can be tested without
@@ -44,6 +46,8 @@ export interface CellShape {
   /** the centre of the big value */
   readonly valueCenter: Point;
   readonly valueFontSize: number;
+  /** the fill when the cell is not highlighted (default: the white board), e.g. a shaded box */
+  readonly background?: string;
 }
 
 export type Decoration =
@@ -226,6 +230,125 @@ export function kakuroLayout(puzzle: Puzzle): BoardLayout {
   return finish(cells, decorations);
 }
 
+// --- bent edges (Futoshiki, Jidoku) -----------------------------------------------------------
+
+/** How far a bent edge reaches into the lesser cell, as a fraction of the cell size. */
+export const BEND_DEPTH = 0.16;
+/** How much of the edge the bend spans, as a fraction of the edge. */
+export const BEND_SPAN = 0.42;
+
+/** A square cell before its edges are bent: top-left corner and size. */
+interface SquarePlacement {
+  readonly cell: Cell;
+  readonly x: number;
+  readonly y: number;
+  readonly size: number;
+  readonly background?: string;
+}
+
+type Side = 'top' | 'right' | 'bottom' | 'left';
+/** the outward normal of each side (y grows downwards) */
+const SIDE_NORMALS: Readonly<Record<Side, Point>> = {
+  top: { x: 0, y: -1 },
+  right: { x: 1, y: 0 },
+  bottom: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+};
+const OPPOSITE: Readonly<Record<Side, Side>> = {
+  top: 'bottom',
+  right: 'left',
+  bottom: 'top',
+  left: 'right',
+};
+
+/** The side of `a` that `b` touches (they share a whole edge), or null. */
+function touchingSide(a: SquarePlacement, b: SquarePlacement): Side | null {
+  const close = (p: number, q: number) => Math.abs(p - q) < 1e-6;
+  if (!close(a.size, b.size)) return null;
+  if (close(a.y, b.y) && close(a.x + a.size, b.x)) return 'right';
+  if (close(a.y, b.y) && close(b.x + b.size, a.x)) return 'left';
+  if (close(a.x, b.x) && close(a.y + a.size, b.y)) return 'bottom';
+  if (close(a.x, b.x) && close(b.y + b.size, a.y)) return 'top';
+  return null;
+}
+
+/**
+ * Square cells whose shared edge is bent into a < or > for every inequality between two touching
+ * cells: the greater cell gets a tooth that points into the lesser cell, which gets the matching
+ * notch, so the edge reads as the sign (its point at the lesser cell). The hint area keeps clear
+ * of the bends. An inequality between cells that do not touch gets a separate sign instead.
+ */
+export function bentSquares(
+  placements: readonly SquarePlacement[],
+  relations: readonly CellGreaterThanCellConstraint[],
+): { cells: CellShape[]; signs: Decoration[] } {
+  const byCell = new Map(placements.map((p) => [p.cell, p]));
+  /** cell -> side -> +1 (tooth) or -1 (notch) */
+  const bends = new Map<Cell, Map<Side, number>>();
+  const bend = (cell: Cell, side: Side, direction: number) => {
+    const sides = bends.get(cell) ?? new Map<Side, number>();
+    sides.set(side, direction);
+    bends.set(cell, sides);
+  };
+  const center = (p: SquarePlacement): Point => ({ x: p.x + p.size / 2, y: p.y + p.size / 2 });
+  const signs: Decoration[] = [];
+  for (const relation of relations) {
+    const greater = relation.greaterCell && byCell.get(relation.greaterCell);
+    const lesser = relation.lesserCell && byCell.get(relation.lesserCell);
+    if (!greater || !lesser) continue;
+    const side = touchingSide(greater, lesser);
+    if (side !== null) {
+      bend(greater.cell, side, 1);
+      bend(lesser.cell, OPPOSITE[side], -1);
+    } else {
+      const size = greater.size * 0.35;
+      signs.push(inequalitySign(center(greater), center(lesser), size * 0.45, size * 0.8));
+    }
+  }
+
+  const cells = placements.map((p): CellShape => {
+    const { x, y, size } = p;
+    const sides: [Side, Point, Point][] = [
+      ['top', { x, y }, { x: x + size, y }],
+      ['right', { x: x + size, y }, { x: x + size, y: y + size }],
+      ['bottom', { x: x + size, y: y + size }, { x, y: y + size }],
+      ['left', { x, y: y + size }, { x, y }],
+    ];
+    const outline: Point[] = [];
+    for (const [side, a, b] of sides) {
+      outline.push(a);
+      const direction = bends.get(p.cell)?.get(side);
+      if (direction === undefined) continue;
+      const along = (t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      const normal = SIDE_NORMALS[side];
+      const middle = along(0.5);
+      const depth = direction * BEND_DEPTH * size;
+      outline.push(
+        along(0.5 - BEND_SPAN / 2),
+        { x: middle.x + normal.x * depth, y: middle.y + normal.y * depth },
+        along(0.5 + BEND_SPAN / 2),
+      );
+    }
+    const inset = BEND_DEPTH * size;
+    return {
+      cell: p.cell,
+      outline,
+      strokeWidth: 1,
+      hintArea: { x: x + inset, y: y + inset, width: size - 2 * inset, height: size - 2 * inset },
+      valueCenter: center(p),
+      valueFontSize: size * 0.55,
+      ...(p.background === undefined ? {} : { background: p.background }),
+    };
+  });
+  return { cells, signs };
+}
+
+function greaterThanConstraints(puzzle: Puzzle): CellGreaterThanCellConstraint[] {
+  return puzzle
+    .getConstraints()
+    .filter((c): c is CellGreaterThanCellConstraint => c instanceof CellGreaterThanCellConstraint);
+}
+
 // --- Futoshiki -------------------------------------------------------------------------------
 
 /** A chevron centred between two cell centres, its point towards the lesser cell. */
@@ -259,26 +382,49 @@ export function inequalitySign(
   };
 }
 
+/** The cells side by side, each inequality bent into the edge between its two cells. */
 export function futoshikiLayout(puzzle: Puzzle): BoardLayout {
-  const cellSize = 55;
-  const cellGap = 22; // room between the cells for the inequality signs
-  const pitch = cellSize + cellGap;
-  const shapes = new Map<Cell, CellShape>();
-  for (const c of puzzle.getGrid().getPositionedCells()) {
-    shapes.set(c, square(c, c.getPosition().x() * pitch, c.getPosition().y() * pitch, cellSize));
-  }
-  const decorations: Decoration[] = [];
-  for (const constraint of puzzle.getConstraints()) {
-    if (!(constraint instanceof CellGreaterThanCellConstraint)) continue;
-    const greater = constraint.greaterCell && shapes.get(constraint.greaterCell);
-    const lesser = constraint.lesserCell && shapes.get(constraint.lesserCell);
-    if (greater && lesser) {
-      decorations.push(
-        inequalitySign(greater.valueCenter, lesser.valueCenter, cellGap * 0.45, cellGap * 0.8),
-      );
+  const cellSize = 60;
+  const placements = puzzle
+    .getGrid()
+    .getPositionedCells()
+    .map((c) => ({
+      cell: c,
+      x: c.getPosition().x() * cellSize,
+      y: c.getPosition().y() * cellSize,
+      size: cellSize,
+    }));
+  const { cells, signs } = bentSquares(placements, greaterThanConstraints(puzzle));
+  return finish(cells, signs);
+}
+
+// --- Jidoku ----------------------------------------------------------------------------------
+
+/** the shade of every other 3x3 box, as in the paper's figures */
+export const JIDOKU_BOX_SHADE = '#dcdff2';
+
+/**
+ * A 9x9 grid without gaps; the boxes are told apart by shading every other one (as in the paper)
+ * and the clues are bent edges between the cells of a box.
+ */
+export function jidokuLayout(puzzle: Puzzle): BoardLayout {
+  const cellSize = 60;
+  const grid = puzzle.getGrid();
+  const placements: SquarePlacement[] = [];
+  for (let y = 0; y < 9; y++) {
+    for (let x = 0; x < 9; x++) {
+      const shaded = (Math.floor(x / 3) + Math.floor(y / 3)) % 2 === 1;
+      placements.push({
+        cell: grid.getCellFromSquareGrid(x, y),
+        x: x * cellSize,
+        y: y * cellSize,
+        size: cellSize,
+        ...(shaded ? { background: JIDOKU_BOX_SHADE } : {}),
+      });
     }
   }
-  return finish([...shapes.values()], decorations);
+  const { cells, signs } = bentSquares(placements, greaterThanConstraints(puzzle));
+  return finish(cells, signs);
 }
 
 // --- Sumbrero --------------------------------------------------------------------------------
@@ -427,49 +573,61 @@ export const LAYOUTS: Readonly<Record<PuzzleTypeName, (puzzle: Puzzle) => BoardL
   sudoku: sudokuLayout,
   kakuro: kakuroLayout,
   futoshiki: futoshikiLayout,
+  jidoku: jidokuLayout,
   sumbrero: sumbreroLayout,
 };
 
 // --- group outlines --------------------------------------------------------------------------
 
-function insideConvex(point: Point, polygon: readonly Point[]): boolean {
-  let sign = 0;
+/** Whether the point lies inside the polygon (even-odd rule; it need not be convex). */
+function insidePolygon(point: Point, polygon: readonly Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i] as Point;
+    const b = polygon[j] as Point;
+    if (
+      a.y > point.y !== b.y > point.y &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** Twice the signed area of the polygon: positive when clockwise on screen (y downwards). */
+function signedArea(polygon: readonly Point[]): number {
+  let sum = 0;
   for (let i = 0; i < polygon.length; i++) {
     const a = polygon[i] as Point;
     const b = polygon[(i + 1) % polygon.length] as Point;
-    const cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
-    if (cross === 0) continue;
-    if (sign === 0) sign = Math.sign(cross);
-    else if (Math.sign(cross) !== sign) return false;
+    sum += a.x * b.y - b.x * a.y;
   }
-  return true;
+  return sum;
 }
 
 /**
  * The outer edges of a set of cells (e.g. a row, column or box), to draw the border of the
  * group. An edge is inner when just beyond it (half its length out) lies another cell
- * of the set, so the gaps between Sudoku blocks and Futoshiki cells do not break the border.
+ * of the set, so the gaps between Sudoku blocks do not break the border. The outlines need not
+ * be convex (bent edges).
  */
 export function outlineEdges(shapes: readonly CellShape[]): [Point, Point][] {
   const edges: [Point, Point][] = [];
   for (const shape of shapes) {
     const outline = shape.outline;
-    const center = {
-      x: outline.reduce((s, p) => s + p.x, 0) / outline.length,
-      y: outline.reduce((s, p) => s + p.y, 0) / outline.length,
-    };
+    const orientation = Math.sign(signedArea(outline));
     for (let i = 0; i < outline.length; i++) {
       const a = outline[i] as Point;
       const b = outline[(i + 1) % outline.length] as Point;
       const length = Math.hypot(b.x - a.x, b.y - a.y);
       if (length === 0) continue;
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      // the normal of the edge, pointing away from the cell's centre
-      let nx = -(b.y - a.y) / length;
-      let ny = (b.x - a.x) / length;
-      if (nx * (mid.x - center.x) + ny * (mid.y - center.y) < 0) [nx, ny] = [-nx, -ny];
+      // the normal of the edge that points out of the cell (from the winding of the outline)
+      const nx = (orientation * (b.y - a.y)) / length;
+      const ny = (-orientation * (b.x - a.x)) / length;
       const beyond = { x: mid.x + (nx * length) / 2, y: mid.y + (ny * length) / 2 };
-      const inner = shapes.some((other) => other !== shape && insideConvex(beyond, other.outline));
+      const inner = shapes.some((other) => other !== shape && insidePolygon(beyond, other.outline));
       if (!inner) edges.push([a, b]);
     }
   }

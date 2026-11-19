@@ -12,6 +12,7 @@ define a puzzle that has no file format yet, directly in TypeScript. The example
 - [Grid types and coordinates](#grid-types-and-coordinates)
 - [Sudoku](#sudoku)
 - [Futoshiki](#futoshiki)
+- [Jidoku](#jidoku)
 - [Kakuro](#kakuro)
 - [Sumbrero](#sumbrero)
 - [Opening your own puzzle file](#opening-your-own-puzzle-file)
@@ -25,7 +26,7 @@ How cells are laid out depends on the grid type:
 
 | Grid type | Used by | Cells | Coordinates in the file | Drawn in the app (`app/src/logic/layout.ts`) |
 |---|---|---|---|---|
-| **Square grid** | Sudoku, Futoshiki | Every position of an N×N square is a cell. | Implicit: the file is a picture of the grid, one line per row. Futoshiki relations use 1-based `x,y`. | squares (`sudokuLayout`, `futoshikiLayout`) |
+| **Square grid** | Sudoku, Futoshiki, Jidoku | Every position of an N×N square is a cell. | Implicit: the file is a picture of the grid, one line per row. Futoshiki and Jidoku relations use 1-based `x,y`. | squares (`sudokuLayout`); Futoshiki and Jidoku bend the edge between two related cells into the `<` / `>` (`futoshikiLayout`, `jidokuLayout`) |
 | **Free-form grid** | Kakuro | Only the positions you list are cells; everything else is empty (black). | Explicit `cell(x,y)`, any integers. | squares, clues as triangles (`kakuroLayout`) |
 | **Hexagonal grid** | Sumbrero | Only the positions you list are cells. | Explicit `cell(x,y)`, any integers (the example starts at 0). | hexagons (`sumbreroLayout`) |
 
@@ -106,11 +107,45 @@ the cell in column x2, row y2*. Coordinates are **1-based**, column first. In th
 
 - Only `>` is understood. Write `a < b` as `b>a`.
 - Lines without `>` (blank lines, notes) are ignored.
-- The two cells do not need to be neighbours, although in a real Futoshiki they always are.
+- The two cells do not need to be neighbours, although in a real Futoshiki they always are. The
+  app draws a relation between neighbours as a bent cell edge (the point of the bend in the
+  lesser cell) and any other relation as a separate sign.
 - The `relativity` part is optional; without it you get a Latin square.
 
 What it builds: one `ExactCoverConstraint` group per row and per column, and one two-cell group
 with a `CellGreaterThanCellConstraint` per relation.
+
+## Jidoku
+
+Parser: `parseJidokuLines` (`parsers/jidoku.ts`). Example: `jidoku.txt`.
+
+Jidoku ("Less-Than-Sudoku") is the Sudoku variant of O'Sullivan & Horan, *Generating and Solving
+Logic Puzzles through Constraint Satisfaction* (AAAI 2007,
+<https://cdn.aaai.org/AAAI/2007/AAAI07-361.pdf>): the 1-9 in every row, column and 3×3 box of
+Sudoku, but the clues are `<` / `>` relations between neighbouring cells of a box, usually
+without any given values. The app draws it as in the paper: every other box shaded, and each
+clue as the edge between its two cells bent into the sign.
+
+The file is a Sudoku grid (nine lines, usually all `-`) followed by the Futoshiki relations part:
+
+```
+- - - - - - - - -
+(nine lines in all)
+- - - - - - - - -
+
+relativity
+2,1>1,1
+1,2>1,1
+```
+
+Each `x1,y1>x2,y2` means *the cell in column x1, row y1 is greater than the cell in column x2,
+row y2* (1-based, column first). Unlike Futoshiki, the two cells **must** be orthogonal neighbours
+in the same 3×3 box; anything else is a `PuzzleFileError` naming the line.
+
+What it builds: the 27 `ExactCoverConstraint` groups of a Sudoku, and one two-cell group with a
+`CellGreaterThanCellConstraint` per clue. The example has 57 clues in rotationally symmetric
+pairs, a unique solution, and is solved by deduction alone (no guessing); see
+[jidoku-generator.md](jidoku-generator.md) for how it was made.
 
 ## Kakuro
 
