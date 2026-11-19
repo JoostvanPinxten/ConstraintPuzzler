@@ -433,7 +433,10 @@ skill scaffolds all of these. By hand:
    returning a `Puzzle`, and export it from `packages/core/src/index.ts`.
 2. Add an example `puzzles/<name>.txt`.
 3. Register the type in `packages/core/src/puzzletypes.ts`: a `definePuzzleType({...})` with its
-   name, label, parser, file extensions, examples and default example, added to `PUZZLE_TYPES`.
+   name, label, parser, file extensions, examples, default example and `guide`, added to
+   `PUZZLE_TYPES`. The guide (`packages/core/src/guide/rules.ts`) explains the rules to players
+   and lists the techniques that help, from `TECHNIQUE_GUIDE` (`guide/techniques.ts`); add an
+   entry there for a new kind of deduction (see `doc/rules-and-techniques.md`).
    The start page, the tests and the app's bundled examples
    (`npm run examples -w @constraintpuzzler/app`) all read this registry.
 4. Add a layout to `app/src/logic/layout.ts` (`LAYOUTS`): the cells as polygons with an area for

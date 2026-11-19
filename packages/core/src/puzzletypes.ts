@@ -4,6 +4,15 @@
  * The example files are named here; reading them is up to the caller (the app bundles them,
  * the tests read them from the repository), so this package stays free of platform APIs.
  */
+import {
+  FUTOSHIKI_GUIDE,
+  JIDOKU_GUIDE,
+  KAKURO_GUIDE,
+  NONOGRAM_GUIDE,
+  SUDOKU_GUIDE,
+  SUMBRERO_GUIDE,
+  type PuzzleGuide,
+} from './guide/rules';
 import { parseFutoshikiLines } from './parsers/futoshiki';
 import { parseJidokuLines } from './parsers/jidoku';
 import { parseKakuroLines } from './parsers/kakuro';
@@ -28,6 +37,8 @@ export interface PuzzleType {
   readonly examples: Readonly<Record<string, string>>;
   /** the example that is opened when no file is given */
   readonly defaultExample: string;
+  /** the rules and the techniques that help, for players */
+  readonly guide: PuzzleGuide;
 }
 
 /** Check a puzzle type definition (its default example must be listed) and return it. */
@@ -45,6 +56,7 @@ export const SUDOKU = definePuzzleType({
   fileExtensions: ['txt', 'sud'],
   examples: { Easy: 'easySudoku.txt', Medium: 'mediumSudoku.txt', Hard: 'hardSudoku.txt' },
   defaultExample: 'Easy',
+  guide: SUDOKU_GUIDE,
 });
 
 export const KAKURO = definePuzzleType({
@@ -54,6 +66,7 @@ export const KAKURO = definePuzzleType({
   fileExtensions: ['txt'],
   examples: { Simple: 'simpleKakuro.txt', Medium: 'mediumKakuro.txt' },
   defaultExample: 'Medium',
+  guide: KAKURO_GUIDE,
 });
 
 export const FUTOSHIKI = definePuzzleType({
@@ -63,6 +76,7 @@ export const FUTOSHIKI = definePuzzleType({
   fileExtensions: ['txt', 'fut'],
   examples: { '7x7': 'futoshiki.txt' },
   defaultExample: '7x7',
+  guide: FUTOSHIKI_GUIDE,
 });
 
 export const JIDOKU = definePuzzleType({
@@ -72,6 +86,7 @@ export const JIDOKU = definePuzzleType({
   fileExtensions: ['txt', 'jid'],
   examples: { Medium: 'jidoku.txt' },
   defaultExample: 'Medium',
+  guide: JIDOKU_GUIDE,
 });
 
 export const SUMBRERO = definePuzzleType({
@@ -81,6 +96,7 @@ export const SUMBRERO = definePuzzleType({
   fileExtensions: ['txt'],
   examples: { Simple: 'simpleSumbrero.txt' },
   defaultExample: 'Simple',
+  guide: SUMBRERO_GUIDE,
 });
 
 export const NONOGRAM = definePuzzleType({
@@ -90,6 +106,7 @@ export const NONOGRAM = definePuzzleType({
   fileExtensions: ['txt', 'non'],
   examples: { Cup: 'nonogramCup.txt', Cherries: 'nonogramCherries.txt' },
   defaultExample: 'Cup',
+  guide: NONOGRAM_GUIDE,
 });
 
 /** name -> PuzzleType, in the order the app shows them */
