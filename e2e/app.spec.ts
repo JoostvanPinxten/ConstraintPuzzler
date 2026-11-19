@@ -26,6 +26,92 @@ for (const [type, label, cells] of EXAMPLES) {
   });
 }
 
+test('dragging over or double-clicking the board selects no text', async ({ page }, info) => {
+  test.skip(info.project.name === 'phone', 'mouse gestures are for desktop');
+  await open(page, 'sudoku', 'Easy');
+  const box = await page.getByTestId('board').boundingBox();
+  if (box === null) throw new Error('no board');
+  await page.mouse.move(box.x + 5, box.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width - 5, box.y + box.height - 5, { steps: 5 });
+  await page.mouse.up();
+  await page.getByTestId('cell-2, 1').dblclick();
+  expect(await page.evaluate(() => String(window.getSelection()))).toBe('');
+  await expect(page.getByText('Cell 2, 1')).toBeVisible();
+});
+
+test('a right click on the board opens no browser menu, but zooming still works', async ({
+  page,
+}) => {
+  await open(page, 'sudoku', 'Easy');
+  const cell = page.getByTestId('cell-2, 1');
+  // the default action of an event the app cancels does not happen
+  const cancelled = (type: 'contextmenu' | 'wheel' | 'keydown') =>
+    cell.evaluate((element, type) => {
+      const event =
+        type === 'contextmenu'
+          ? new MouseEvent(type, { bubbles: true, cancelable: true, button: 2 })
+          : type === 'wheel'
+            ? new WheelEvent(type, { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100 })
+            : new KeyboardEvent(type, { bubbles: true, cancelable: true, ctrlKey: true, key: '+' });
+      return !element.dispatchEvent(event);
+    }, type);
+  expect(await cancelled('contextmenu')).toBe(true);
+  // Ctrl + wheel and Ctrl + plus zoom the page
+  expect(await cancelled('wheel')).toBe(false);
+  expect(await cancelled('keydown')).toBe(false);
+});
+
+test('nothing stops a pinch on the board from zooming the page', async ({ page }, info) => {
+  // a synthesized pinch zooms no page in Playwright, so this checks what would block one
+  test.skip(info.project.name !== 'phone', 'pinching is for touch screens');
+  await open(page, 'sudoku', 'Easy');
+  const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
+  expect(viewport).not.toMatch(/user-scalable\s*=\s*(no|0)|maximum-scale/);
+  const cell = page.getByTestId('cell-2, 1');
+  // touch-action of the cell and everything around it lets a pinch zoom
+  const touchActions = await cell.evaluate((element) => {
+    const values: string[] = [];
+    for (let e: Element | null = element; e !== null; e = e.parentElement) {
+      values.push(getComputedStyle(e).touchAction);
+    }
+    return values;
+  });
+  for (const value of touchActions) expect(value).toMatch(/^(auto|manipulation|.*pinch-zoom.*)$/);
+  // and a two-finger move is not cancelled
+  const cancelled = await cell.evaluate((element) => {
+    const touch = (id: number, x: number) =>
+      new Touch({ identifier: id, target: element, clientX: x, clientY: 100 });
+    const touches = [touch(1, 100), touch(2, 140)];
+    const init = {
+      bubbles: true,
+      cancelable: true,
+      touches,
+      targetTouches: touches,
+      changedTouches: touches,
+    };
+    element.dispatchEvent(new TouchEvent('touchstart', init));
+    const move = !element.dispatchEvent(new TouchEvent('touchmove', init));
+    element.dispatchEvent(new TouchEvent('touchend', { ...init, touches: [], targetTouches: [] }));
+    return move;
+  });
+  expect(cancelled).toBe(false);
+});
+
+test('the clues and lines drawn over the cells let clicks through', async ({ page }) => {
+  await open(page, 'kakuro', 'Medium');
+  const overlays = await page
+    .getByTestId('board')
+    .locator('svg text, svg polyline, svg polygon')
+    .evaluateAll((els) =>
+      els
+        .filter((e) => e.closest('[data-testid^="cell-"]') === null && e.closest('defs') === null)
+        .map((e) => getComputedStyle(e).pointerEvents),
+    );
+  expect(overlays.length).toBeGreaterThan(0);
+  expect(overlays.filter((value) => value !== 'none')).toEqual([]);
+});
+
 test('enters a value by clicking and typing, and undoes it', async ({ page }, info) => {
   test.skip(info.project.name === 'phone', 'keyboard input is for desktop');
   await open(page, 'sudoku', 'Easy');

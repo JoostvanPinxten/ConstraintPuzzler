@@ -2,7 +2,13 @@
 // highlight, and the decorations of the puzzle type. Tapping a cell selects it.
 import { BLANK, paletteOf, type Cell, type Value } from '@constraintpuzzler/core';
 import { memo, useMemo, useState } from 'react';
-import { Platform, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Platform,
+  View,
+  type LayoutChangeEvent,
+  type ViewProps,
+  type ViewStyle,
+} from 'react-native';
 import Svg, {
   Circle,
   Defs,
@@ -37,6 +43,19 @@ const FONT = Platform.select({
   android: 'sans-serif',
   default: undefined,
 });
+
+// a cell shows a hand on the web, as it can be clicked
+const CELL_STYLE = Platform.OS === 'web' ? { cursor: 'pointer' as const } : undefined;
+// dragging over or double-clicking the board must not select its digits (web); React Native
+// only types userSelect for Text, react-native-web applies it to a View as well
+const NO_TEXT_SELECTION = (Platform.OS === 'web' ? { userSelect: 'none' } : {}) as ViewStyle;
+// no browser menu on a right click on the board (web); React Native does not type
+// onContextMenu, react-native-web passes it on. Zooming the page is left alone.
+const NO_CONTEXT_MENU = (
+  Platform.OS === 'web'
+    ? { onContextMenu: (event: { preventDefault: () => void }) => event.preventDefault() }
+    : {}
+) as ViewProps;
 
 /** the id of the dashed hatching drawn over the cells a hint rules out */
 const RULED_OUT = 'ruled-out';
@@ -165,7 +184,11 @@ const CellView = memo(function CellView({
   const area = shape.hintArea;
   const smallSize = Math.min(area.width / columns, area.height / rows) * 0.62;
   return (
-    <G onPress={() => onPress(shape.cell)} testID={`cell-${shape.cell.getName()}`}>
+    <G
+      onPress={() => onPress(shape.cell)}
+      style={CELL_STYLE}
+      testID={`cell-${shape.cell.getName()}`}
+    >
       <Polygon
         points={pointsAttribute(shape.outline)}
         fill={fill}
@@ -289,7 +312,7 @@ function cellFill(role: HighlightRole, background: string | undefined): string {
 
 function Decorations({ layout, symbols }: { layout: BoardLayout; symbols: boolean }) {
   return (
-    <>
+    <G pointerEvents="none">
       {layout.decorations.map((d, i) => {
         switch (d.kind) {
           case 'polygon':
@@ -331,7 +354,7 @@ function Decorations({ layout, symbols }: { layout: BoardLayout; symbols: boolea
             );
         }
       })}
-    </>
+    </G>
   );
 }
 
@@ -341,7 +364,7 @@ function ReasonGroups({ session, layout }: { session: PuzzleSession; layout: Boa
   if (groups.length === 0) return null;
   const width = (layout.cells[0]?.valueFontSize ?? 10) / 7;
   return (
-    <>
+    <G pointerEvents="none">
       {groups.map((group) => {
         const cells = new Set(group.getCells());
         const edges = outlineEdges(layout.cells.filter((s) => cells.has(s.cell)));
@@ -362,7 +385,7 @@ function ReasonGroups({ session, layout }: { session: PuzzleSession; layout: Boa
           </G>
         );
       })}
-    </>
+    </G>
   );
 }
 
@@ -388,7 +411,8 @@ export function Board({ session }: { session: PuzzleSession }) {
 
   return (
     <View
-      style={{ flex: 1, alignSelf: 'stretch' }}
+      {...NO_CONTEXT_MENU}
+      style={[{ flex: 1, alignSelf: 'stretch' }, NO_TEXT_SELECTION]}
       onLayout={(e: LayoutChangeEvent) => setSize(e.nativeEvent.layout)}
       testID="board"
     >
@@ -432,17 +456,20 @@ export function Board({ session }: { session: PuzzleSession }) {
             );
           })}
           <Decorations layout={layout} symbols={symbols !== undefined} />
-          {symbols !== undefined &&
-            layout.clueSymbols?.map((mark, i) => (
-              <SymbolMark
-                key={i}
-                symbol={symbols.get(mark.value)}
-                center={mark.center}
-                size={mark.size}
-                on={layout.palette?.get(mark.value) ?? '#000000'}
-                testID={`clue-symbol-${i}`}
-              />
-            ))}
+          {symbols !== undefined && layout.clueSymbols !== undefined && (
+            <G pointerEvents="none">
+              {layout.clueSymbols.map((mark, i) => (
+                <SymbolMark
+                  key={i}
+                  symbol={symbols.get(mark.value)}
+                  center={mark.center}
+                  size={mark.size}
+                  on={layout.palette?.get(mark.value) ?? '#000000'}
+                  testID={`clue-symbol-${i}`}
+                />
+              ))}
+            </G>
+          )}
           <ReasonGroups session={session} layout={layout} />
         </Svg>
       )}
