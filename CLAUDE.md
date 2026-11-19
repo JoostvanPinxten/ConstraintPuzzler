@@ -53,6 +53,7 @@ npm run export:web -w @constraintpuzzler/app && npx playwright test   # app-buil
 - `null` for "no value" in the engine (not `undefined`). Iterate candidate sets in a fixed order (`sortedValues(...)`), so the solver is deterministic.
 - Keep UI logic in `app/src/logic/` (plain TypeScript, tested without rendering) and keep components thin.
 - Prefer `Pressable`, `react-native-svg` and Expo modules that work on all platforms; check web (`npm run web`) and a narrow (phone) window when changing the UI.
+- Colours that are essential to a puzzle (values, clues, regions the rules depend on) must be distinguishable for colour-blind players, or come with an accessibility aid that does not rely on colour (like the nonogram's *Colour symbols*); see `doc/puzzle-files.md`, "Adding a new puzzle type". This also holds for example files. The colours of hints and highlights are exempt.
 
 ## Review focus
-When reviewing changes, prioritise: correctness of constraint propagation and possible-value bookkeeping, solver termination and cancellation (the puzzle must be restored), grid coordinate off-by-ones, deterministic ordering, the engine staying free of platform imports, React state that bypasses `PuzzleSession`/`Game`, platform differences (web, Android, iOS, desktop), and missing tests.
+When reviewing changes, prioritise: correctness of constraint propagation and possible-value bookkeeping, solver termination and cancellation (the puzzle must be restored), grid coordinate off-by-ones, deterministic ordering, the engine staying free of platform imports, React state that bypasses `PuzzleSession`/`Game`, platform differences (web, Android, iOS, desktop), puzzle colours that colour-blind players cannot tell apart (hints and highlights are exempt), and missing tests.

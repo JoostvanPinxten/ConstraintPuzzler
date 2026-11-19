@@ -440,3 +440,15 @@ skill scaffolds all of these. By hand:
    the small values, and the clues or signs as decorations; see the existing layouts.
 5. Add parser tests to `packages/core/test/parsers/`, and the example to `e2e/app.spec.ts`.
 
+**Colours that carry meaning must work for colour-blind players.** When a colour is part of
+the puzzle itself (a value, a clue, a region the rules depend on), players with a colour vision
+deficiency must be able to tell the colours apart: pick colours that stay distinguishable (e.g.
+the Okabe-Ito palette, and never two colours that differ only between red and green), or offer
+an accessibility aid that does not rely on colour, such as the nonogram's *Colour symbols*
+(a shape per colour). Check a palette with a colour-blindness simulator for protanopia,
+deuteranopia and tritanopia. This applies to the example files as well.
+
+The colours of hints and highlights (the selection, a hint's region, Check marks, the roles in
+`app/src/logic/highlight.ts`) do not have to follow this rule: they only help, and the
+explanation in words says the same.
+
