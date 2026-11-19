@@ -31,6 +31,11 @@ export abstract class Technique {
     return (this.constructor as TechniqueClass).difficulty;
   }
 
+  /** How hard this deduction is for a person (the technique's difficulty). */
+  difficultyOf(_deduction: Deduction): number {
+    return this.getDifficulty();
+  }
+
   /** The name of the technique, e.g. "X-Wing". */
   abstract getType(): string;
 

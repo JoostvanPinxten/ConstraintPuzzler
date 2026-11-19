@@ -38,9 +38,12 @@ export class Deduction {
     return this.value !== null;
   }
 
-  /** How hard the deduction is for a person: NAKED_SINGLE, or its cause's level. */
+  /**
+   * How hard the deduction is for a person: NAKED_SINGLE, or its cause's level for this
+   * deduction (one rule can make both easy and hard deductions, see Constraint.difficultyOf).
+   */
   difficulty(): number {
-    return this.cause !== null ? this.cause.getDifficulty() : NAKED_SINGLE;
+    return this.cause !== null ? this.cause.difficultyOf(this) : NAKED_SINGLE;
   }
 
   /** Why the change was made, in words. */

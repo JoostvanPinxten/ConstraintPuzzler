@@ -7,12 +7,13 @@
 import { parseFutoshikiLines } from './parsers/futoshiki';
 import { parseJidokuLines } from './parsers/jidoku';
 import { parseKakuroLines } from './parsers/kakuro';
+import { parseNonogramLines } from './parsers/nonogram';
 import { splitLines } from './parsers/common';
 import { parseSudokuLines } from './parsers/sudoku';
 import { parseSumbreroLines } from './parsers/sumbrero';
 import type { Puzzle } from './structure/puzzle';
 
-export type PuzzleTypeName = 'sudoku' | 'kakuro' | 'futoshiki' | 'jidoku' | 'sumbrero';
+export type PuzzleTypeName = 'sudoku' | 'kakuro' | 'futoshiki' | 'jidoku' | 'sumbrero' | 'nonogram';
 
 export interface PuzzleType {
   /** identifier, e.g. in links and as the registry key */
@@ -82,6 +83,15 @@ export const SUMBRERO = definePuzzleType({
   defaultExample: 'Simple',
 });
 
+export const NONOGRAM = definePuzzleType({
+  name: 'nonogram',
+  label: 'Nonogram',
+  parseLines: parseNonogramLines,
+  fileExtensions: ['txt', 'non'],
+  examples: { Cup: 'nonogramCup.txt', Cherries: 'nonogramCherries.txt' },
+  defaultExample: 'Cup',
+});
+
 /** name -> PuzzleType, in the order the app shows them */
 export const PUZZLE_TYPES: Readonly<Record<PuzzleTypeName, PuzzleType>> = {
   sudoku: SUDOKU,
@@ -89,6 +99,7 @@ export const PUZZLE_TYPES: Readonly<Record<PuzzleTypeName, PuzzleType>> = {
   futoshiki: FUTOSHIKI,
   jidoku: JIDOKU,
   sumbrero: SUMBRERO,
+  nonogram: NONOGRAM,
 };
 
 /** Parse the contents of a puzzle file of the given type. */

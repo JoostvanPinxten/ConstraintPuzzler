@@ -1,0 +1,27 @@
+# Two cherries (10 x 10, three colours).
+colors
+r red #d62728
+g green #2ca02c
+n brown #8c564b
+rows
+2n 3g
+2n 2g
+2n 3n
+1n 1n
+1n
+3r 3r
+5r 4r
+5r 4r
+5r 4r
+3r 2r
+columns
+3r
+5r
+1n 5r
+1n 5r
+2n 3r
+2n
+1n 1n 3r
+2g 1n 5r
+2g 3n 5r
+1g 4r
