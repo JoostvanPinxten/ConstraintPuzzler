@@ -155,6 +155,31 @@ test('reveals a hint in levels and solves', async ({ page }, info) => {
   await expect(page.getByText('81 cells: 81 filled, 0 open')).toBeVisible();
 });
 
+test('explains the rules and the technique behind a hint', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByTestId('rules-nonogram').click();
+  await expect(page.getByText('Nonogram: rules and techniques')).toBeVisible();
+  await page.getByRole('button', { name: 'Overlap' }).click();
+  await expect(page.getByText(/^Example: A block of 7/)).toBeVisible();
+  await page.getByTestId('guide-close').click();
+  await expect(page.getByTestId('guide')).toBeHidden();
+
+  await open(page, 'sudoku', 'Easy');
+  for (let i = 0; i < 3; i++) await page.getByTestId('hint').click();
+  const link = page.getByTestId('technique-link');
+  await expect(link).toHaveText(/^About this technique: /);
+  const name = ((await link.textContent()) ?? '').replace('About this technique: ', '');
+  await link.click();
+  await expect(page.getByText('Sudoku: rules and techniques')).toBeVisible();
+  // opened (and scrolled to) at that technique
+  const entry = page.getByRole('button', { name, exact: true });
+  await expect(entry).toBeInViewport();
+  await expect(entry).toHaveAttribute('aria-expanded', 'true');
+  await page.waitForTimeout(500); // the dialog fades in
+  await page.screenshot({ path: info.outputPath('guide.png') });
+  await page.getByTestId('guide-close').click();
+});
+
 test('checks the entries against the solution', async ({ page }) => {
   await open(page, 'futoshiki', '7x7');
   await page.getByTestId('check').click();

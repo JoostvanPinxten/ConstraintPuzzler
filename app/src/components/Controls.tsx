@@ -85,7 +85,15 @@ export function Button({
   );
 }
 
-export function Toolbar({ session, onHelp }: { session: PuzzleSession; onHelp: () => void }) {
+export function Toolbar({
+  session,
+  onHelp,
+  onRules,
+}: {
+  session: PuzzleSession;
+  onHelp: () => void;
+  onRules: () => void;
+}) {
   useSession(session);
   const { settings, update } = useSettings();
   const busy = session.solving !== null;
@@ -136,6 +144,12 @@ export function Toolbar({ session, onHelp }: { session: PuzzleSession; onHelp: (
             onChange={(colorSymbols) => update({ colorSymbols })}
           />
         )}
+        <Button
+          label="Rules"
+          onPress={onRules}
+          accessibilityLabel={`Rules and techniques of ${session.type.label}`}
+          testID="guide-open"
+        />
         <Button label="?" onPress={onHelp} accessibilityLabel="How to play" testID="help-open" />
       </View>
     </View>
