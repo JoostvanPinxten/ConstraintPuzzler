@@ -15,6 +15,7 @@
  * The solver is passed in, so this module does not depend on the solver at run time.
  */
 import type { Solver } from '../solver/solver';
+import type { Finding } from '../techniques/technique';
 import type { Cell } from './cell';
 import type { Deduction } from './deduction';
 import { EntryError, UserEntries } from './entries';
@@ -256,7 +257,7 @@ export class Game {
    * Let the solver fill in a single cell (the one of `preferred`, e.g. the hint shown last,
    * when it can). Returns whether the puzzle changed.
    */
-  solveStep(solver: Solver, preferred: Deduction | null = null): boolean {
+  solveStep(solver: Solver, preferred: Deduction | Finding | null = null): boolean {
     return this.perform(() => solver.solveStep(preferred));
   }
 

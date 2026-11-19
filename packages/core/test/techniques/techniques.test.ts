@@ -5,12 +5,12 @@ import { parseSudokuLines } from '../../src/parsers/sudoku';
 import { createEmptySudoku, createFutoshikiPuzzle } from '../../src/puzzlefactory';
 import { Solver } from '../../src/solver/solver';
 import type { Cell } from '../../src/structure/cell';
-import { DeductionLog, type Deduction } from '../../src/structure/deduction';
+import { Deduction, DeductionLog } from '../../src/structure/deduction';
 import { ContradictionError } from '../../src/structure/errors';
 import type { Puzzle } from '../../src/structure/puzzle';
 import { Jellyfish, Swordfish, XWing } from '../../src/techniques/fish';
 import { IntersectionRemoval } from '../../src/techniques/intersection';
-import { Technique } from '../../src/techniques/technique';
+import { Technique, type Finding } from '../../src/techniques/technique';
 import { TECHNIQUES } from '../../src/techniques/techniques';
 import { allExamples } from '../helpers';
 
@@ -261,5 +261,117 @@ describe('the solver with techniques', () => {
     }
     expect(puzzle.isSolved()).toBe(true);
     expect(causes).toContain('X-Wing');
+  });
+});
+
+describe('findings', () => {
+  /** An empty sudoku with an X-Wing on 7 in rows 2 and 6, columns 4 and 8. */
+  function xWingGrid(): Puzzle {
+    const puzzle = createEmptySudoku();
+    onlyInRow(puzzle, 7, 2, [4, 8]);
+    onlyInRow(puzzle, 7, 6, [4, 8]);
+    return puzzle;
+  }
+
+  it('describe the pattern as data, without changing the puzzle', () => {
+    const puzzle = xWingGrid();
+    const before = puzzle.saveState();
+    const technique = new XWing(puzzle);
+    const finding = technique.find() as Finding;
+    expect(puzzle.saveState()).toEqual(before);
+    expect(finding.technique).toBe(technique);
+    expect(finding.value).toBe(7);
+    expect(finding.groups.map((g) => g.getName())).toEqual(['Row 2', 'Row 6']);
+    expect(finding.cover.map((g) => g.getName())).toEqual(['Column 4', 'Column 8']);
+    expect(finding.pattern.map((c) => c.getName())).toEqual(['4, 2', '8, 2', '4, 6', '8, 6']);
+    expect(finding.targets).toHaveLength(14);
+    expect(finding.reason).toMatch(/^X-Wing on 7: Row 2 and Row 6/);
+  });
+
+  it('describe an intersection with the group to look at and the group that loses the value', () => {
+    const puzzle = createEmptySudoku();
+    onlyInRow(puzzle, 4, 5, [4, 6]);
+    const finding = new IntersectionRemoval(puzzle).find() as Finding;
+    expect(finding.groups.map((g) => g.getName())).toEqual(['Row 5']);
+    expect(finding.cover.map((g) => g.getName())).toEqual(['Block 5']);
+    expect(finding.pattern.map((c) => c.getName())).toEqual(['4, 5', '6, 5']);
+  });
+
+  it('can be looked up from the deductions they made', () => {
+    const puzzle = xWingGrid();
+    const technique = new XWing(puzzle);
+    const finding = technique.find() as Finding;
+    const log = new DeductionLog();
+    puzzle.recording(log, () => puzzle.causedBy(technique, () => technique.applyFinding(finding)));
+    expect(log.deductions).toHaveLength(14);
+    for (const d of log.deductions) {
+      expect(technique.findingFor(d)).toBe(finding);
+      expect(d.reason()).toBe(finding.reason);
+    }
+    // a deduction the technique did not make has no finding
+    const other = new Deduction(at(puzzle, 1, 1), new Set([7]));
+    expect(technique.findingFor(other)).toBeNull();
+    expect(technique.explain(other)).toBe('X-Wing');
+  });
+
+  it('know whether they still apply', () => {
+    const puzzle = xWingGrid();
+    const technique = new XWing(puzzle);
+    const finding = technique.find() as Finding;
+    expect(technique.stillApplies(finding)).toBe(true);
+    technique.applyFinding(finding);
+    expect(technique.stillApplies(finding)).toBe(false); // nothing left to remove
+
+    // a pattern cell lost the value since the finding was made
+    const puzzle2 = xWingGrid();
+    const technique2 = new XWing(puzzle2);
+    const finding2 = technique2.find() as Finding;
+    at(puzzle2, 4, 2).remove(7);
+    expect(technique2.stillApplies(finding2)).toBe(false);
+  });
+
+  it('are offered by the solver without changing the puzzle, the easiest technique first', () => {
+    const puzzle = xWingGrid();
+    // also an intersection: block 1 holds 3 only in row 1
+    for (const [x, y] of [
+      [1, 2],
+      [2, 2],
+      [3, 2],
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ] as const) {
+      at(puzzle, x, y).remove(3);
+    }
+    const before = puzzle.saveState();
+    const solver = new Solver(puzzle);
+    const finding = solver.techniqueFinding() as Finding;
+    expect(puzzle.saveState()).toEqual(before);
+    expect(finding.technique).toBeInstanceOf(IntersectionRemoval);
+    expect(new Solver(createEmptySudoku()).techniqueFinding()).toBeNull();
+    expect(new Solver(puzzle, false, []).techniqueFinding()).toBeNull();
+  });
+
+  it('are applied by a step that is given one (e.g. the hint shown)', () => {
+    const puzzle = sudoku(XWING_SAMPLE);
+    const solver = new Solver(puzzle);
+    // step until no value follows directly and a technique applies
+    let finding: Finding | null = null;
+    for (let i = 0; i < 100 && finding === null; i++) {
+      if (solver.deducibleValues().length === 0) finding = solver.techniqueFinding();
+      if (finding === null) solver.solveStep();
+    }
+    expect(finding).not.toBeNull();
+    const chosen = finding as Finding;
+    expect(solver.solveStep(chosen)).toBe(true);
+    expect(solver.lastStep).toBeNull();
+    expect(solver.log.deductions.length).toBeGreaterThan(0);
+    for (const d of solver.log.deductions) {
+      expect(d.cause).toBe(chosen.technique);
+      expect(chosen.targets).toContain(d.cell);
+      expect(d.removed).toEqual(new Set([chosen.value]));
+    }
+    // once applied, the finding no longer applies; a step then does something else
+    expect(chosen.technique.stillApplies(chosen)).toBe(false);
   });
 });

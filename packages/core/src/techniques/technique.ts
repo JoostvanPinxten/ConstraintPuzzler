@@ -5,6 +5,28 @@ import type { Deduction } from '../structure/deduction';
 import type { Puzzle } from '../structure/puzzle';
 import { sortedValues, type Value } from '../structure/types';
 
+/**
+ * One application of a technique: a pattern of cells that can still hold `value`, in the base
+ * groups, which shows that the value goes in those cells and so not in `targets`, the other
+ * open cells of the cover groups that could hold it. E.g. for an X-Wing on 7 in rows 2 and 6
+ * and columns 4 and 8: groups = the rows, cover = the columns, pattern = the cells of the rows
+ * that can hold 7, targets = the cells of the columns that lose 7.
+ */
+export interface Finding {
+  readonly technique: Technique;
+  readonly value: Value;
+  /** where the pattern is (where to look): e.g. the rows of an X-Wing */
+  readonly groups: readonly ConstraintGroup[];
+  /** the groups that lose the value outside the pattern: e.g. the columns of an X-Wing */
+  readonly cover: readonly ConstraintGroup[];
+  /** the open cells of `groups` that can hold the value */
+  readonly pattern: readonly Cell[];
+  /** the cells that lose the value */
+  readonly targets: readonly Cell[];
+  /** the finding in words */
+  readonly reason: string;
+}
+
 export type TechniqueClass<T extends Technique = Technique> = (new (puzzle: Puzzle) => T) & {
   difficulty: number;
 };
@@ -22,8 +44,8 @@ export abstract class Technique {
   /** How hard the technique is for a person (see Deduction.difficulty). */
   static difficulty = 6;
 
-  /** why a candidate was removed: cell -> value -> reason */
-  private readonly reasons = new Map<Cell, Map<Value, string>>();
+  /** the finding that removed a candidate: cell -> value -> finding */
+  private readonly findings = new Map<Cell, Map<Value, Finding>>();
 
   constructor(readonly puzzle: Puzzle) {}
 
@@ -35,33 +57,63 @@ export abstract class Technique {
   abstract getType(): string;
 
   /**
-   * Look for one application of the technique that removes candidates, and remove them.
-   * Returns whether anything changed. Throws ContradictionError when a cell loses its last
-   * candidate.
+   * The first application of the technique in the current state that removes a candidate, in
+   * a fixed order; null when there is none. Does not change the puzzle.
    */
-  abstract apply(): boolean;
+  abstract find(): Finding | null;
+
+  /**
+   * Look for one application of the technique (find()) and remove its candidates. Returns
+   * whether anything changed. Throws ContradictionError when a cell loses its last candidate.
+   */
+  apply(): boolean {
+    const finding = this.find();
+    if (finding === null) return false;
+    this.applyFinding(finding);
+    return true;
+  }
+
+  /**
+   * Remove the value of a finding from its targets (those that still hold it), remembering the
+   * finding for explain() and findingFor().
+   */
+  applyFinding(finding: Finding): void {
+    for (const cell of finding.targets) {
+      if (!cell.values.has(finding.value)) continue;
+      let findings = this.findings.get(cell);
+      if (findings === undefined) {
+        findings = new Map();
+        this.findings.set(cell, findings);
+      }
+      findings.set(finding.value, finding);
+      cell.remove(finding.value);
+    }
+  }
+
+  /** The finding that made a Deduction of this technique (a removal), if any. */
+  findingFor(deduction: Deduction): Finding | null {
+    const found = new Set<Finding | undefined>();
+    for (const value of deduction.removed) found.add(this.findings.get(deduction.cell)?.get(value));
+    const [finding] = found;
+    return found.size === 1 && finding !== undefined ? finding : null;
+  }
 
   /** Why this technique removed the candidates of a Deduction, in words. */
   explain(deduction: Deduction): string {
-    const reasons = new Set<string | undefined>();
-    for (const value of deduction.removed)
-      reasons.add(this.reasons.get(deduction.cell)?.get(value));
-    const [reason] = reasons;
-    return reasons.size === 1 && reason !== undefined ? reason : this.getType();
+    return this.findingFor(deduction)?.reason ?? this.getType();
   }
 
-  /** Remove `value` from `cells`, remembering the reason for explain(). */
-  protected removeWithReason(cells: Iterable<Cell>, value: Value, reason: string): void {
-    for (const cell of cells) {
-      if (!cell.values.has(value)) continue;
-      let reasons = this.reasons.get(cell);
-      if (reasons === undefined) {
-        reasons = new Map();
-        this.reasons.set(cell, reasons);
-      }
-      reasons.set(value, reason);
-      cell.remove(value);
+  /** Whether the finding still removes something in the current state. */
+  stillApplies(finding: Finding): boolean {
+    if (!finding.pattern.every((c) => !c.hasValue() && c.values.has(finding.value))) return false;
+    if (
+      finding.groups.some((g) =>
+        (spotsFor(g, finding.value) ?? []).some((c) => !finding.pattern.includes(c)),
+      )
+    ) {
+      return false;
     }
+    return finding.targets.some((c) => !c.hasValue() && c.values.has(finding.value));
   }
 
   /** The groups in which every value appears exactly once (e.g. Sudoku rows, columns, blocks). */
