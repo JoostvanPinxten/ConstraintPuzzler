@@ -16,6 +16,7 @@ import {
   PositionedCell,
   REGION,
   CELL,
+  RunsConstraint,
   SolveCancelled,
   Solver,
   VALUE,
@@ -25,6 +26,7 @@ import {
   type Deduction,
   type Finding,
   type HintLevel,
+  type PlacementDiagram,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -82,6 +84,11 @@ export class PuzzleSession {
   shownFinding: Finding | null = null;
   /** the cells of the shown finding's pattern: where its value can still go */
   hintPattern = new Set<Cell>();
+  /**
+   * for a hint's value on a nonogram line: the placements of its blocks that explain it (drawn
+   * below the hint); null for none
+   */
+  hintPlacements: PlacementDiagram | null = null;
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -228,6 +235,7 @@ export class PuzzleSession {
     this.hintReasonGroups = new Set();
     this.shownFinding = null;
     this.hintPattern = new Set();
+    this.hintPlacements = null;
     this.checkMarks = new Set();
   }
 
@@ -408,6 +416,7 @@ export class PuzzleSession {
     }
     if (this.hints.finding !== null) {
       this.showFinding(this.hints.finding, this.hints.level);
+      this.hintPlacements = null;
       this.inputMessage = null;
       // a technique works on the solver's candidates, which the user only sees with Show hints
       const note =
@@ -436,6 +445,7 @@ export class PuzzleSession {
       this.hintRegion = this.hintRuledOut.size > 0 ? this.hints.regionCells() : new Set();
       this.selection = { kind: 'cell', cell: (this.hints.deduction as Deduction).cell };
     }
+    this.hintPlacements = this.hints.level === VALUE ? placementsOf(this.hints.deduction) : null;
     this.inputMessage = null;
     this.stepMessage = `Hint: ${this.hints.message()}`;
     this.changed();
@@ -589,6 +599,13 @@ export class PuzzleSession {
       this.changed();
     }
   }
+}
+
+/** The placements of a nonogram line behind a deduction of its rule; null for other rules. */
+function placementsOf(deduction: Deduction | null): PlacementDiagram | null {
+  const cause = deduction?.cause;
+  if (deduction == null || !(cause instanceof RunsConstraint)) return null;
+  return cause.placementDiagram(deduction);
 }
 
 /**

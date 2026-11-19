@@ -15,6 +15,7 @@ import {
 } from '../logic/highlight';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
+import { PlacementsView } from './PlacementsView';
 import { useSettings } from '../settings';
 import { COLORS } from '../theme';
 import { useSession } from '../useSession';
@@ -40,6 +41,9 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
       {note !== null && <Text style={styles.error}>{note}</Text>}
       {session.inputMessage !== null && <Text style={styles.error}>{session.inputMessage}</Text>}
       {session.stepMessage !== null && <Text style={styles.italic}>{session.stepMessage}</Text>}
+      {session.hintPlacements !== null && (
+        <PlacementsView session={session} diagram={session.hintPlacements} />
+      )}
       {session.solving !== null && (
         <Text style={styles.italic}>
           {session.solving === 'solve' ? 'Solving…' : 'Finding the solution…'}
