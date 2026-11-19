@@ -57,7 +57,7 @@ export function Toolbar({ session, onHelp }: { session: PuzzleSession; onHelp: (
       <Button label="Redo" onPress={() => session.redo()} disabled={!session.canRedo()} />
       <Button
         label={session.hintLabel()}
-        onPress={() => session.hint()}
+        onPress={() => session.hint(settings)}
         disabled={busy}
         testID="hint"
       />

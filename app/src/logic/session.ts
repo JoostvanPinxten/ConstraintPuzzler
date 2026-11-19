@@ -21,7 +21,10 @@ import {
   VALUE,
   type Cell,
   type ConstraintGroup,
+  Technique,
   type Deduction,
+  type Finding,
+  type HintLevel,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -72,6 +75,10 @@ export class PuzzleSession {
   hintRuledOut = new Set<Cell>();
   /** the groups through which those numbers rule the value out (drawn with a border) */
   hintReasonGroups = new Set<ConstraintGroup>();
+  /** the technique finding shown (by a hint or a step), e.g. an X-Wing; null for none */
+  shownFinding: Finding | null = null;
+  /** the cells of the shown finding's pattern: where its value can still go */
+  hintPattern = new Set<Cell>();
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
@@ -157,6 +164,7 @@ export class PuzzleSession {
       HighlightRole.REASON_GROUP,
     );
     mergeRole(roles, this.hintRegion, HighlightRole.HINT);
+    mergeRole(roles, this.hintPattern, HighlightRole.PATTERN);
     mergeRole(roles, this.hintReasons, HighlightRole.REASON);
     mergeRole(roles, this.checkMarks, HighlightRole.WRONG);
     return roles;
@@ -215,7 +223,25 @@ export class PuzzleSession {
     this.hintReasons = new Set();
     this.hintRuledOut = new Set();
     this.hintReasonGroups = new Set();
+    this.shownFinding = null;
+    this.hintPattern = new Set();
     this.checkMarks = new Set();
+  }
+
+  /**
+   * Show a technique's finding, up to a hint level: the groups it looks at (REGION), also
+   * where the value can still go (CELL), and also the groups that cannot hold the value
+   * elsewhere (with a border) and the cells that lose it (hatched; VALUE). There is no single
+   * cell to select.
+   */
+  private showFinding(finding: Finding, level: HintLevel): void {
+    this.shownFinding = finding;
+    this.selection = null;
+    this.hintRegion = new Set(finding.groups.flatMap((g) => g.getCells()));
+    this.hintPattern = level >= CELL ? new Set(finding.pattern) : new Set();
+    this.hintReasonGroups = level >= VALUE ? new Set(finding.cover) : new Set();
+    this.hintRuledOut = level >= VALUE ? new Set(finding.targets) : new Set();
+    this.hintReasons = new Set();
   }
 
   toggleNotesMode(): void {
@@ -331,6 +357,11 @@ export class PuzzleSession {
 
   /** The text of the Hint button: what the next press reveals. */
   hintLabel(): string {
+    if (this.hints.finding !== null) {
+      if (this.hints.level === REGION) return 'Hint: show pattern';
+      if (this.hints.level === CELL) return 'Hint: what goes?';
+      return 'Hint';
+    }
     if (this.hints.deduction === null) return 'Hint';
     if (this.hints.level === REGION) return 'Hint: which cell?';
     if (this.hints.level === CELL) return 'Hint: show value';
@@ -346,9 +377,11 @@ export class PuzzleSession {
 
   /**
    * Reveal a value that follows from the constraints, a bit more on every press: first where
-   * to look, then the cell, then the value and why. Nothing is filled in.
+   * to look, then the cell, then the value and why. When no value follows directly, reveal a
+   * technique (e.g. an X-Wing) instead: where to look, its pattern, then which candidates go
+   * and why. Nothing is filled in.
    */
-  hint(): void {
+  hint(settings: Settings = DEFAULT_SETTINGS): void {
     if (this.solving !== null) return;
     let hint;
     try {
@@ -363,10 +396,22 @@ export class PuzzleSession {
       this.notice = {
         title: 'No hint',
         text:
-          'No value follows from a single round of the rules. Use Step to narrow down the' +
-          ' candidates, or Solve.',
+          'No value follows from a single round of the rules, and no technique applies.' +
+          ' Use Step to narrow down the candidates, or Solve.',
       };
       this.resetGuidance();
+      this.changed();
+      return;
+    }
+    if (this.hints.finding !== null) {
+      this.showFinding(this.hints.finding, this.hints.level);
+      this.inputMessage = null;
+      // a technique works on the solver's candidates, which the user only sees with Show hints
+      const note =
+        this.hints.level === VALUE && !settings.showHints
+          ? ' (This uses the candidates the solver keeps; turn on Show hints to see them.)'
+          : '';
+      this.stepMessage = `Hint: ${this.hints.message()}${note}`;
       this.changed();
       return;
     }
@@ -386,7 +431,7 @@ export class PuzzleSession {
       // for an exact cover hint, the group with its ruled-out cells; a naked single's groups
       // are the reason groups themselves
       this.hintRegion = this.hintRuledOut.size > 0 ? this.hints.regionCells() : new Set();
-      this.selection = { kind: 'cell', cell: hint.cell };
+      this.selection = { kind: 'cell', cell: (this.hints.deduction as Deduction).cell };
     }
     this.inputMessage = null;
     this.stepMessage = `Hint: ${this.hints.message()}`;
@@ -398,7 +443,7 @@ export class PuzzleSession {
     if (this.solving !== null || this.puzzle.isSolved()) return;
     let changed: boolean;
     try {
-      changed = this.game.solveStep(this.solver, this.hints.deduction);
+      changed = this.game.solveStep(this.solver, this.hints.deduction ?? this.hints.finding);
     } catch (error) {
       if (!(error instanceof ContradictionError)) throw error;
       this.contradiction(error);
@@ -413,7 +458,10 @@ export class PuzzleSession {
       this.selection = { kind: 'cell', cell: step.cell };
       this.stepMessage = `Solver step: ${step.describe()}`;
     } else if (changed) {
-      this.stepMessage = `Solver step: ${narrowingMessage(this.solver.log.deductions)}`;
+      const deductions = this.solver.log.deductions;
+      this.stepMessage = `Solver step: ${narrowingMessage(deductions)}`;
+      const finding = findingOf(deductions);
+      if (finding !== null) this.showFinding(finding, VALUE);
     }
     if (!changed) {
       this.notice = {
@@ -550,4 +598,12 @@ export function narrowingMessage(deductions: readonly Deduction[]): string {
   const more = reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : '';
   const what = removed === 1 ? '1 candidate' : `${removed} candidates`;
   return `removed ${what}. ${reasons[0] ?? ''}${more}.`;
+}
+
+/** The technique finding behind a step's removals, if a technique made them. */
+export function findingOf(deductions: readonly Deduction[]): Finding | null {
+  for (const d of deductions) {
+    if (d.cause instanceof Technique) return d.cause.findingFor(d);
+  }
+  return null;
 }

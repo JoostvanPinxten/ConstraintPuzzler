@@ -408,6 +408,72 @@ describe('solving in the background', () => {
     ).toBe(true);
   });
 
+  it('shows the pattern of a technique step: groups, pattern, cover and lost values', () => {
+    const session = openExample('sudoku', 'Hard');
+    for (let i = 0; i < 200 && session.shownFinding === null && session.notice === null; i++) {
+      session.solveStep();
+    }
+    const finding = session.shownFinding!;
+    expect(finding.technique.getType()).toBe('X-Wing');
+    expect(session.selection).toBeNull();
+    expect(session.hintPattern).toEqual(new Set(finding.pattern));
+    expect(session.hintReasonGroups).toEqual(new Set(finding.cover));
+    expect(session.hintRuledOut).toEqual(new Set(finding.targets));
+    // the targets lost the value
+    for (const cell of finding.targets) expect(cell.values.has(finding.value)).toBe(false);
+    const roles = session.highlight();
+    for (const cell of finding.pattern) expect(roles.get(cell)).toBe(HighlightRole.PATTERN);
+    for (const cell of finding.groups.flatMap((g) => g.getCells())) {
+      expect(roles.get(cell)).toBeGreaterThanOrEqual(HighlightRole.HINT);
+    }
+    // the next step forgets it
+    session.solveStep();
+    expect(session.shownFinding).toBeNull();
+    expect(session.hintPattern.size).toBe(0);
+  });
+
+  it('hints at a technique (e.g. an intersection) when no value follows; Step applies it', () => {
+    const session = openExample('sudoku', 'Hard');
+    const { solver } = session;
+    for (let i = 0; i < 200; i++) {
+      if (solver.deducibleValues().length === 0 && solver.techniqueFinding() !== null) break;
+      session.solveStep();
+    }
+    const before = session.puzzle.saveState();
+    session.hint();
+    const finding = session.hints.finding!;
+    expect(session.shownFinding).toBe(finding);
+    expect(session.notice).toBeNull();
+    expect(session.stepMessage).toBe(
+      `Hint: Look at where ${finding.value} can go in ${finding.groups
+        .map((g) => g.getName())
+        .join(' and ')} (${finding.technique.getType()}).`,
+    );
+    expect(session.hintLabel()).toBe('Hint: show pattern');
+    expect(session.hintPattern.size).toBe(0);
+
+    session.hint();
+    expect(session.hintLabel()).toBe('Hint: what goes?');
+    expect(session.hintPattern).toEqual(new Set(finding.pattern));
+    expect(session.hintRuledOut.size).toBe(0);
+
+    session.hint({ ...DEFAULT_SETTINGS, showHints: false });
+    expect(session.hintLabel()).toBe('Hint');
+    expect(session.hintReasonGroups).toEqual(new Set(finding.cover));
+    expect(session.hintRuledOut).toEqual(new Set(finding.targets));
+    expect(session.stepMessage).toContain(finding.reason);
+    expect(session.stepMessage).toMatch(/turn on Show hints to see them/);
+    session.hint({ ...DEFAULT_SETTINGS, showHints: true });
+    expect(session.stepMessage).not.toMatch(/Show hints/);
+    expect(session.puzzle.saveState()).toEqual(before);
+
+    // Step does what the hint said
+    session.solveStep();
+    for (const d of solver.log.deductions) expect(d.cause).toBe(finding.technique);
+    for (const cell of finding.targets) expect(cell.values.has(finding.value)).toBe(false);
+    expect(session.shownFinding).toBe(finding);
+  });
+
   it('gets stuck without guessing on the hard sudoku', async () => {
     const session = openExample('sudoku', 'Hard');
     await session.solve(DEFAULT_SETTINGS);

@@ -1,6 +1,6 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { Cell } from '../structure/cell';
-import { cellNames, spotsFor, Technique } from './technique';
+import { cellNames, spotsFor, Technique, type Finding } from './technique';
 
 interface Overlap {
   /** the group whose candidates for a value all lie in the overlap */
@@ -44,7 +44,7 @@ export class IntersectionRemoval extends Technique {
     return result;
   }
 
-  apply(): boolean {
+  find(): Finding | null {
     for (const value of this.values()) {
       for (const { from, to, cells } of this.overlaps()) {
         const spots = spotsFor(from, value);
@@ -57,10 +57,17 @@ export class IntersectionRemoval extends Technique {
           `${from.getName()} can only hold ${value} in ${cellNames(spots)}, which ${to.getName()}` +
           ` shares with it; so ${value} is in one of those cells and in no other cell of` +
           ` ${to.getName()} (${this.getType().toLowerCase()})`;
-        this.removeWithReason(targets, value, reason);
-        return true;
+        return {
+          technique: this,
+          value,
+          groups: [from],
+          cover: [to],
+          pattern: spots,
+          targets,
+          reason,
+        };
       }
     }
-    return false;
+    return null;
   }
 }

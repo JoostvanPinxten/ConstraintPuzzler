@@ -5,12 +5,17 @@
  * so a user can get just enough help: first the region (the cells of the rule that decides the
  * value), then the cell, then the value with its reason. After the puzzle changes, the next
  * hint is a new one.
+ *
+ * When no value follows directly, a hint can be a technique's finding instead (e.g. an X-Wing,
+ * see Solver.techniqueFinding): first the groups to look at, then the pattern of cells where
+ * the value can still go, then which candidates go and why.
  */
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import { Constraint } from '../constraints/constraint';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
+import { listNames, type Finding } from '../techniques/technique';
 import { stateKey, type Value } from '../structure/types';
 import type { Solver } from './solver';
 
@@ -20,7 +25,10 @@ export const VALUE = 3;
 export type HintLevel = 0 | typeof REGION | typeof CELL | typeof VALUE;
 
 export class HintSession {
+  /** the value the hint is about; null for none, or for a technique's finding */
   deduction: Deduction | null = null;
+  /** the technique finding the hint is about, when no value follows directly */
+  finding: Finding | null = null;
   /** 0 (no hint), REGION, CELL or VALUE */
   level: HintLevel = 0;
   /** the puzzle state the hint was made for (as a stateKey) */
@@ -28,28 +36,37 @@ export class HintSession {
 
   reset(): void {
     this.deduction = null;
+    this.finding = null;
     this.level = 0;
     this.state = null;
   }
 
   /**
    * Reveal more of the current hint, or start a new one (at REGION) when there is none or the
-   * puzzle changed since. Returns the hint's deduction; null when the rules do not determine
-   * any value now (the session is then reset). Throws ContradictionError like Solver.hint().
+   * puzzle changed since. Returns the hint's deduction, or, when no value follows directly,
+   * the finding of the easiest technique that applies; null when neither (the session is then
+   * reset). Throws ContradictionError like Solver.hint().
    */
-  advance(solver: Solver): Deduction | null {
+  advance(solver: Solver): Deduction | Finding | null {
     const state = stateKey(solver.puzzle.saveState());
-    if (this.deduction === null || state !== this.state) {
+    if (!this.active() || state !== this.state) {
       this.reset();
       const deduction = solver.hint();
-      if (deduction === null) return null;
+      const finding = deduction === null ? solver.techniqueFinding() : null;
+      if (deduction === null && finding === null) return null;
       this.deduction = deduction;
+      this.finding = finding;
       this.level = REGION;
       this.state = state;
     } else {
       this.level = Math.min(this.level + 1, VALUE) as HintLevel;
     }
-    return this.deduction;
+    return this.deduction ?? this.finding;
+  }
+
+  /** Whether a hint is being revealed. */
+  active(): boolean {
+    return this.deduction !== null || this.finding !== null;
   }
 
   /**
@@ -57,6 +74,7 @@ export class HintSession {
    * with a single candidate left, every group the cell is in.
    */
   regionCells(): Set<Cell> {
+    if (this.finding !== null) return new Set(this.finding.groups.flatMap((g) => g.getCells()));
     const deduction = this.deduction;
     if (deduction === null) return new Set();
     if (deduction.cause instanceof Constraint) return new Set(deduction.cause.group.getCells());
@@ -225,6 +243,7 @@ export class HintSession {
 
   /** What the hint says at its current level. */
   message(): string {
+    if (this.finding !== null) return this.findingMessage(this.finding);
     const deduction = this.deduction;
     if (deduction === null) return '';
     if (this.level === REGION) {
@@ -240,6 +259,20 @@ export class HintSession {
     if (this.level === CELL) return `Look at cell ${deduction.cell.getName()}.`;
     const exclusions = this.exclusions();
     return exclusions === '' ? deduction.describe() : `${deduction.describe()} ${exclusions}`;
+  }
+
+  /** What a technique hint says at its current level. */
+  private findingMessage(finding: Finding): string {
+    const groups = listNames(finding.groups.map((g) => g.getName()));
+    const type = finding.technique.getType();
+    if (this.level === REGION) {
+      return `Look at where ${finding.value} can go in ${groups} (${type}).`;
+    }
+    if (this.level === CELL) {
+      return `In ${groups}, ${finding.value} can only go in the highlighted cells.`;
+    }
+    const cells = finding.targets.length === 1 ? 'the hatched cell' : 'the hatched cells';
+    return `${finding.reason}. So ${finding.value} can be removed from ${cells}.`;
   }
 }
 
