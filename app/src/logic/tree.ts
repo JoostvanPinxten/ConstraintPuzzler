@@ -99,11 +99,12 @@ export interface Description {
 export function describeCell(cell: Cell, showHints: boolean): Description {
   let state: string;
   if (cell.hasValue()) {
-    state = `Value: ${cell.getValue()} (${cell.getSource() ?? 'given'})`;
+    const puzzle = cell.getGrid().getPuzzle();
+    state = `Value: ${puzzle.valueName(cell.getValue() as number)} (${cell.getSource() ?? 'given'})`;
   } else if (!showHints) {
     state = 'Open';
   } else {
-    state = `Candidates: ${[...cell.values].sort((a, b) => a - b).join(', ')}`;
+    state = `Candidates: ${cell.getGrid().getPuzzle().formatValues(cell.values)}`;
   }
   const groups = cell.constraintGroups.map((g) => g.getName());
   return {

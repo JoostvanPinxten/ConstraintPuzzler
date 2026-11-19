@@ -59,6 +59,14 @@ export abstract class Constraint {
     return (this.constructor as ConstraintClass).difficulty;
   }
 
+  /**
+   * How hard this deduction of the constraint is for a person; by default the static
+   * difficulty. Override it when one rule makes both easy and hard deductions.
+   */
+  difficultyOf(_deduction: Deduction): number {
+    return this.getDifficulty();
+  }
+
   abstract applyConstraint(): void;
 
   abstract notify(cell: Cell): void;

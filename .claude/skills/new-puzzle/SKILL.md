@@ -25,4 +25,7 @@ Add a new puzzle type: $ARGUMENTS
 5. Tests: parser tests in `packages/core/test/parsers/`, a solver test that loads the example; the registry,
    layout, app and Playwright tests pick up the new type from `PUZZLE_TYPES` (add its example to the
    `EXAMPLES` list in `e2e/app.spec.ts` with its cell count).
-6. Add the puzzle to the README list. Run the `/test` checks and fix anything that fails.
+6. If colours carry meaning in the puzzle (values, clues, regions), make sure colour-blind players can tell them
+   apart: a colour-blind safe palette (e.g. Okabe-Ito, checked with a simulator) or an aid that does not rely on
+   colour, like the nonogram's *Colour symbols*. Hint and highlight colours are exempt. See `doc/puzzle-files.md`.
+7. Add the puzzle to the README list. Run the `/test` checks and fix anything that fails.

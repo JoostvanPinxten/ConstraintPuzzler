@@ -15,6 +15,7 @@ define a puzzle that has no file format yet, directly in TypeScript. The example
 - [Jidoku](#jidoku)
 - [Kakuro](#kakuro)
 - [Sumbrero](#sumbrero)
+- [Nonogram](#nonogram)
 - [Opening your own puzzle file](#opening-your-own-puzzle-file)
 - [Defining a puzzle in code](#defining-a-puzzle-in-code)
 - [Adding a new puzzle type](#adding-a-new-puzzle-type)
@@ -267,6 +268,60 @@ faces along the line:
 
 So one black hexagon can hold up to three sums, and every line has its own wedge.
 
+## Nonogram
+
+Parser: `parseNonogramLines` (`parsers/nonogram.ts`). Examples: `nonogramCup.txt` (black and
+white) and `nonogramCherries.txt` (three colours).
+
+A nonogram is a rectangular grid of cells that are blank or have a colour; the clue of every row
+and column lists its blocks of consecutive same-coloured cells, in order. Between two blocks of
+the same colour there is at least one blank cell; blocks of different colours may touch. The
+values of the cells are colours: `0` is blank and `1`, `2`, ... are the colours in the order
+they are listed (in a black-and-white nonogram, `1` is black). Cells have the positions `(x, y)`
+from `(1, 1)` at the top left.
+
+The file has up to three sections, each started by a line with its name:
+
+```
+# Two cherries (comments start with #)
+colors
+r red #d55e00
+g green #009e73
+n brown #4d2b0c
+rows
+2n 3g
+...
+columns
+3r
+...
+```
+
+- `colors` (optional): one colour per line, `code name #rrggbb`: a one-letter code for the clues,
+  a name for the explanations, and how the colour is drawn. Without this section the puzzle is
+  black and white.
+  Pick colours that colour-blind players can tell apart, e.g. from the Okabe-Ito palette
+  (`#e69f00`, `#56b4e9`, `#009e73`, `#f0e442`, `#0072b2`, `#d55e00`, `#cc79a7`), and avoid pairs
+  like red and green that differ only in hue. The app's *Colour symbols* switch also draws a
+  shape for every colour (in the order listed: circle, triangle, square, diamond, plus, star,
+  hexagon, upside-down triangle).
+- `rows`: the clue of every row, from top to bottom; the number of lines is the height.
+- `columns`: the clue of every column, from left to right; the number of lines is the width.
+
+A clue is a list of blocks separated by spaces: `3` (in a black-and-white nonogram) or `3r` (three
+cells of the colour with code `r`). A line without blocks is `-` or `0`.
+
+The parser reports (with the line number): a line outside a section, a section given twice, a
+missing `rows` or `columns` section, a malformed colour line or a colour code used twice, a block
+without a colour when there are several colours, an unknown colour code, blocks that do not fit
+in their line, and a colour that has a different number of cells in the rows than in the
+columns.
+
+Hints, steps and the info panel name the values by their colour (`Puzzle.setValueNames`):
+"cell 4, 7 is red", not "cell 4, 7 is 1".
+
+Every row and every column is a group with a `RunsConstraint` (see
+[constraints.md](constraints.md#runsconstraint)).
+
 ## Opening your own puzzle file
 
 On the start page of the app, every puzzle type has an *Open file…* button. The puzzle opens in a
@@ -384,4 +439,16 @@ skill scaffolds all of these. By hand:
 4. Add a layout to `app/src/logic/layout.ts` (`LAYOUTS`): the cells as polygons with an area for
    the small values, and the clues or signs as decorations; see the existing layouts.
 5. Add parser tests to `packages/core/test/parsers/`, and the example to `e2e/app.spec.ts`.
+
+**Colours that carry meaning must work for colour-blind players.** When a colour is part of
+the puzzle itself (a value, a clue, a region the rules depend on), players with a colour vision
+deficiency must be able to tell the colours apart: pick colours that stay distinguishable (e.g.
+the Okabe-Ito palette, and never two colours that differ only between red and green), or offer
+an accessibility aid that does not rely on colour, such as the nonogram's *Colour symbols*
+(a shape per colour). Check a palette with a colour-blindness simulator for protanopia,
+deuteranopia and tritanopia. This applies to the example files as well.
+
+The colours of hints and highlights (the selection, a hint's region, Check marks, the roles in
+`app/src/logic/highlight.ts`) do not have to follow this rule: they only help, and the
+explanation in words says the same.
 

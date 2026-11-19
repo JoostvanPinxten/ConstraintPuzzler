@@ -57,6 +57,25 @@ export class Puzzle {
     return [...this.values];
   }
 
+  /** names of values (e.g. the colours of a nonogram), for the text shown to the user */
+  private valueNames = new Map<Value, string>();
+
+  /** Name the values (e.g. 0 -> 'blank', 1 -> 'red'); values without a name show as numbers. */
+  setValueNames(names: ReadonlyMap<Value, string>): void {
+    this.valueNames = new Map(names);
+  }
+
+  /** How a value is shown to the user: its name, or the number. */
+  valueName(value: Value): string {
+    return this.valueNames.get(value) ?? String(value);
+  }
+
+  /** Values for a description, in ascending order, e.g. "1, 3, 4" or "blank, red". */
+  formatValues(values: Iterable<Value>): string {
+    const sorted = sortedValues(values);
+    return sorted.length > 0 ? sorted.map((v) => this.valueName(v)).join(', ') : 'none';
+  }
+
   addConstraintGroup(name: string): ConstraintGroup {
     const group = new ConstraintGroup(this, name);
     this.constraintGroups.push(group);

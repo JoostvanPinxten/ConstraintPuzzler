@@ -11,7 +11,7 @@ import { loadExample, loadFixtures } from './helpers';
 
 const fixtures = loadFixtures();
 /** examples of puzzle types added after the Python engine, so without a fixture */
-const NEWER_THAN_PYTHON = ['jidoku.txt'];
+const NEWER_THAN_PYTHON = ['jidoku.txt', 'nonogramCup.txt', 'nonogramCherries.txt'];
 
 describe('golden fixtures from the Python engine', () => {
   it('cover every registered example of the Python era', () => {

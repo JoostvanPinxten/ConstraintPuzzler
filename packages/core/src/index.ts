@@ -9,6 +9,7 @@ export {
 export { ConstraintGroup } from './constraints/constraintgroup';
 export { ExactCoverConstraint } from './constraints/exactcoverconstraint';
 export { TotalSumValueConstraint } from './constraints/totalsumvalueconstraint';
+export * from './constraints/runsconstraint';
 export { UniqueValueConstraint } from './constraints/uniquevalueconstraint';
 export * from './parsers/common';
 export {
@@ -20,6 +21,7 @@ export {
 } from './parsers/futoshiki';
 export { jidokuRelationProblem, parseJidokuLines } from './parsers/jidoku';
 export { clueAnchor, parseKakuroLines } from './parsers/kakuro';
+export { parseNonogramLines } from './parsers/nonogram';
 export { parseSudokuLines, readGridValues } from './parsers/sudoku';
 export * from './parsers/sumbrero';
 export * from './puzzlefactory';
