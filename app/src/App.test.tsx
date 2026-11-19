@@ -1,7 +1,7 @@
 // The app rendered: open puzzles from the start page, play with taps, close tabs.
 // (Testing Library 14: render and fireEvent are async.)
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { PUZZLE_TYPES } from '@constraintpuzzler/core';
+import { PUZZLE_TYPES, TECHNIQUE_GUIDE } from '@constraintpuzzler/core';
 
 import App from '../App';
 import { PUZZLE_RULES } from './components/StartPage';
@@ -99,6 +99,36 @@ describe('App', () => {
     expect(screen.getByText(/^Hint: (Look at|In the highlighted area)/)).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Close Sudoku: Easy'));
     expect(screen.getByText('Sumbrero')).toBeTruthy();
+  });
+
+  it('shows the rules of a puzzle type from the start page', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByTestId('rules-kakuro'));
+    expect(screen.getByText('Kakuro: rules and techniques')).toBeTruthy();
+    expect(screen.getByText(`• ${PUZZLE_TYPES.kakuro.guide.rules[0]}`)).toBeTruthy();
+    // a technique opens to show how it works
+    const sums = TECHNIQUE_GUIDE.sumCombinations;
+    expect(screen.queryByText(`• ${sums.steps[0]}`)).toBeNull();
+    await fireEvent.press(screen.getByLabelText(sums.name));
+    expect(screen.getByText(`• ${sums.steps[0]}`)).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('guide-close'));
+    expect(screen.queryByTestId('guide')).toBeNull();
+  });
+
+  it('explains the technique behind a hint', async () => {
+    await openPuzzle('open-sudoku-Easy');
+    await fireEvent.press(screen.getByTestId('guide-open'));
+    expect(screen.getByText('Sudoku: rules and techniques')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('guide-close'));
+    for (let i = 0; i < 3; i++) await fireEvent.press(screen.getByTestId('hint'));
+    const link = screen.getByTestId('technique-link');
+    await fireEvent.press(link);
+    // the dialog opens at that technique
+    const opened = Object.values(TECHNIQUE_GUIDE).find(
+      (t) => screen.queryByText(`• ${t.steps[0]}`) !== null,
+    );
+    expect(opened).toBeDefined();
+    expect(screen.getByText(`About this technique: ${opened?.name}`)).toBeTruthy();
   });
 
   it('solves in the background', async () => {

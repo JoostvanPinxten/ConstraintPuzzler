@@ -1,6 +1,9 @@
 // Explains the selection: its description, a broken rule, messages, and the
 // legend of the highlight colours. (The label below the tree in the desktop app.)
-import { StyleSheet, Text, View } from 'react-native';
+import type { TechniqueId } from '@constraintpuzzler/core';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { techniqueLinkLabel } from '../logic/guide';
 
 import {
   HighlightRole,
@@ -20,7 +23,14 @@ import { useSettings } from '../settings';
 import { COLORS } from '../theme';
 import { useSession } from '../useSession';
 
-export function InfoPanel({ session }: { session: PuzzleSession }) {
+export function InfoPanel({
+  session,
+  onTechnique,
+}: {
+  session: PuzzleSession;
+  /** open the explanation of a technique (the one behind the hint or step shown) */
+  onTechnique?: (technique: TechniqueId) => void;
+}) {
   useSession(session);
   const { settings } = useSettings();
   const selection = session.selection;
@@ -43,6 +53,9 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
       {session.stepMessage !== null && <Text style={styles.italic}>{session.stepMessage}</Text>}
       {session.hintPlacements !== null && (
         <PlacementsView session={session} diagram={session.hintPlacements} />
+      )}
+      {session.stepTechnique !== null && onTechnique !== undefined && (
+        <TechniqueLink technique={session.stepTechnique} onPress={onTechnique} />
       )}
       {session.solving !== null && (
         <Text style={styles.italic}>
@@ -76,6 +89,25 @@ export function InfoPanel({ session }: { session: PuzzleSession }) {
         </View>
       )}
     </View>
+  );
+}
+
+function TechniqueLink({
+  technique,
+  onPress,
+}: {
+  technique: TechniqueId;
+  onPress: (technique: TechniqueId) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onPress(technique)}
+      accessibilityRole="link"
+      testID="technique-link"
+      style={styles.linkPress}
+    >
+      <Text style={styles.link}>{techniqueLinkLabel(technique)}</Text>
+    </Pressable>
   );
 }
 
@@ -131,4 +163,6 @@ const styles = StyleSheet.create({
     backgroundColor: roleColor(HighlightRole.REASON_GROUP),
   },
   legendText: { color: COLORS.text, fontSize: 13 },
+  linkPress: { alignSelf: 'flex-start' },
+  link: { color: COLORS.accent, fontSize: 14, lineHeight: 20, textDecorationLine: 'underline' },
 });

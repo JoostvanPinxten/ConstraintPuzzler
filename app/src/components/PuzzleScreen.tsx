@@ -1,5 +1,6 @@
 // One open puzzle: the board with the toolbar and number pad, and the list of puzzle parts with
 // the info panel. Side by side on wide screens, stacked on phones.
+import type { TechniqueId } from '@constraintpuzzler/core';
 import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
@@ -11,6 +12,7 @@ import { Board } from './Board';
 import { Confetti } from './Confetti';
 import { ConstraintTree } from './ConstraintTree';
 import { Button, NumberPad, Toolbar } from './Controls';
+import { GuideDialog } from './GuideDialog';
 import { HelpDialog } from './HelpDialog';
 import { InfoPanel } from './InfoPanel';
 import { NoticeDialog } from './NoticeDialog';
@@ -50,10 +52,22 @@ export function PuzzleScreen({
   useSession(session);
   const [showParts, setShowParts] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  useKeyboard(session, active && !showHelp);
+  // the Rules dialog: closed (null), or open at a technique (or at the top, null)
+  const [guide, setGuide] = useState<{ technique: TechniqueId | null } | null>(null);
+  useKeyboard(session, active && !showHelp && guide === null);
   const { width } = useWindowDimensions();
   const wide = width >= 900;
-  const help = <HelpDialog visible={showHelp} onClose={() => setShowHelp(false)} />;
+  const help = (
+    <>
+      <HelpDialog visible={showHelp} onClose={() => setShowHelp(false)} />
+      <GuideDialog
+        type={guide === null ? null : session.type}
+        technique={guide?.technique ?? null}
+        onClose={() => setGuide(null)}
+      />
+    </>
+  );
+  const info = <InfoPanel session={session} onTechnique={(technique) => setGuide({ technique })} />;
 
   const board = (
     <View style={wide ? styles.boardWide : styles.boardNarrow}>
@@ -65,7 +79,11 @@ export function PuzzleScreen({
   const confetti = <Confetti burst={session.finishedCount} enabled={settings.celebrate} />;
   const controls = (
     <View style={styles.controls}>
-      <Toolbar session={session} onHelp={() => setShowHelp(true)} />
+      <Toolbar
+        session={session}
+        onHelp={() => setShowHelp(true)}
+        onRules={() => setGuide({ technique: null })}
+      />
       <NumberPad session={session} />
     </View>
   );
@@ -79,7 +97,7 @@ export function PuzzleScreen({
           {board}
         </View>
         <View style={styles.side}>
-          <InfoPanel session={session} />
+          {info}
           <ConstraintTree session={session} />
         </View>
         {confetti}
@@ -94,7 +112,7 @@ export function PuzzleScreen({
         {progress}
         {board}
         {controls}
-        <InfoPanel session={session} />
+        {info}
         <Button
           label={showParts ? 'Hide groups and rules' : 'Show groups and rules'}
           onPress={() => setShowParts(!showParts)}

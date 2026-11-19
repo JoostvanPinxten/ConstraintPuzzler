@@ -29,6 +29,7 @@ import {
   type PlacementDiagram,
   type Puzzle,
   type PuzzleType,
+  type TechniqueId,
 } from '@constraintpuzzler/core';
 
 import { HighlightRole, highlightRoles, mergeRole } from './highlight';
@@ -95,6 +96,11 @@ export class PuzzleSession {
   inputMessage: string | null = null;
   /** about the last hint, solver step, Solve or Check */
   stepMessage: string | null = null;
+  /**
+   * the technique behind the stepMessage, to explain it ("About this technique"): the hint's
+   * at its last level, or the solver step's; null for other messages
+   */
+  stepTechnique: TechniqueId | null = null;
   notice: Notice | null = null;
   /** the background job that runs, if any */
   solving: SolvingJob | null = null;
@@ -186,7 +192,7 @@ export class PuzzleSession {
     // a message about entering a value belongs to the previous selection
     this.selection = selection;
     this.inputMessage = null;
-    this.stepMessage = null;
+    this.say(null);
     this.changed();
   }
 
@@ -366,6 +372,12 @@ export class PuzzleSession {
 
   // --- guidance --------------------------------------------------------------------------
 
+  /** Show a message about a hint or step, with the technique behind it (if any). */
+  private say(message: string | null, technique: TechniqueId | null = null): void {
+    this.stepMessage = message;
+    this.stepTechnique = message === null ? null : technique;
+  }
+
   /** The text of the Hint button: what the next press reveals. */
   hintLabel(): string {
     if (this.hints.finding !== null) {
@@ -423,7 +435,7 @@ export class PuzzleSession {
         this.hints.level === VALUE && !settings.showHints
           ? ' (This uses the candidates the solver keeps; turn on Show hints to see them.)'
           : '';
-      this.stepMessage = `Hint: ${this.hints.message()}${note}`;
+      this.say(`Hint: ${this.hints.message()}${note}`, this.revealedTechnique());
       this.changed();
       return;
     }
@@ -447,8 +459,13 @@ export class PuzzleSession {
     }
     this.hintPlacements = this.hints.level === VALUE ? placementsOf(this.hints.deduction) : null;
     this.inputMessage = null;
-    this.stepMessage = `Hint: ${this.hints.message()}`;
+    this.say(`Hint: ${this.hints.message()}`, this.revealedTechnique());
     this.changed();
+  }
+
+  /** The hint's technique, once the hint is shown in full (naming it earlier gives it away). */
+  private revealedTechnique(): TechniqueId | null {
+    return this.hints.level === VALUE ? this.hints.techniqueId() : null;
   }
 
   /** Fill in one deducible cell (the hint's, if one is shown), to follow the solver. */
@@ -465,14 +482,17 @@ export class PuzzleSession {
     }
     this.resetGuidance();
     this.inputMessage = null;
-    this.stepMessage = null;
+    this.say(null);
     const step = this.solver.lastStep;
     if (step !== null) {
       this.selection = { kind: 'cell', cell: step.cell };
-      this.stepMessage = `Solver step: ${step.describe()}`;
+      this.say(`Solver step: ${step.describe()}`, step.techniqueId());
     } else if (changed) {
       const deductions = this.solver.log.deductions;
-      this.stepMessage = `Solver step: ${narrowingMessage(deductions)}`;
+      this.say(
+        `Solver step: ${narrowingMessage(deductions)}`,
+        deductions[0]?.techniqueId() ?? null,
+      );
       const finding = findingOf(deductions);
       if (finding !== null) this.showFinding(finding, VALUE);
     }
@@ -511,7 +531,7 @@ export class PuzzleSession {
       this.game.applySolution(copy.saveState());
       this.resetGuidance();
       this.inputMessage = null;
-      this.stepMessage = solved ? null : 'The solver got stuck; try Allow guessing.';
+      this.say(solved ? null : 'The solver got stuck; try Allow guessing.');
     });
   }
 
@@ -565,7 +585,7 @@ export class PuzzleSession {
 
   showCheckMarks(cells: Set<Cell>): void {
     this.checkMarks = cells;
-    this.stepMessage = 'Check: the cells marked in red are wrong.';
+    this.say('Check: the cells marked in red are wrong.');
     this.changed();
   }
 
@@ -586,7 +606,7 @@ export class PuzzleSession {
       return await work(abort.signal);
     } catch (error) {
       if (error instanceof SolveCancelled) {
-        this.stepMessage = job === 'solve' ? 'Solving was cancelled.' : 'Check was cancelled.';
+        this.say(job === 'solve' ? 'Solving was cancelled.' : 'Check was cancelled.');
       } else if (error instanceof ContradictionError) {
         this.contradiction(error);
       } else {

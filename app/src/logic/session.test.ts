@@ -257,6 +257,20 @@ describe('hints', () => {
     for (const row of diagram.rows) expect(row[diagram.index]).toBe(deduction.value);
   });
 
+  it('names the technique behind a hint once it shows the value, and behind a step', () => {
+    const session = EASY();
+    session.hint();
+    session.hint();
+    expect(session.stepTechnique).toBeNull(); // naming it would give the hint away
+    session.hint();
+    expect(session.stepTechnique).toBe(session.hints.techniqueId());
+    expect(session.stepTechnique).not.toBeNull();
+    session.solveStep();
+    expect(session.stepTechnique).toBe(session.solver.lastStep?.techniqueId());
+    session.select(null);
+    expect(session.stepTechnique).toBeNull();
+  });
+
   it('shows the numbers that lead to an exact cover value with the value', () => {
     const session = EASY();
     const deduction = session.solver

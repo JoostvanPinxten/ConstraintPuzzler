@@ -1,5 +1,5 @@
 // The start page: what the app is, then a card per puzzle type (a preview of its example, its
-// rule, and buttons to open an example or a file), the settings and the version.
+// rule, and buttons to open an example or a file, or to read its rules), the settings and the version.
 import { PUZZLE_TYPES, type PuzzleType, type PuzzleTypeName } from '@constraintpuzzler/core';
 import Constants from 'expo-constants';
 import { useState } from 'react';
@@ -19,6 +19,7 @@ import { useSettings } from '../settings';
 import { BRAND, COLORS } from '../theme';
 import icon from '../../assets/icon.png';
 import { BoardPreview } from './BoardPreview';
+import { GuideDialog } from './GuideDialog';
 import { Button, Toggle } from './Controls';
 
 export function appVersion(): string {
@@ -41,6 +42,8 @@ const FEATURES = ['Hints that explain why', 'Solve step by step', 'Create your o
 
 export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void }) {
   const [error, setError] = useState<string | null>(null);
+  // the puzzle type whose rules are shown
+  const [guide, setGuide] = useState<PuzzleType | null>(null);
   const { settings, update } = useSettings();
   // a phone: a smaller header, so the name fits on one line
   const compact = useWindowDimensions().width < 480;
@@ -91,6 +94,7 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
                 onOpen(openExample(type.name, label));
               }}
               onOpenFile={() => openFile(type)}
+              onRules={() => setGuide(type)}
             />
           ))}
         </View>
@@ -107,6 +111,7 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
           {`Version ${appVersion()} · Puzzles are described as constraints over a grid of cells, and solved by propagating them.`}
         </Text>
       </View>
+      <GuideDialog type={guide} onClose={() => setGuide(null)} />
     </ScrollView>
   );
 }
@@ -115,10 +120,12 @@ function PuzzleCard({
   type,
   onOpenExample,
   onOpenFile,
+  onRules,
 }: {
   type: PuzzleType;
   onOpenExample: (label: string) => void;
   onOpenFile: () => void;
+  onRules: () => void;
 }) {
   return (
     <View style={styles.card}>
@@ -144,6 +151,12 @@ function PuzzleCard({
             />
           ))}
           <Button label="Open file…" onPress={onOpenFile} />
+          <Button
+            label="Rules"
+            onPress={onRules}
+            accessibilityLabel={`Rules and techniques of ${type.label}`}
+            testID={`rules-${type.name}`}
+          />
         </View>
       </View>
     </View>
