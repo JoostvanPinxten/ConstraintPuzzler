@@ -107,10 +107,24 @@ candidates. It is the cause of its removals in the deduction log and explains th
 single *Step* that finds no value uses a technique when the constraints cannot narrow down the
 candidates.
 
+Each application is a `Finding`: the value, the groups the pattern is in (`groups`, e.g. the
+rows of an X-Wing), the groups that lose the value (`cover`, e.g. its columns), the `pattern`
+cells where the value can still go and the `targets` that lose it, plus the `reason`.
+`find()` returns the first finding without changing the puzzle, `apply()` applies it, and
+`findingFor(deduction)` gives the finding behind a removal. The app uses findings to explain
+techniques on the board:
+
+- after a *Step* that used a technique, it shows the groups to look at, the pattern, a border
+  around the cover groups and hatching on the cells that lost the value;
+- when no value follows directly, *Hint* offers the easiest technique
+  (`Solver.techniqueFinding()`) in three levels: the groups, then the pattern, then the
+  removals and why. *Step* then applies that finding.
+
+A technique works on the solver's candidates, so with *Show hints* off the hint says so.
+
 `new Solver(puzzle, allowGuessing, [])` solves with the constraints only (the golden fixtures
 of the Python engine are checked that way). To add a technique, subclass `Technique` (set
-`static difficulty`, implement `getType()` and `apply()`, remove candidates with
-`removeWithReason`) and add it to `TECHNIQUES` in `techniques/techniques.ts`.
+`static difficulty`, implement `getType()` and `find()`, which returns a `Finding` or null) and add it to `TECHNIQUES` in `techniques/techniques.ts`.
 
 ## Constraint types at a glance
 

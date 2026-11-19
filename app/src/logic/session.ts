@@ -24,6 +24,7 @@ import {
   Technique,
   type Deduction,
   type Finding,
+  type HintLevel,
   type Puzzle,
   type PuzzleType,
 } from '@constraintpuzzler/core';
@@ -228,17 +229,18 @@ export class PuzzleSession {
   }
 
   /**
-   * Show a technique's finding: the groups it looks at, and with `pattern` also where the
-   * value can still go, the groups that cannot hold the value elsewhere (with a border) and
-   * the cells that lose it (hatched). There is no single cell to select.
+   * Show a technique's finding, up to a hint level: the groups it looks at (REGION), also
+   * where the value can still go (CELL), and also the groups that cannot hold the value
+   * elsewhere (with a border) and the cells that lose it (hatched; VALUE). There is no single
+   * cell to select.
    */
-  private showFinding(finding: Finding, pattern: boolean): void {
+  private showFinding(finding: Finding, level: HintLevel): void {
     this.shownFinding = finding;
     this.selection = null;
     this.hintRegion = new Set(finding.groups.flatMap((g) => g.getCells()));
-    this.hintPattern = pattern ? new Set(finding.pattern) : new Set();
-    this.hintReasonGroups = pattern ? new Set(finding.cover) : new Set();
-    this.hintRuledOut = pattern ? new Set(finding.targets) : new Set();
+    this.hintPattern = level >= CELL ? new Set(finding.pattern) : new Set();
+    this.hintReasonGroups = level >= VALUE ? new Set(finding.cover) : new Set();
+    this.hintRuledOut = level >= VALUE ? new Set(finding.targets) : new Set();
     this.hintReasons = new Set();
   }
 
@@ -355,6 +357,11 @@ export class PuzzleSession {
 
   /** The text of the Hint button: what the next press reveals. */
   hintLabel(): string {
+    if (this.hints.finding !== null) {
+      if (this.hints.level === REGION) return 'Hint: show pattern';
+      if (this.hints.level === CELL) return 'Hint: what goes?';
+      return 'Hint';
+    }
     if (this.hints.deduction === null) return 'Hint';
     if (this.hints.level === REGION) return 'Hint: which cell?';
     if (this.hints.level === CELL) return 'Hint: show value';
@@ -370,9 +377,11 @@ export class PuzzleSession {
 
   /**
    * Reveal a value that follows from the constraints, a bit more on every press: first where
-   * to look, then the cell, then the value and why. Nothing is filled in.
+   * to look, then the cell, then the value and why. When no value follows directly, reveal a
+   * technique (e.g. an X-Wing) instead: where to look, its pattern, then which candidates go
+   * and why. Nothing is filled in.
    */
-  hint(): void {
+  hint(settings: Settings = DEFAULT_SETTINGS): void {
     if (this.solving !== null) return;
     let hint;
     try {
@@ -387,10 +396,22 @@ export class PuzzleSession {
       this.notice = {
         title: 'No hint',
         text:
-          'No value follows from a single round of the rules. Use Step to narrow down the' +
-          ' candidates, or Solve.',
+          'No value follows from a single round of the rules, and no technique applies.' +
+          ' Use Step to narrow down the candidates, or Solve.',
       };
       this.resetGuidance();
+      this.changed();
+      return;
+    }
+    if (this.hints.finding !== null) {
+      this.showFinding(this.hints.finding, this.hints.level);
+      this.inputMessage = null;
+      // a technique works on the solver's candidates, which the user only sees with Show hints
+      const note =
+        this.hints.level === VALUE && !settings.showHints
+          ? ' (This uses the candidates the solver keeps; turn on Show hints to see them.)'
+          : '';
+      this.stepMessage = `Hint: ${this.hints.message()}${note}`;
       this.changed();
       return;
     }
@@ -410,7 +431,7 @@ export class PuzzleSession {
       // for an exact cover hint, the group with its ruled-out cells; a naked single's groups
       // are the reason groups themselves
       this.hintRegion = this.hintRuledOut.size > 0 ? this.hints.regionCells() : new Set();
-      this.selection = { kind: 'cell', cell: hint.cell };
+      this.selection = { kind: 'cell', cell: (this.hints.deduction as Deduction).cell };
     }
     this.inputMessage = null;
     this.stepMessage = `Hint: ${this.hints.message()}`;
@@ -422,7 +443,7 @@ export class PuzzleSession {
     if (this.solving !== null || this.puzzle.isSolved()) return;
     let changed: boolean;
     try {
-      changed = this.game.solveStep(this.solver, this.hints.deduction);
+      changed = this.game.solveStep(this.solver, this.hints.deduction ?? this.hints.finding);
     } catch (error) {
       if (!(error instanceof ContradictionError)) throw error;
       this.contradiction(error);
@@ -440,7 +461,7 @@ export class PuzzleSession {
       const deductions = this.solver.log.deductions;
       this.stepMessage = `Solver step: ${narrowingMessage(deductions)}`;
       const finding = findingOf(deductions);
-      if (finding !== null) this.showFinding(finding, true);
+      if (finding !== null) this.showFinding(finding, VALUE);
     }
     if (!changed) {
       this.notice = {

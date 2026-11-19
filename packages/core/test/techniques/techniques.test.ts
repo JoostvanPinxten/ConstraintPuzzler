@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseSudokuLines } from '../../src/parsers/sudoku';
 import { createEmptySudoku, createFutoshikiPuzzle } from '../../src/puzzlefactory';
+import { CELL, HintSession, REGION, VALUE } from '../../src/solver/hints';
 import { Solver } from '../../src/solver/solver';
 import type { Cell } from '../../src/structure/cell';
 import { Deduction, DeductionLog } from '../../src/structure/deduction';
@@ -373,5 +374,69 @@ describe('findings', () => {
     }
     // once applied, the finding no longer applies; a step then does something else
     expect(chosen.technique.stillApplies(chosen)).toBe(false);
+  });
+});
+
+describe('technique hints', () => {
+  /** The X-Wing sample, stepped until no value follows directly and a technique applies. */
+  function stuck(): Solver {
+    const solver = new Solver(sudoku(XWING_SAMPLE));
+    solver.random = () => 0;
+    for (let i = 0; i < 100; i++) {
+      if (solver.deducibleValues().length === 0 && solver.techniqueFinding() !== null)
+        return solver;
+      solver.solveStep();
+    }
+    throw new Error('no technique needed');
+  }
+
+  it('offer a technique when no value follows directly, in three levels', () => {
+    const solver = stuck();
+    const before = solver.puzzle.saveState();
+    const hints = new HintSession();
+    const hint = hints.advance(solver);
+    const finding = hints.finding as Finding;
+    expect(hint).toBe(finding);
+    expect(hints.deduction).toBeNull();
+    expect(hints.active()).toBe(true);
+    expect(hints.level).toBe(REGION);
+    const groups = finding.groups.map((g) => g.getName()).join(' and ');
+    expect(hints.message()).toBe(
+      `Look at where ${finding.value} can go in ${groups} (${finding.technique.getType()}).`,
+    );
+    expect(hints.regionCells()).toEqual(new Set(finding.groups.flatMap((g) => g.getCells())));
+    // value hints' explanations stay empty
+    expect(hints.reasonCells().size).toBe(0);
+    expect(hints.ruledOutCells().size).toBe(0);
+    expect(hints.reasonGroups().size).toBe(0);
+
+    expect(hints.advance(solver)).toBe(finding);
+    expect(hints.level).toBe(CELL);
+    expect(hints.message()).toMatch(/can only go in the highlighted cells\.$/);
+    expect(hints.advance(solver)).toBe(finding);
+    expect(hints.level).toBe(VALUE);
+    expect(hints.message()).toContain(finding.reason);
+    expect(hints.message()).toMatch(/can be removed from the hatched cells?\.$/);
+    expect(solver.puzzle.saveState()).toEqual(before);
+  });
+
+  it('start over when the puzzle changed', () => {
+    const solver = stuck();
+    const hints = new HintSession();
+    const finding = hints.advance(solver) as Finding;
+    hints.advance(solver);
+    solver.solveStep(finding);
+    hints.advance(solver);
+    expect(hints.level).toBe(REGION);
+    expect(hints.finding === finding).toBe(false);
+  });
+
+  it('are not offered without techniques', () => {
+    const solver = stuck();
+    const plain = new Solver(solver.puzzle, false, []);
+    const hints = new HintSession();
+    expect(hints.advance(plain)).toBeNull();
+    expect(hints.active()).toBe(false);
+    expect(hints.message()).toBe('');
   });
 });
