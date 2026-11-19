@@ -8,6 +8,7 @@ import {
 } from '@constraintpuzzler/core';
 
 import { openExample } from '../puzzles/open';
+import { HighlightRole, roleColor } from './highlight';
 import {
   BEND_DEPTH,
   clueLayout,
@@ -152,6 +153,19 @@ describe('futoshiki', () => {
 
 describe('jidoku', () => {
   const { puzzle, layout } = relationsOf('jidoku');
+
+  it('shades the boxes in a neutral grey, which no highlight looks like', () => {
+    // how far a #rrggbb colour is from grey: the spread of its channels
+    const tint = (hex: string): number => {
+      const channels = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      return Math.max(...channels) - Math.min(...channels);
+    };
+    expect(tint(JIDOKU_BOX_SHADE)).toBeLessThanOrEqual(4);
+    const faint = Object.entries(HighlightRole).filter(
+      ([, role]) => role !== HighlightRole.NONE && tint(roleColor(role)) < 20,
+    );
+    expect(faint).toEqual([]);
+  });
 
   it('shades every other box, as in the paper', () => {
     const shaded = layout.cells.filter((s) => s.background === JIDOKU_BOX_SHADE);
