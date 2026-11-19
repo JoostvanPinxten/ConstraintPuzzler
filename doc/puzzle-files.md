@@ -311,6 +311,9 @@ without a colour when there are several colours, an unknown colour code, blocks 
 in their line, and a colour that has a different number of cells in the rows than in the
 columns.
 
+Hints, steps and the info panel name the values by their colour (`Puzzle.setValueNames`):
+"cell 4, 7 is red", not "cell 4, 7 is 1".
+
 Every row and every column is a group with a `RunsConstraint` (see
 [constraints.md](constraints.md#runsconstraint)).
 

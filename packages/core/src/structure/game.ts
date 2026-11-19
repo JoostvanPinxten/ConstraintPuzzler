@@ -315,6 +315,7 @@ export class Game {
   violationNote(cell: Cell, violations: Set<Cell> = this.violations()): string | null {
     if (!violations.has(cell)) return null;
     const value = this.valueOf(cell);
+    const shown = value === null ? 'it' : this.puzzle.valueName(value);
     const clashes = new Set<Cell>();
     for (const group of cell.constraintGroups) {
       for (const c of group.getCells()) if (violations.has(c) && c !== cell) clashes.add(c);
@@ -324,8 +325,8 @@ export class Game {
         .map((c) => c.getName())
         .sort()
         .join(', ');
-      return `${value} breaks a rule together with cell(s) ${names}.`;
+      return `${shown} breaks a rule together with cell(s) ${names}.`;
     }
-    return `${value} does not fit: it leaves no possible value for another cell.`;
+    return `${shown} does not fit: it leaves no possible value for another cell.`;
   }
 }

@@ -54,6 +54,7 @@ describe('App', () => {
     await fireEvent.press(screen.getByTestId('cell-1, 1'));
     await fireEvent.press(screen.getByLabelText('red (1)'));
     expect(screen.getByTestId('color-1, 1')).toBeTruthy();
+    expect(screen.getByText('Value: red (entered)')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('pad-0'));
     expect(screen.getByTestId('blank-1, 1')).toBeTruthy();
   });

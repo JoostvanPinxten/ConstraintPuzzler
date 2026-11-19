@@ -139,6 +139,8 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
     filename,
     palette.map((c) => c.value),
   );
+  // hints and the info panel say "red", not "1"
+  puzzle.setValueNames(new Map(palette.map((c) => [c.value, c.name])));
   const grid = puzzle.getGrid();
   const cells: Cell[][] = [];
   for (let y = 0; y < height; y++) {

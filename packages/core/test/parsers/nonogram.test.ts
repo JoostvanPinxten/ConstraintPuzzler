@@ -95,6 +95,28 @@ describe('nonogram files', () => {
   });
 });
 
+describe('nonogram value names', () => {
+  it('names the values after the colours, in hints and steps', () => {
+    const puzzle = loadExample('nonogram', 'nonogramCherries.txt');
+    expect(puzzle.valueName(0)).toBe('blank');
+    expect(puzzle.valueName(1)).toBe('red');
+    expect(puzzle.formatValues([3, 1])).toBe('red, brown');
+    const hint = new Solver(puzzle).hint();
+    expect(hint?.describe()).toMatch(/^cell \d+, \d+ is (blank|red|green|brown): /);
+  });
+
+  it('names black and white', () => {
+    const puzzle = loadExample('nonogram', 'nonogramCup.txt');
+    expect([0, 1].map((v) => puzzle.valueName(v))).toEqual(['blank', 'black']);
+  });
+
+  it('leaves the values of other puzzles as numbers', () => {
+    const sudoku = loadExample('sudoku', 'easySudoku.txt');
+    expect(sudoku.valueName(4)).toBe('4');
+    expect(sudoku.formatValues([])).toBe('none');
+  });
+});
+
 describe('the example nonograms', () => {
   it.each([
     ['nonogramCup.txt', 100],
