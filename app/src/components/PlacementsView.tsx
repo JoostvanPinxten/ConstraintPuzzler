@@ -55,11 +55,14 @@ export function PlacementsView({
         {lines.map((line, l) =>
           line.map((value, j) => {
             const { x, y } = at(l, j);
+            // for an overlap, the blocks other than the one shown are pale
+            const span = l > 0 ? diagram.spans?.[l - 1] : undefined;
+            const pale = span !== undefined && (j < span[0] || j > span[1]);
             const fill = value === null ? OPEN_COLOR : value === BLANK ? '#ffffff' : hex(value);
             const symbol = value !== null ? symbols?.get(value) : undefined;
             const center = { x: x + s / 2, y: y + s / 2 };
             return (
-              <G key={`${l}-${j}`}>
+              <G key={`${l}-${j}`} opacity={pale ? 0.55 : 1}>
                 <Rect
                   x={x}
                   y={y}

@@ -290,7 +290,7 @@ Every deduction is rated by the easiest technique that explains it (`techniqueOf
 | Technique | Difficulty | Example explanation |
 |---|---|---|
 | `wholeLine` | 2 | the blocks of Row 7 (5 red, 4 red) and the gaps they need fill the whole line |
-| `overlap` | 3 | block 1 of Row 1 (4) starts somewhere in cells 1-3, so it always covers cells 3-4: this cell is black |
+| `overlap` | 3 | block 1 of Row 1 (4) starts somewhere in cells 1-3 (the blocks after it (1 1) need at least the last 4 cells, with gaps), so it always covers cells 3-4: this cell is black |
 | `reach` | 3 | no red block of Row 1 can reach this cell |
 | `placements` | 5 | of all ways to place the blocks of Row 1 (1 1) that fit the cells known so far, every one makes this cell blank |
 

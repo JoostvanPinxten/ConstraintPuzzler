@@ -2,7 +2,7 @@
  * The picture of a nonogram hint: the line as it is now, then the placements of its blocks
  * that explain the hint (see RunsConstraint.placementDiagram). This is the text above it.
  */
-import type { PlacementDiagram, Value } from '@constraintpuzzler/core';
+import { BLANK, type PlacementDiagram, type Value } from '@constraintpuzzler/core';
 
 /**
  * What the picture shows, e.g. "The column now, then every place block 1 can go: each covers
@@ -15,7 +15,16 @@ export function placementsCaption(
   const line = diagram.vertical ? 'column' : 'row';
   const now = `The ${line} now (grey: open), then`;
   if (diagram.block !== null) {
-    return `${now} every place block ${diagram.block + 1} can go: each covers the outlined cell.`;
+    const others = diagram.rows.some((row, r) => {
+      const span = diagram.spans?.[r];
+      return (
+        span !== undefined &&
+        row.some((v, j) => v !== null && v !== BLANK && (j < span[0] || j > span[1]))
+      );
+    })
+      ? ', with the other blocks (pale) pushed as far from it as they fit'
+      : '';
+    return `${now} every place block ${diagram.block + 1} can go${others}: each covers the outlined cell.`;
   }
   const shown = diagram.rows.length;
   const ways =
