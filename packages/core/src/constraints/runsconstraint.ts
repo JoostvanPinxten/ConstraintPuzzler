@@ -83,6 +83,11 @@ export interface PlacementDiagram {
    */
   readonly block: number | null;
   readonly rows: readonly (readonly (Value | null)[])[];
+  /**
+   * for an overlap: per row, the first and last cell of the block shown; the other blocks in
+   * that row are pushed as far from it as they fit (to be drawn pale)
+   */
+  readonly spans?: readonly (readonly [number, number])[];
   /** how many placements there are; more than rows.length when only the first are given */
   readonly total: number;
 }
@@ -98,6 +103,51 @@ export function paletteOf(puzzle: Puzzle): readonly PaletteColor[] | null {
 /** '4' or '4-6' (1-based positions in a line). */
 function cellRange(from: number, to: number): string {
   return from === to ? `cell ${from + 1}` : `cells ${from + 1}-${to + 1}`;
+}
+
+/**
+ * The placement of the blocks in the cells with every block as far to the start as it fits
+ * (cells without a block BLANK), or null when they do not fit.
+ */
+function leftmostPlacement(
+  runs: readonly Run[],
+  candidates: readonly ReadonlySet<Value>[],
+): Value[] | null {
+  const n = candidates.length;
+  const has = (j: number, v: Value): boolean => (candidates[j] as ReadonlySet<Value>).has(v);
+  const failed = new Set<number>();
+  const line: Value[] = new Array<Value>(n).fill(BLANK);
+  const fill = (i: number, b: number): boolean => {
+    if (b === runs.length) {
+      for (let j = i; j < n; j++) if (!has(j, BLANK)) return false;
+      return true;
+    }
+    if (i >= n || failed.has(i * (runs.length + 1) + b)) return false;
+    const run = runs[b] as Run;
+    const end = i + run.length;
+    let fits = end <= n;
+    for (let j = i; fits && j < end; j++) fits = has(j, run.color);
+    const gap = runs[b + 1]?.color === run.color ? 1 : 0;
+    if (fits && gap === 1) fits = end < n && has(end, BLANK);
+    if (fits) {
+      for (let j = i; j < end; j++) line[j] = run.color;
+      if (fill(end + gap, b + 1)) return true;
+      for (let j = i; j < end; j++) line[j] = BLANK;
+    }
+    if (has(i, BLANK) && fill(i + 1, b)) return true;
+    failed.add(i * (runs.length + 1) + b);
+    return false;
+  };
+  return fill(0, 0) ? line : null;
+}
+
+/** As leftmostPlacement, with every block as far to the end as it fits. */
+function rightmostPlacement(
+  runs: readonly Run[],
+  candidates: readonly ReadonlySet<Value>[],
+): Value[] | null {
+  const line = leftmostPlacement([...runs].reverse(), [...candidates].reverse());
+  return line === null ? null : line.reverse();
 }
 
 /**
@@ -428,13 +478,45 @@ export class RunsConstraint extends Constraint {
       const b = reason.run;
       const run = this.runs[b] as Run;
       const starts = this.placements(candidates)?.starts[b] ?? [];
-      const rows = starts.map((start) =>
-        cells.map((_, j) => (j >= start && j < start + run.length ? run.color : null)),
-      );
-      return { index, value, known, vertical, block: b, rows, total: rows.length };
+      const rows = starts.map((start) => this.placementAround(candidates, b, start));
+      const spans = starts.map((start): [number, number] => [start, start + run.length - 1]);
+      return { index, value, known, vertical, block: b, rows, spans, total: rows.length };
     }
     const { rows, total } = this.linePlacements(candidates, limit);
     return { index, value, known, vertical, block: null, rows, total };
+  }
+
+  /**
+   * A placement with block b at `start`, the blocks before it as far to the start and the
+   * blocks after it as far to the end as they fit: it shows what keeps block b from going
+   * further. Cells that cannot be filled this way (not when `start` is a start of block b) are
+   * null.
+   */
+  private placementAround(
+    candidates: readonly ReadonlySet<Value>[],
+    b: number,
+    start: number,
+  ): (Value | null)[] {
+    const n = candidates.length;
+    const run = this.runs[b] as Run;
+    const end = start + run.length;
+    const gapBefore = b > 0 && (this.runs[b - 1] as Run).color === run.color ? 1 : 0;
+    const gapAfter = this.runs[b + 1]?.color === run.color ? 1 : 0;
+    const before = leftmostPlacement(
+      this.runs.slice(0, b),
+      candidates.slice(0, Math.max(0, start - gapBefore)),
+    );
+    const after = rightmostPlacement(
+      this.runs.slice(b + 1),
+      candidates.slice(Math.min(n, end + gapAfter)),
+    );
+    const line: (Value | null)[] = new Array<Value | null>(n).fill(null);
+    for (let j = 0; j < start - gapBefore && before !== null; j++) line[j] = before[j] as Value;
+    if (gapBefore === 1 && before !== null) line[start - 1] = BLANK;
+    for (let j = start; j < end; j++) line[j] = run.color;
+    if (gapAfter === 1 && after !== null && end < n) line[end] = BLANK;
+    if (after !== null) after.forEach((v, j) => (line[end + gapAfter + j] = v));
+    return line;
   }
 
   /** The filled cells, when no placement of the blocks fits the values shown. */
@@ -491,9 +573,11 @@ export class RunsConstraint extends Constraint {
           first === last
             ? `can only start at cell ${first + 1}`
             : `starts somewhere in ${cellRange(first, last)}`;
+        const why = this.boundsWhy(b, first, last);
         return (
-          `block ${b + 1} of ${group} (${this.clueText([run])}) ${where}, ` +
-          `so it always covers ${cellRange(last, first + run.length - 1)}: this cell is ${color}`
+          `block ${b + 1} of ${group} (${this.clueText([run])}) ${where}` +
+          (why === '' ? '' : ` (${why})`) +
+          `, so it always covers ${cellRange(last, first + run.length - 1)}: this cell is ${color}`
         );
       }
       case 'reach':
@@ -507,6 +591,40 @@ export class RunsConstraint extends Constraint {
         return `${all}, none makes this cell ${name}`;
       }
     }
+  }
+
+  /**
+   * Why block b starts no earlier than `first` and no later than `last`: the blocks before or
+   * after it need the room, or else the cells known so far. Empty when it can start anywhere.
+   */
+  private boundsWhy(b: number, first: number, last: number): string {
+    const n = this.group.cells.length;
+    const run = this.runs[b] as Run;
+    const open = this.placements(this.group.cells.map(() => new Set(this.group.getValues())));
+    const reasons: string[] = [];
+    const blocks = (runs: readonly Run[], side: string, cells: number): string => {
+      const which = runs.length === 1 ? `the block ${side} it` : `the blocks ${side} it`;
+      const filled = runs.reduce((sum, r) => sum + r.length, 0);
+      const gaps = cells - filled > 1 ? ', with gaps' : cells > filled ? ', with a gap' : '';
+      const room = side === 'before' ? 'first' : 'last';
+      const need = runs.length === 1 ? 'needs' : 'need';
+      return `${which} (${this.clueText(runs)}) ${need} at least the ${room} ${cells === 1 ? 'cell' : `${cells} cells`}${gaps}`;
+    };
+    const known: string[] = [];
+    if (first > 0) {
+      if (open !== null && open.firstStart[b] === first) {
+        reasons.push(blocks(this.runs.slice(0, b), 'before', first));
+      } else known.push(`before cell ${first + 1}`);
+    }
+    if (last + run.length < n) {
+      if (open !== null && open.lastStart[b] === last) {
+        reasons.push(blocks(this.runs.slice(b + 1), 'after', n - last - run.length));
+      } else known.push(`after cell ${last + 1}`);
+    }
+    if (known.length > 0) {
+      reasons.push(`the cells known so far keep it from starting ${known.join(' or ')}`);
+    }
+    return reasons.join('; ');
   }
 
   override toString(): string {
