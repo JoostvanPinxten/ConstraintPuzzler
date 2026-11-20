@@ -21,6 +21,14 @@ describe('placementsCaption', () => {
     );
   });
 
+  it('mentions the other blocks when they are drawn', () => {
+    const d = diagram({ block: 1, rows: [[1, 0, 1]], spans: [[2, 2]] });
+    expect(placementsCaption(d, name)).toBe(
+      'The row now (grey: open), then every place block 2 can go, with the other blocks (pale) ' +
+        'pushed as far from it as they fit: each covers the outlined cell.',
+    );
+  });
+
   it('counts the placements of the blocks', () => {
     const rows = [
       [1, 0, 0],

@@ -129,6 +129,41 @@ describe('RunsConstraint techniques', () => {
     );
   });
 
+  it('says which blocks keep an overlapping block from going further', () => {
+    // 4 1 1 in ten cells: the 1s and their gaps need the last 4 cells, so the 4 starts by cell 3
+    const { puzzle, cells, constraint } = line([red(4), red(1), red(1)], 10);
+    const deduction = apply(puzzle, constraint).find((d) => d.cell === cells[2]);
+    expect(deduction?.reason()).toBe(
+      'block 1 of Row 1 (4) starts somewhere in cells 1-3 (the blocks after it (1 1) need at ' +
+        'least the last 4 cells, with gaps), so it always covers cells 3-4: this cell is black',
+    );
+  });
+
+  it('names the known cells once when they bound a block on both sides', () => {
+    // 3 in eight cells with cells 2 and 7 blank: the block starts in cells 3-4
+    const { puzzle, cells, constraint } = line([red(3)], 8);
+    cells[1]?.setValue(BLANK);
+    cells[6]?.setValue(BLANK);
+    const deduction = apply(puzzle, constraint).find((d) => d.cell === cells[3]);
+    expect(deduction?.reason()).toBe(
+      'block 1 of Row 1 (3) starts somewhere in cells 3-4 (the cells known so far keep it ' +
+        'from starting before cell 3 or after cell 4), so it always covers cells 4-5: this ' +
+        'cell is black',
+    );
+  });
+
+  it('says when the known cells keep an overlapping block from going further', () => {
+    // 1 3 in eight cells with cell 8 blank: the 3 starts in cells 3-5
+    const { puzzle, cells, constraint } = line([red(1), red(3)], 8);
+    cells[7]?.setValue(BLANK);
+    const deduction = apply(puzzle, constraint).find((d) => d.cell === cells[4]);
+    expect(deduction?.reason()).toBe(
+      'block 2 of Row 1 (3) starts somewhere in cells 3-5 (the block before it (1) needs at ' +
+        'least the first 2 cells, with a gap; the cells known so far keep it from starting ' +
+        'after cell 5), so it always covers cell 5: this cell is black',
+    );
+  });
+
   it('explains a colour that no block can reach', () => {
     const { puzzle, cells, constraint } = line([red(1), green(1)], 4, RED_GREEN);
     cells[1]?.setValue(1);
@@ -270,9 +305,25 @@ describe('RunsConstraint placements to show', () => {
     const diagram = deduction && constraint.placementDiagram(deduction);
     expect(diagram).toMatchObject({ index: 2, value: 1, block: 0, total: 3, vertical: false });
     expect(diagram?.rows).toEqual([
-      [1, 1, 1, 1, null, null],
-      [null, 1, 1, 1, 1, null],
-      [null, null, 1, 1, 1, 1],
+      [1, 1, 1, 1, 0, 0],
+      [0, 1, 1, 1, 1, 0],
+      [0, 0, 1, 1, 1, 1],
+    ]);
+    expect(diagram?.spans).toEqual([
+      [0, 3],
+      [1, 4],
+      [2, 5],
+    ]);
+  });
+
+  it('pushes the other blocks away from the covering block', () => {
+    const { puzzle, cells, constraint } = line([red(4), red(1), red(1)], 10);
+    const deduction = hintDeductions(puzzle, constraint).find((d) => d.cell === cells[2]);
+    const diagram = deduction && constraint.placementDiagram(deduction);
+    expect(diagram?.rows).toEqual([
+      [1, 1, 1, 1, 0, 0, 0, 1, 0, 1],
+      [0, 1, 1, 1, 1, 0, 0, 1, 0, 1],
+      [0, 0, 1, 1, 1, 1, 0, 1, 0, 1],
     ]);
   });
 
@@ -291,7 +342,7 @@ describe('RunsConstraint placements to show', () => {
     const deduction = hintDeductions(puzzle, constraint)[0];
     const diagram = deduction && constraint.placementDiagram(deduction);
     expect(diagram?.known).toEqual([0, null, null, null]);
-    expect(diagram?.rows).toEqual([[null, 1, 1, 1]]);
+    expect(diagram?.rows).toEqual([[0, 1, 1, 1]]);
   });
 
   it('shows all placements of the line for a harder deduction', () => {
