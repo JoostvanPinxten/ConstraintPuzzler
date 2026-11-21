@@ -20,6 +20,7 @@ import type { Cell } from './cell';
 import type { Deduction } from './deduction';
 import { EntryError, UserEntries } from './entries';
 import type { Puzzle } from './puzzle';
+import { formatMessage, msg, type Message } from '../i18n/message';
 import { stateKey, type CellState, type PuzzleState, type Value } from './types';
 
 /** What undo() goes back to: the puzzle, the entries and mistakes, and the notes. */
@@ -67,23 +68,24 @@ export class CheckResult {
     return this.wrongValues.size === 0 && this.wrongNotes.size === 0;
   }
 
-  /** The result in words, e.g. "2 of 23 filled-in cells are wrong.". */
+  /** The result in English, e.g. "2 of 23 filled-in cells are wrong." (see summaryMessage). */
   summary(): string {
-    if (this.checked === 0 && this.wrongNotes.size === 0) {
-      return 'Nothing is filled in yet; every note so far fits the solution.';
-    }
-    const parts: string[] = [];
-    if (this.wrongValues.size > 0) {
-      parts.push(`${this.wrongValues.size} of ${this.checked} filled-in cells are wrong`);
-    } else if (this.checked > 0) {
-      parts.push(`All ${this.checked} filled-in cells are correct so far`);
-    }
-    if (this.wrongNotes.size > 0) {
-      const count = this.wrongNotes.size;
-      const cells = count === 1 ? 'cell rules' : 'cells rule';
-      parts.push(`the notes of ${count} ${cells} out the correct value`);
-    }
-    return `${parts.join(', and ')}.`;
+    return formatMessage(this.summaryMessage());
+  }
+
+  /** The result as a message. */
+  summaryMessage(): Message {
+    if (this.checked === 0 && this.wrongNotes.size === 0) return msg('check.nothing');
+    const values =
+      this.wrongValues.size > 0
+        ? msg('check.wrong', { wrong: this.wrongValues.size, checked: this.checked })
+        : this.checked > 0
+          ? msg('check.allCorrect', { checked: this.checked })
+          : null;
+    const notes =
+      this.wrongNotes.size > 0 ? msg('check.wrongNotes', { count: this.wrongNotes.size }) : null;
+    if (values !== null && notes !== null) return msg('check.both', { values, notes });
+    return msg('sentence.end', { text: values ?? notes ?? '' });
   }
 }
 
@@ -312,11 +314,17 @@ export class Game {
     return this.puzzle.isSolved() && violations.size === 0;
   }
 
-  /** Explain why the value of a cell breaks a rule (null when it does not). */
+  /** Explain why the value of a cell breaks a rule, in English (null when it does not). */
   violationNote(cell: Cell, violations: Set<Cell> = this.violations()): string | null {
+    const note = this.violationNoteMessage(cell, violations);
+    return note === null ? null : formatMessage(note);
+  }
+
+  /** Explain why the value of a cell breaks a rule, as a message (null when it does not). */
+  violationNoteMessage(cell: Cell, violations: Set<Cell> = this.violations()): Message | null {
     if (!violations.has(cell)) return null;
     const value = this.valueOf(cell);
-    const shown = value === null ? 'it' : this.puzzle.valueName(value);
+    const shown = value === null ? msg('game.it') : this.puzzle.valueNameMessage(value);
     const clashes = new Set<Cell>();
     for (const group of cell.constraintGroups) {
       for (const c of group.getCells()) if (violations.has(c) && c !== cell) clashes.add(c);
@@ -326,8 +334,8 @@ export class Game {
         .map((c) => c.getName())
         .sort()
         .join(', ');
-      return `${shown} breaks a rule together with cell(s) ${names}.`;
+      return msg('game.clash', { value: shown, cells: names });
     }
-    return `${shown} does not fit: it leaves no possible value for another cell.`;
+    return msg('game.noFit', { value: shown });
   }
 }

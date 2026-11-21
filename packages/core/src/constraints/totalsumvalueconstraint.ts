@@ -2,7 +2,8 @@ import type { Cell } from '../structure/cell';
 import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
-import { formatValues, sortedValues, type Value, type ValueOf } from '../structure/types';
+import { msg, valueList, type Message } from '../i18n/message';
+import { sortedValues, type Value, type ValueOf } from '../structure/types';
 import { Constraint, placedValues } from './constraint';
 import { UniqueValueConstraint } from './uniquevalueconstraint';
 
@@ -79,15 +80,15 @@ export class TotalSumValueConstraint extends Constraint {
     return 'Total Sum Value Constraint';
   }
 
-  override summary(): string {
-    return `sum = ${this.totalValue}`;
+  override summaryMessage(): Message {
+    return msg('sum.summary', { total: String(this.totalValue) });
   }
 
-  override explain(deduction: Deduction): string {
-    const group = this.group.getName();
-    if (deduction.setsValue()) return `${group} must add up to ${this.totalValue}`;
-    const removed = formatValues(deduction.removed);
-    return `${group} must add up to ${this.totalValue}, and no combination with ${removed} does`;
+  override explainMessage(deduction: Deduction): Message {
+    const group = this.group.nameMessage();
+    const total = String(this.totalValue);
+    if (deduction.setsValue()) return msg('sum.mustAddUp', { group, total });
+    return msg('sum.noCombination', { group, total, values: valueList(deduction.removed) });
   }
 
   /**
@@ -112,26 +113,24 @@ export class TotalSumValueConstraint extends Constraint {
     return new Set();
   }
 
-  override describe(showHints = true): string {
-    if (this.totalValue === null) return 'The total of this sum has not been set.';
+  override describeMessage(showHints = true): Message {
+    if (this.totalValue === null) return msg('sum.notSet');
     const cells = this.group.getCells();
     const placed = placedValues(cells);
     const openCount = cells.length - placed.length;
-    let text = `The values add up to ${this.totalValue}`;
-    if (openCount === 0) return `${text}; complete (${placed.join(' + ')}).`;
+    const total = this.totalValue;
+    if (openCount === 0) return msg('sum.complete', { total, sum: placed.join(' + ') });
     const placedSum = placed.reduce((a, b) => a + b, 0);
-    const left = this.totalValue - placedSum;
-    const cellWord = openCount === 1 ? 'cell' : 'cells';
-    if (placed.length > 0) {
-      text += `; ${placedSum} is placed, so ${left} is left for ${openCount} open ${cellWord}`;
-    } else {
-      text += ` over ${openCount} open ${cellWord}`;
-    }
-    if (!showHints) return `${text}.`;
+    const left = total - placedSum;
+    const text =
+      placed.length > 0
+        ? msg('sum.placed', { total, placed: placedSum, left, count: openCount })
+        : msg('sum.open', { total, count: openCount });
+    if (!showHints) return msg('sentence.end', { text });
     // the values that can still complete the sum (without changing any state)
     const possible = this.applyConstraintRecursively(left, openCount, placed);
     const candidates = this.values.filter((v) => possible.has(v));
-    return `${text}; candidates: ${formatValues(candidates)}.`;
+    return msg('sum.candidates', { text, values: valueList(candidates) });
   }
 
   setTotalValue(value: number): void {

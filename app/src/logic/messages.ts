@@ -73,9 +73,10 @@ export function contradictionNotice(error: Error): Notice {
  */
 export function narrowingMessage(deductions: readonly Deduction[]): UiMessage {
   const count = deductions.reduce((n, d) => n + d.removed.size, 0);
-  const reasons = [...new Set(deductions.map((d) => d.reason()))];
-  const reason = reasons[0] ?? '';
-  return reasons.length > 1
-    ? ui('step.narrowingMore', { count, reason, more: reasons.length - 1 })
+  // the different reasons (the same reason can come from several deductions)
+  const reasons = new Map(deductions.map((d) => [d.reason(), d.reasonMessage()]));
+  const reason = reasons.values().next().value ?? '';
+  return reasons.size > 1
+    ? ui('step.narrowingMore', { count, reason, more: reasons.size - 1 })
     : ui('step.narrowing', { count, reason });
 }

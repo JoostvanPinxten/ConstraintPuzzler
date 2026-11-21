@@ -4,7 +4,36 @@
  * node selects a puzzle part, which the board highlights and the info panel describes.
  * (Ported from gui/puzzlemodel/puzzletreemodel.py of the former PySide6 app.)
  */
-import type { Cell, Constraint, ConstraintGroup, Puzzle } from '@constraintpuzzler/core';
+import {
+  msg,
+  type Cell,
+  type Constraint,
+  type ConstraintGroup,
+  type Puzzle,
+} from '@constraintpuzzler/core';
+
+import { formatCore, i18n, type AppKey } from '../i18n';
+
+/** The names of the kinds of constraints (Constraint.getType) in the catalog. */
+const CONSTRAINT_TYPES: Readonly<Record<string, AppKey>> = {
+  'Unique Value Constraint': 'type.unique',
+  'Exact cover constraint': 'type.exactCover',
+  'Total Sum Value Constraint': 'type.sum',
+  'Cell Greater Than Cell Constraint': 'type.greater',
+  'Runs Constraint': 'type.runs',
+};
+
+/** The kind of a constraint in the player's language, e.g. "Unique Value Constraint". */
+export function constraintType(constraint: Constraint): string {
+  const key = CONSTRAINT_TYPES[constraint.getType()];
+  return key === undefined ? constraint.getType() : i18n.t(key);
+}
+
+/** A value as the player sees it: its name (e.g. a colour) or the number. */
+function valueName(puzzle: Puzzle, value: number): string {
+  const name = puzzle.valueNameMessage(value);
+  return typeof name === 'object' ? formatCore(name) : String(name);
+}
 
 export type Selection =
   | { readonly kind: 'puzzle' }
@@ -28,27 +57,27 @@ export function buildPuzzleTree(puzzle: Puzzle): TreeNode {
   const cellNode = (cell: Cell, id: string): TreeNode => ({
     id,
     label: cell.getName(),
-    type: 'Cell',
+    type: i18n.t('tree.cell'),
     selection: { kind: 'cell', cell },
     children: [],
   });
   const grid: TreeNode = {
     id: 'grid',
-    label: 'Grid',
-    type: 'Grid',
+    label: i18n.t('tree.grid'),
+    type: i18n.t('tree.grid'),
     selection: { kind: 'grid' },
     children: cells.map((cell, i) => cellNode(cell, `cell:${i}`)),
   };
   const groups = puzzle.getConstraintGroups().map((group, g): TreeNode => ({
     id: `group:${g}`,
-    label: group.getName(),
-    type: 'Constraint Group',
+    label: formatCore(group.nameMessage()),
+    type: i18n.t('tree.group'),
     selection: { kind: 'group', group },
     children: [
       ...group.getConstraints().map((constraint, k): TreeNode => ({
         id: `group:${g}/constraint:${k}`,
-        label: constraint.summary(),
-        type: constraint.getType(),
+        label: formatCore(constraint.summaryMessage()),
+        type: constraintType(constraint),
         selection: { kind: 'constraint', constraint },
         children: [],
       })),
@@ -58,7 +87,7 @@ export function buildPuzzleTree(puzzle: Puzzle): TreeNode {
   return {
     id: 'puzzle',
     label: puzzle.name,
-    type: 'Puzzle',
+    type: i18n.t('tree.puzzle'),
     selection: { kind: 'puzzle' },
     children: [grid, ...groups],
   };
@@ -83,7 +112,11 @@ export function selectionCells(puzzle: Puzzle, selection: Selection): Cell[] {
 /** E.g. "9 cells: 4 filled, 5 open". */
 export function cellCounts(cells: readonly Cell[]): string {
   const filled = cells.filter((c) => c.hasValue()).length;
-  return `${cells.length} cells: ${filled} filled, ${cells.length - filled} open`;
+  return i18n.t('tree.cellCounts', {
+    total: cells.length,
+    filled,
+    open: cells.length - filled,
+  });
 }
 
 export interface Description {
@@ -100,16 +133,21 @@ export function describeCell(cell: Cell, showHints: boolean): Description {
   let state: string;
   if (cell.hasValue()) {
     const puzzle = cell.getGrid().getPuzzle();
-    state = `Value: ${puzzle.valueName(cell.getValue() as number)} (${cell.getSource() ?? 'given'})`;
+    state = i18n.t('tree.value', {
+      value: valueName(puzzle, cell.getValue() as number),
+      source: i18n.t(`source.${cell.getSource() ?? 'given'}`),
+    });
   } else if (!showHints) {
-    state = 'Open';
+    state = i18n.t('tree.open');
   } else {
-    state = `Candidates: ${cell.getGrid().getPuzzle().formatValues(cell.values)}`;
+    const values = cell.getGrid().getPuzzle().valueList(cell.values);
+    state = i18n.t('tree.candidates', { values: formatCore(msg('values.list', { values })) });
   }
-  const groups = cell.constraintGroups.map((g) => g.getName());
+  const groups = cell.constraintGroups.map((g) => formatCore(g.nameMessage()));
   return {
-    title: `Cell ${cell.getName()}`,
-    lines: groups.length > 0 ? [state, `In groups: ${groups.join(', ')}`] : [state],
+    title: i18n.t('tree.cellTitle', { cell: cell.getName() }),
+    lines:
+      groups.length > 0 ? [state, i18n.t('tree.inGroups', { groups: groups.join(', ') })] : [state],
   };
 }
 
@@ -124,29 +162,34 @@ export function describeSelection(
         title: puzzle.name,
         lines: [
           cellCounts(puzzle.getGrid().getCells()),
-          `${puzzle.getConstraintGroups().length} constraint groups`,
+          i18n.t('tree.groupCount', { total: puzzle.getConstraintGroups().length }),
         ],
       };
     case 'grid':
-      return { title: 'Grid', lines: [cellCounts(puzzle.getGrid().getCells())] };
+      return { title: i18n.t('tree.grid'), lines: [cellCounts(puzzle.getGrid().getCells())] };
     case 'cell':
       return describeCell(selection.cell, showHints);
     case 'group':
       return {
-        title: selection.group.getName(),
-        kind: 'constraint group',
+        title: formatCore(selection.group.nameMessage()),
+        kind: i18n.t('tree.groupKind'),
         lines: [cellCounts(selection.group.getCells())],
-        bullets: selection.group.getConstraints().map((c) => c.describe(showHints)),
+        bullets: selection.group
+          .getConstraints()
+          .map((c) => formatCore(c.describeMessage(showHints))),
       };
     case 'constraint': {
       const { constraint } = selection;
       const group = constraint.group;
       return {
-        title: constraint.summary(),
-        kind: constraint.getType(),
+        title: formatCore(constraint.summaryMessage()),
+        kind: constraintType(constraint),
         lines: [
-          constraint.describe(showHints),
-          `Group ${group.getName()}: ${cellCounts(group.getCells())}`,
+          formatCore(constraint.describeMessage(showHints)),
+          i18n.t('tree.groupLine', {
+            group: formatCore(group.nameMessage()),
+            counts: cellCounts(group.getCells()),
+          }),
         ],
       };
     }

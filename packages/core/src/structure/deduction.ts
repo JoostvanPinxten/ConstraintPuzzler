@@ -11,6 +11,7 @@ import type { Constraint } from '../constraints/constraint';
 import type { TechniqueId } from '../guide/techniques';
 import type { Technique } from '../techniques/technique';
 import { ValueSource, type Cell } from './cell';
+import { formatMessage, msg, type Message, type MessageParam } from '../i18n/message';
 import type { Value } from './types';
 
 /** What made a change: a constraint, or a technique that combines several groups. */
@@ -66,30 +67,48 @@ export class Deduction {
   }
 
   /** The value set, as the user sees it (its name, e.g. a colour, or the number). */
-  private valueText(): string {
-    return this.value === null ? '' : this.cell.getGrid().getPuzzle().valueName(this.value);
+  private valueParam(): MessageParam {
+    return this.value === null ? '' : this.cell.getGrid().getPuzzle().valueNameMessage(this.value);
   }
 
-  /** Why the change was made, in words. */
+  /** Why the change was made, in English (see reasonMessage). */
   reason(): string {
-    if (this.cause !== null) return this.cause.explain(this);
-    const value = this.valueText();
-    if (this.source === ValueSource.GUESSED) return `${value} is a guess (backtracking)`;
-    if (this.setsValue() && this.source === ValueSource.DEDUCED) {
-      return `${value} is the only candidate left in this cell`;
-    }
-    if (this.setsValue()) return `${value} was ${this.source ?? 'set'}`;
-    return 'removed';
+    return formatMessage(this.reasonMessage());
   }
 
-  /** What changed and why, e.g. "cell 3, 4 is 7: ...". */
+  /** Why the change was made, as a message. */
+  reasonMessage(): Message {
+    if (this.cause !== null) return this.cause.explainMessage(this);
+    const value = this.valueParam();
+    if (this.source === ValueSource.GUESSED) return msg('deduction.guess', { value });
+    if (this.setsValue() && this.source === ValueSource.DEDUCED) {
+      return msg('deduction.onlyCandidate', { value });
+    }
+    if (this.setsValue()) {
+      const key =
+        this.source === ValueSource.GIVEN
+          ? 'deduction.given'
+          : this.source === ValueSource.ENTERED
+            ? 'deduction.entered'
+            : 'deduction.set';
+      return msg(key, { value });
+    }
+    return msg('deduction.removed');
+  }
+
+  /** What changed and why, e.g. "cell 3, 4 is 7: ...", in English (see describeMessage). */
   describe(): string {
-    const name = this.cell.getName();
+    return formatMessage(this.describeMessage());
+  }
+
+  /** What changed and why, as a message. */
+  describeMessage(): Message {
+    const cell = this.cell.getName();
     const puzzle = this.cell.getGrid().getPuzzle();
-    const what = this.setsValue()
-      ? `cell ${name} is ${this.valueText()}`
-      : `cell ${name} cannot be ${puzzle.formatValues(this.removed)}`;
-    return `${what}: ${this.reason()}.`;
+    const reason = this.reasonMessage();
+    return this.setsValue()
+      ? msg('deduction.setsValue', { cell, value: this.valueParam(), reason })
+      : msg('deduction.removes', { cell, values: puzzle.valueList(this.removed), reason });
   }
 }
 

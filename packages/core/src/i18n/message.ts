@@ -42,12 +42,21 @@ type BaseKey<K> = K extends `${infer Base}_${'zero' | 'one' | 'two' | 'few' | 'm
 /** A key of the engine's catalog (without the plural suffix). */
 export type MessageKey = BaseKey<keyof typeof enCore>;
 
-/** A list of values, shown in ascending order ("1, 3, 4"), or as "none" when empty. */
+/** A list of values ("1, 3, 4", or their names), or "none" when empty. */
 export interface ValueList {
-  readonly values: readonly number[];
+  readonly values: readonly (number | string)[];
 }
 
-export type MessageParam = string | number | Message | ValueList;
+/**
+ * A list of items joined in words: "5, 7 and 8" (`and`), "before 3 or after 7" (`or`), or
+ * with commas or semicolons only.
+ */
+export interface WordList {
+  readonly items: readonly MessageParam[];
+  readonly join: 'and' | 'or' | 'comma' | 'semicolon';
+}
+
+export type MessageParam = string | number | Message | ValueList | WordList;
 
 export interface Message {
   readonly key: MessageKey;
@@ -59,9 +68,34 @@ export function msg(key: MessageKey, params?: Readonly<Record<string, MessagePar
   return params === undefined ? { key } : { key, params };
 }
 
-/** A list of values as a message parameter. */
+/** A list of values as a message parameter, in ascending order. */
 export function valueList(values: Iterable<number>): ValueList {
   return { values: [...values].sort((a, b) => a - b) };
+}
+
+/** Items joined with "and" ("5, 7 and 8"), in the order given. */
+export function andList(items: Iterable<MessageParam>): WordList {
+  return { items: [...items], join: 'and' };
+}
+
+/** Items joined with "or", in the order given. */
+export function orList(items: Iterable<MessageParam>): WordList {
+  return { items: [...items], join: 'or' };
+}
+
+/** Items joined with commas ("2 red, 1 black"). */
+export function commaList(items: Iterable<MessageParam>): WordList {
+  return { items: [...items], join: 'comma' };
+}
+
+/** Items joined with semicolons. */
+export function semicolonList(items: Iterable<MessageParam>): WordList {
+  return { items: [...items], join: 'semicolon' };
+}
+
+/** A text that is not translated (e.g. a name from a puzzle file) as a message. */
+export function plainText(text: string): Message {
+  return msg('text.plain', { text });
 }
 
 export function isMessage(value: unknown): value is Message {
@@ -89,7 +123,17 @@ export function formatMessage(message: Message, translate: Translate = englishTr
 function formatParam(value: MessageParam, translate: Translate): string | number {
   if (typeof value === 'string' || typeof value === 'number') return value;
   if (isMessage(value)) return formatMessage(value, translate);
-  return value.values.length > 0 ? value.values.join(', ') : translate('values.none', {});
+  if ('values' in value) {
+    return value.values.length > 0 ? value.values.join(', ') : translate('values.none', {});
+  }
+  const items = value.items.map((item) => String(formatParam(item, translate)));
+  if (value.join === 'comma') return items.join(', ');
+  if (value.join === 'semicolon') return items.join('; ');
+  if (items.length <= 1) return items.join('');
+  return translate(value.join === 'and' ? 'list.and' : 'list.or', {
+    head: items.slice(0, -1).join(', '),
+    last: items.at(-1) as string,
+  });
 }
 
 /** Fills in `{{param}}` placeholders; a missing parameter is an error in the catalog. */

@@ -1,3 +1,4 @@
+import { formatMessage, plainText, type Message } from '../i18n/message';
 import { PositionedCell, type Cell } from '../structure/cell';
 import type { Puzzle } from '../structure/puzzle';
 import type { Value } from '../structure/types';
@@ -8,10 +9,19 @@ export class ConstraintGroup {
   readonly constraints: Constraint[] = [];
   readonly cells: Cell[] = [];
 
+  /** the name in English, e.g. "Row 3" */
+  readonly name: string;
+  /** the name as a message, for the player's language */
+  readonly label: Message;
+
+  /** `name`: a message (e.g. msg('group.row', { index: 3 })), or a text not to translate */
   constructor(
     readonly puzzle: Puzzle,
-    readonly name = 'Untitled',
-  ) {}
+    name: string | Message = 'Untitled',
+  ) {
+    this.label = typeof name === 'string' ? plainText(name) : name;
+    this.name = typeof name === 'string' ? name : formatMessage(name);
+  }
 
   /** All values a cell of the puzzle can take. */
   getValues(): Value[] {
@@ -58,6 +68,11 @@ export class ConstraintGroup {
 
   getName(): string {
     return this.name;
+  }
+
+  /** The name as a message, e.g. "Row 3" in the player's language. */
+  nameMessage(): Message {
+    return this.label;
   }
 
   getType(): string {

@@ -1,5 +1,6 @@
 import type { Constraint } from '../constraints/constraint';
 import { ConstraintGroup } from '../constraints/constraintgroup';
+import { formatMessage, msg, type Message, type ValueList } from '../i18n/message';
 import type { Cell } from './cell';
 import type { Cause, DeductionLog } from './deduction';
 import { Grid } from './grid';
@@ -58,25 +59,43 @@ export class Puzzle {
   }
 
   /** names of values (e.g. the colours of a nonogram), for the text shown to the user */
-  private valueNames = new Map<Value, string>();
+  private valueNames = new Map<Value, string | Message>();
 
-  /** Name the values (e.g. 0 -> 'blank', 1 -> 'red'); values without a name show as numbers. */
-  setValueNames(names: ReadonlyMap<Value, string>): void {
+  /**
+   * Name the values (e.g. 0 -> 'blank', 1 -> 'red'): a name from the puzzle file, or a message
+   * for a built-in name; values without a name show as numbers.
+   */
+  setValueNames(names: ReadonlyMap<Value, string | Message>): void {
     this.valueNames = new Map(names);
   }
 
-  /** How a value is shown to the user: its name, or the number. */
+  /** How a value is shown to the user: its name (in English), or the number. */
   valueName(value: Value): string {
-    return this.valueNames.get(value) ?? String(value);
+    const name = this.valueNameMessage(value);
+    return typeof name === 'object' ? formatMessage(name) : String(name);
+  }
+
+  /** How a value is shown to the user: its name (a message when built in), or the number. */
+  valueNameMessage(value: Value): string | number | Message {
+    return this.valueNames.get(value) ?? value;
   }
 
   /** Values for a description, in ascending order, e.g. "1, 3, 4" or "blank, red". */
   formatValues(values: Iterable<Value>): string {
-    const sorted = sortedValues(values);
-    return sorted.length > 0 ? sorted.map((v) => this.valueName(v)).join(', ') : 'none';
+    return formatMessage(msg('values.list', { values: this.valueList(values) }));
   }
 
-  addConstraintGroup(name: string): ConstraintGroup {
+  /** Values as a message parameter, in ascending order, by their names. */
+  valueList(values: Iterable<Value>): ValueList {
+    return {
+      values: sortedValues(values).map((v) => {
+        const name = this.valueNameMessage(v);
+        return typeof name === 'object' ? formatMessage(name) : name;
+      }),
+    };
+  }
+
+  addConstraintGroup(name: string | Message): ConstraintGroup {
     const group = new ConstraintGroup(this, name);
     this.constraintGroups.push(group);
     return group;

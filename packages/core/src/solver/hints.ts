@@ -16,7 +16,8 @@ import { Constraint } from '../constraints/constraint';
 import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
-import { listNames, type Finding } from '../techniques/technique';
+import { andList, formatMessage, msg, semicolonList, type Message } from '../i18n/message';
+import type { Finding } from '../techniques/technique';
 import { stateKey, type Value } from '../structure/types';
 import type { Solver } from './solver';
 
@@ -150,7 +151,13 @@ export class HintSession {
    * group whose other numbers were named before. Empty for other hints.
    */
   exclusions(): string {
-    if (!this.isNakedSingle()) return '';
+    const exclusions = this.exclusionsMessage();
+    return exclusions === null ? '' : formatMessage(exclusions);
+  }
+
+  /** The exclusions (see exclusions) as a message; null for other hints. */
+  exclusionsMessage(): Message | null {
+    if (!this.isNakedSingle()) return null;
     const reasons = this.nakedSingleReasons();
     const byGroup = new Map<ConstraintGroup, Value[]>();
     for (const [cell, group] of reasons) {
@@ -161,9 +168,12 @@ export class HintSession {
     // "also" when some of the group's numbers were named for an earlier group
     const parts = [...byGroup].map(([group, values]) => {
       const named = group.getCells().some((c) => reasons.has(c) && reasons.get(c) !== group);
-      return `${group.getName()}${named ? ' also' : ''} has ${listing(values)}`;
+      return msg(named ? 'hint.groupAlsoHas' : 'hint.groupHas', {
+        group: group.nameMessage(),
+        values: andList(values),
+      });
     });
-    return parts.length > 0 ? `${parts.join('; ')}.` : '';
+    return parts.length > 0 ? msg('sentence.end', { text: semicolonList(parts) }) : null;
   }
 
   /**
@@ -251,43 +261,45 @@ export class HintSession {
     return blockersOf;
   }
 
-  /** What the hint says at its current level. */
+  /** What the hint says at its current level, in English (see hintMessage). */
   message(): string {
+    const message = this.hintMessage();
+    return message === null ? '' : formatMessage(message);
+  }
+
+  /** What the hint says at its current level, as a message; null without a hint. */
+  hintMessage(): Message | null {
     if (this.finding !== null) return this.findingMessage(this.finding);
     const deduction = this.deduction;
-    if (deduction === null) return '';
+    if (deduction === null) return null;
     if (this.level === REGION) {
       const cause = deduction.cause;
-      if (!(cause instanceof Constraint)) {
-        return 'In the highlighted area, one cell has only one possible value left.';
-      }
-      return (
-        `Look at ${cause.group.getName()} (${cause.summary()}):` +
-        ' it decides the value of one of its cells.'
-      );
+      if (!(cause instanceof Constraint)) return msg('hint.nakedSingleRegion');
+      return msg('hint.region', {
+        group: cause.group.nameMessage(),
+        rule: cause.summaryMessage(),
+      });
     }
-    if (this.level === CELL) return `Look at cell ${deduction.cell.getName()}.`;
-    const exclusions = this.exclusions();
-    return exclusions === '' ? deduction.describe() : `${deduction.describe()} ${exclusions}`;
+    if (this.level === CELL) return msg('hint.cell', { cell: deduction.cell.getName() });
+    const exclusions = this.exclusionsMessage();
+    const described = deduction.describeMessage();
+    return exclusions === null
+      ? described
+      : msg('hint.withExclusions', { deduction: described, exclusions });
   }
 
   /** What a technique hint says at its current level. */
-  private findingMessage(finding: Finding): string {
-    const groups = listNames(finding.groups.map((g) => g.getName()));
-    const type = finding.technique.getType();
+  private findingMessage(finding: Finding): Message {
+    const groups = andList(finding.groups.map((g) => g.nameMessage()));
+    const value = finding.value;
     if (this.level === REGION) {
-      return `Look at where ${finding.value} can go in ${groups} (${type}).`;
+      return msg('hint.findingRegion', { value, groups, type: finding.technique.typeMessage() });
     }
-    if (this.level === CELL) {
-      return `In ${groups}, ${finding.value} can only go in the highlighted cells.`;
-    }
-    const cells = finding.targets.length === 1 ? 'the hatched cell' : 'the hatched cells';
-    return `${finding.reason}. So ${finding.value} can be removed from ${cells}.`;
+    if (this.level === CELL) return msg('hint.findingCell', { value, groups });
+    return msg('hint.findingValue', {
+      reason: finding.reasonMessage,
+      value,
+      count: finding.targets.length,
+    });
   }
-}
-
-/** "5, 7, 6 and 8": the values in the order given. */
-function listing(values: readonly Value[]): string {
-  if (values.length <= 1) return values.join('');
-  return `${values.slice(0, -1).join(', ')} and ${String(values.at(-1))}`;
 }

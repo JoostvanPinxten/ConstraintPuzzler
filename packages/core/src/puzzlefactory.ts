@@ -4,6 +4,7 @@ import type { ConstraintGroup } from './constraints/constraintgroup';
 import { ExactCoverConstraint } from './constraints/exactcoverconstraint';
 import { TotalSumValueConstraint } from './constraints/totalsumvalueconstraint';
 import { UniqueValueConstraint } from './constraints/uniquevalueconstraint';
+import { msg } from './i18n/message';
 import { Position } from './structure/position';
 import { Puzzle } from './structure/puzzle';
 import type { Value } from './structure/types';
@@ -18,11 +19,11 @@ export function createEmptySudoku(name = 'Sudoku'): Puzzle {
   const columns: ConstraintGroup[] = [];
   for (let i = 0; i < 9; i++) {
     for (const [list, name] of [
-      [blocks, 'Block'],
-      [rows, 'Row'],
-      [columns, 'Column'],
+      [blocks, 'group.block'],
+      [rows, 'group.row'],
+      [columns, 'group.column'],
     ] as const) {
-      const group = sudoku.addConstraintGroup(`${name} ${i + 1}`);
+      const group = sudoku.addConstraintGroup(msg(name, { index: i + 1 }));
       group.addConstraint(ExactCoverConstraint);
       list.push(group);
     }
@@ -84,9 +85,9 @@ export function createFutoshikiPuzzle(size: number): Puzzle {
     for (let x = 1; x <= size; x++) grid.addCell(new Position(x, y));
   }
   for (let i = 0; i < size; i++) {
-    const row = puzzle.addConstraintGroup(`Row ${i + 1}`);
+    const row = puzzle.addConstraintGroup(msg('group.row', { index: i + 1 }));
     row.addConstraint(ExactCoverConstraint);
-    const column = puzzle.addConstraintGroup(`Column ${i + 1}`);
+    const column = puzzle.addConstraintGroup(msg('group.column', { index: i + 1 }));
     column.addConstraint(ExactCoverConstraint);
     for (let j = 0; j < size; j++) {
       // getCellFromSquareGrid takes (x, y): x is the column, y the row

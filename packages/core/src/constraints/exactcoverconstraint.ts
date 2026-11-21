@@ -1,5 +1,5 @@
 import type { Cell } from '../structure/cell';
-import type { Deduction } from '../structure/deduction';
+import { msg, valueList, type Message } from '../i18n/message';
 import { ContradictionError } from '../structure/errors';
 import { formatValues, sortedValues, type Value } from '../structure/types';
 import { combinations, placedValues } from './constraint';
@@ -54,9 +54,12 @@ export class ExactCoverConstraint extends UniqueValueConstraint {
           const others = new Set<Value>();
           for (const c of inOrder) for (const v of c.values) if (!values.has(v)) others.add(v);
           const names = inOrder.map((c) => c.getName()).join('; ');
-          const reason =
-            `${this.group.getName()}: ${formatValues(values)} can only go in ${names}, so` +
-            ` those cells cannot hold anything else (${this.summary()})`;
+          const reason = msg('exactCover.hiddenSubset', {
+            group: this.group.nameMessage(),
+            values: valueList(values),
+            cells: names,
+            rule: this.summaryMessage(),
+          });
           this.withTechnique('hiddenSubset', () => this.removeWithReason(inOrder, others, reason));
           found = true;
           break;
@@ -69,19 +72,15 @@ export class ExactCoverConstraint extends UniqueValueConstraint {
     return 'Exact cover constraint';
   }
 
-  override summary(): string {
-    return 'each value once';
+  override summaryMessage(): Message {
+    return msg('exactCover.summary');
   }
 
-  override explain(deduction: Deduction): string {
-    return this.subsetReason(deduction) ?? super.explain(deduction);
-  }
-
-  override describe(_showHints = true): string {
+  override describeMessage(_showHints = true): Message {
     const placed = new Set(placedValues(this.group.getCells()));
     const missing = this.group.getValues().filter((v) => !placed.has(v));
-    if (missing.length === 0) return 'Every value appears exactly once; complete.';
-    return `Every value appears exactly once; still missing: ${formatValues(missing)}.`;
+    if (missing.length === 0) return msg('exactCover.describeComplete');
+    return msg('exactCover.describe', { values: valueList(missing) });
   }
 
   override toString(): string {

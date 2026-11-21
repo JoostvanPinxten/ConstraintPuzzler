@@ -3,6 +3,7 @@ import { DEFAULT_LANGUAGE, msg } from '@constraintpuzzler/core';
 import { i18n } from '../i18n';
 import { openExample } from '../puzzles/open';
 import { formatUi, plain, ui } from './messages';
+import { describeSelection } from './tree';
 
 describe('session messages', () => {
   afterEach(async () => {
@@ -19,6 +20,20 @@ describe('session messages', () => {
     expect(formatUi(ui('step.narrowing', { count: 1, reason: 'x' }))).toBe(
       '1 kandidaat weggehaald. x.',
     );
+  });
+
+  it('show hints and the engine explanations in Dutch', async () => {
+    const session = openExample('sudoku', 'Easy');
+    await i18n.changeLanguage('nl');
+    session.hint();
+    expect(formatUi(session.stepMessage!)).toMatch(/^Hint: (Kijk naar|In het gemarkeerde gebied)/);
+    session.hint();
+    session.hint();
+    expect(formatUi(session.stepMessage!)).toMatch(/^Hint: vakje \d+, \d+ is \d: /);
+    const group = session.puzzle.getConstraintGroups()[0]!;
+    const description = describeSelection(session.puzzle, { kind: 'group', group }, true);
+    expect(description.title).toBe('Blok 1');
+    expect(description.bullets?.[0]).toMatch(/^Elk cijfer komt precies één keer voor/);
   });
 
   it('keep plain texts as they are', () => {
