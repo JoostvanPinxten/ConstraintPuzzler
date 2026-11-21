@@ -1,6 +1,7 @@
 // The session's notice (a hint that is not available, a contradiction, the result of Check)
 // as a modal dialog.
 import { Modal, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { PuzzleSession } from '../logic/session';
 import { COLORS } from '../theme';
@@ -9,6 +10,7 @@ import { Button } from './Controls';
 
 export function NoticeDialog({ session }: { session: PuzzleSession }) {
   useSession(session);
+  const { t } = useTranslation();
   const notice = session.notice;
   if (notice === null) return null;
   return (
@@ -30,7 +32,11 @@ export function NoticeDialog({ session }: { session: PuzzleSession }) {
                 testID="notice-confirm"
               />
             )}
-            <Button label="Close" onPress={() => session.dismissNotice()} testID="notice-close" />
+            <Button
+              label={t('dialog.close')}
+              onPress={() => session.dismissNotice()}
+              testID="notice-close"
+            />
           </View>
         </View>
       </View>

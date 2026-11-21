@@ -1,6 +1,7 @@
 // Buttons and switches: the toolbar of a puzzle and the number pad.
 import { paletteOf } from '@constraintpuzzler/core';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Polygon } from 'react-native-svg';
 
 import { textColorOn } from '../logic/layout';
@@ -95,12 +96,21 @@ export function Toolbar({
   onRules: () => void;
 }) {
   useSession(session);
+  const { t } = useTranslation();
   const { settings, update } = useSettings();
   const busy = session.solving !== null;
   return (
     <View style={styles.row}>
-      <Button label="Undo" onPress={() => session.undo()} disabled={!session.canUndo()} />
-      <Button label="Redo" onPress={() => session.redo()} disabled={!session.canRedo()} />
+      <Button
+        label={t('toolbar.undo')}
+        onPress={() => session.undo()}
+        disabled={!session.canUndo()}
+      />
+      <Button
+        label={t('toolbar.redo')}
+        onPress={() => session.redo()}
+        disabled={!session.canRedo()}
+      />
       <Button
         label={session.hintLabel()}
         onPress={() => session.hint(settings)}
@@ -108,49 +118,54 @@ export function Toolbar({
         testID="hint"
       />
       <Button
-        label="Step"
+        label={t('toolbar.step')}
         onPress={() => session.solveStep(settings)}
         disabled={busy}
         testID="step"
       />
       <Button
-        label={session.solving === 'solve' ? 'Cancel' : 'Solve'}
+        label={t(session.solving === 'solve' ? 'toolbar.cancel' : 'toolbar.solve')}
         onPress={() => void session.solve(settings)}
         disabled={session.solving === 'check'}
         primary={session.solving === 'solve'}
         testID="solve"
       />
       <Button
-        label={session.solving === 'check' ? 'Cancel' : 'Check'}
+        label={t(session.solving === 'check' ? 'toolbar.cancel' : 'toolbar.check')}
         onPress={() => (session.solving === 'check' ? session.cancel() : void session.check())}
         disabled={session.solving === 'solve'}
         testID="check"
       />
       <View style={styles.switches}>
         <Toggle
-          label="Show hints"
+          label={t('toolbar.showHints')}
           value={settings.showHints}
           onChange={(showHints) => update({ showHints })}
         />
         <Toggle
-          label="Allow guessing"
+          label={t('toolbar.allowGuessing')}
           value={settings.allowGuessing}
           onChange={(allowGuessing) => update({ allowGuessing })}
         />
         {hasSeveralColors(paletteOf(session.puzzle)) && (
           <Toggle
-            label="Colour symbols"
+            label={t('toolbar.colorSymbols')}
             value={settings.colorSymbols}
             onChange={(colorSymbols) => update({ colorSymbols })}
           />
         )}
         <Button
-          label="Rules"
+          label={t('toolbar.rules')}
           onPress={onRules}
-          accessibilityLabel={`Rules and techniques of ${session.type.label}`}
+          accessibilityLabel={t('toolbar.rulesOf', { type: session.type.label })}
           testID="guide-open"
         />
-        <Button label="?" onPress={onHelp} accessibilityLabel="How to play" testID="help-open" />
+        <Button
+          label="?"
+          onPress={onHelp}
+          accessibilityLabel={t('toolbar.help')}
+          testID="help-open"
+        />
       </View>
     </View>
   );
@@ -176,6 +191,7 @@ export function Toggle({
 /** The values of the puzzle, Clear and the notes switch, for touch screens (and mice). */
 export function NumberPad({ session }: { session: PuzzleSession }) {
   useSession(session);
+  const { t } = useTranslation();
   const cell = session.selectedCell();
   const disabled = cell === null || cell.isGiven();
   // a nonogram: a swatch per colour, with its digit (for the keyboard) and name
@@ -203,12 +219,12 @@ export function NumberPad({ session }: { session: PuzzleSession }) {
           />
         );
       })}
-      <Button label="Clear" onPress={() => session.clearSelected()} disabled={disabled} />
+      <Button label={t('pad.clear')} onPress={() => session.clearSelected()} disabled={disabled} />
       <Button
-        label="Notes"
+        label={t('pad.notes')}
         onPress={() => session.toggleNotesMode()}
         active={session.notesMode}
-        accessibilityLabel={session.notesMode ? 'Notes mode on' : 'Notes mode off'}
+        accessibilityLabel={t(session.notesMode ? 'pad.notesOn' : 'pad.notesOff')}
         testID="notes"
       />
     </View>

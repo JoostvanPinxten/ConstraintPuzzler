@@ -1,64 +1,40 @@
 // How to play: entering values and notes, the keyboard, and what the toolbar does. Opened with
 // the question mark button next to the switches.
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { COLORS } from '../theme';
 import { Button } from './Controls';
 
-const SECTIONS: readonly { title: string; lines: readonly string[] }[] = [
-  {
-    title: 'Values',
-    lines: [
-      'Tap a cell (or use the arrow keys), then tap a number or type it to enter it.',
-      'Clear, Delete or Backspace empties the cell.',
-    ],
-  },
-  {
-    title: 'Notes',
-    lines: [
-      'Turn on Notes (or press N) to note candidates: a number notes it, again removes it.',
-      'Ctrl+number notes a candidate without turning on notes mode.',
-    ],
-  },
-  {
-    title: 'Toolbar',
-    lines: [
-      'Undo and Redo (Ctrl+Z, Ctrl+Y) step through your changes.',
-      'Hint shows a bit more on every press: where to look, the cell, then the value and why.',
-      'Step fills in one value, Solve the whole puzzle, Check compares your entries with the solution.',
-    ],
-  },
-  {
-    title: 'Switches',
-    lines: [
-      'Show hints: show the candidates that are left in open cells and in the descriptions.',
-      'Allow guessing: let Step and Solve guess when nothing follows from the rules.',
-      'Colour symbols (nonograms with several colours): draw a shape for every colour too, so colours that look alike can be told apart.',
-    ],
-  },
-];
+const SECTIONS = [
+  { title: 'help.values', lines: ['help.values1', 'help.values2'] },
+  { title: 'help.notes', lines: ['help.notes1', 'help.notes2'] },
+  { title: 'help.toolbar', lines: ['help.toolbar1', 'help.toolbar2', 'help.toolbar3'] },
+  { title: 'help.switches', lines: ['help.switches1', 'help.switches2', 'help.switches3'] },
+] as const;
 
 export function HelpDialog({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   if (!visible) return null;
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.dialog} accessibilityRole="summary" testID="help">
-          <Text style={styles.title}>How to play</Text>
+          <Text style={styles.title}>{t('help.title')}</Text>
           <ScrollView contentContainerStyle={styles.body}>
             {SECTIONS.map(({ title, lines }) => (
               <View key={title} style={styles.section}>
-                <Text style={styles.heading}>{title}</Text>
+                <Text style={styles.heading}>{t(title)}</Text>
                 {lines.map((line) => (
                   <Text key={line} style={styles.text}>
-                    {`• ${line}`}
+                    {`• ${t(line)}`}
                   </Text>
                 ))}
               </View>
             ))}
           </ScrollView>
           <View style={styles.buttons}>
-            <Button label="Close" onPress={onClose} testID="help-close" />
+            <Button label={t('dialog.close')} onPress={onClose} testID="help-close" />
           </View>
         </View>
       </View>

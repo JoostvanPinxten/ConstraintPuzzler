@@ -12,6 +12,7 @@ import {
   View,
   type ScrollViewInstance,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { guideContent, toggleTechnique } from '../logic/guide';
 import { COLORS } from '../theme';
@@ -46,6 +47,7 @@ function GuideBody({
   technique: TechniqueId | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const content = guideContent(type, technique);
   const [opened, setOpened] = useState(content.opened);
   const scroll = useRef<ScrollViewInstance>(null);
@@ -60,7 +62,7 @@ function GuideBody({
         <ScrollView ref={scroll} contentContainerStyle={styles.body}>
           <Text style={styles.text}>{content.goal}</Text>
           <View style={styles.section}>
-            <Text style={styles.heading}>Rules</Text>
+            <Text style={styles.heading}>{t('guide.rules')}</Text>
             {content.rules.map((rule) => (
               <Text key={rule} style={styles.text}>
                 {`• ${rule}`}
@@ -73,7 +75,7 @@ function GuideBody({
               techniquesY.current = event.nativeEvent.layout.y;
             }}
           >
-            <Text style={styles.heading}>Techniques, easiest first</Text>
+            <Text style={styles.heading}>{t('guide.techniques')}</Text>
             {content.techniques.map((entry) => (
               <TechniqueEntry
                 key={entry.id}
@@ -90,7 +92,7 @@ function GuideBody({
           </View>
         </ScrollView>
         <View style={styles.buttons}>
-          <Button label="Close" onPress={onClose} testID="guide-close" />
+          <Button label={t('dialog.close')} onPress={onClose} testID="guide-close" />
         </View>
       </View>
     </View>

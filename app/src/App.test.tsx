@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { PUZZLE_TYPES, TECHNIQUE_GUIDE } from '@constraintpuzzler/core';
 
 import App from '../App';
-import { PUZZLE_RULES } from './components/StartPage';
+import { i18n } from './i18n';
 
 async function openPuzzle(testID: string): Promise<void> {
   await render(<App />);
@@ -30,13 +30,26 @@ describe('App', () => {
     for (const type of Object.values(PUZZLE_TYPES)) {
       expect(screen.getByTestId(`preview-${type.name}`)).toBeTruthy();
       expect(screen.getByText(type.label)).toBeTruthy();
-      expect(screen.getByText(PUZZLE_RULES[type.name])).toBeTruthy();
+      expect(screen.getByText(i18n.t(`rule.${type.name}`))).toBeTruthy();
       for (const label of Object.keys(type.examples)) {
         expect(screen.getByTestId(`open-${type.name}-${label}`)).toBeTruthy();
       }
     }
     await fireEvent.press(screen.getByLabelText('Play Kakuro (Medium)'));
     expect(screen.getByRole('tab', { name: 'Kakuro: Medium', selected: true })).toBeTruthy();
+  });
+
+  it('switches the language on the start page, and back to the device language', async () => {
+    await render(<App />);
+    await fireEvent.press(screen.getByTestId('language-nl'));
+    expect(await screen.findByText('Kies een puzzel')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Puzzels' })).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('open-sudoku-Easy'));
+    expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('tab', { name: 'Puzzels' }));
+    // the device language (English under Jest)
+    await fireEvent.press(screen.getByTestId('language-system'));
+    expect(await screen.findByText('Pick a puzzle')).toBeTruthy();
   });
 
   it.each([

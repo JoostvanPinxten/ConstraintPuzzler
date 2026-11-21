@@ -2,6 +2,7 @@
 // rules and cells. Selecting an entry highlights its cells and describes it.
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { PuzzleSession } from '../logic/session';
 import { buildPuzzleTree, type Selection, type TreeNode } from '../logic/tree';
@@ -25,6 +26,7 @@ function sameSelection(a: Selection | null, b: Selection): boolean {
 export function ConstraintTree({ session }: { session: PuzzleSession }) {
   useSession(session);
   const tree = useMemo(() => buildPuzzleTree(session.puzzle), [session]);
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set(['puzzle']));
   const toggle = (id: string) =>
     setExpanded((current) => {
@@ -55,7 +57,9 @@ export function ConstraintTree({ session }: { session: PuzzleSession }) {
               <Pressable
                 onPress={() => toggle(node.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${open ? 'Collapse' : 'Expand'} ${node.label}`}
+                accessibilityLabel={t(open ? 'tree.collapse' : 'tree.expand', {
+                  label: node.label,
+                })}
                 style={styles.chevron}
               >
                 <Text style={styles.chevronText}>{open ? '▾' : '▸'}</Text>

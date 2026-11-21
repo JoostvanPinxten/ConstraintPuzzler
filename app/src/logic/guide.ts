@@ -12,6 +12,8 @@ import {
   type TechniqueId,
 } from '@constraintpuzzler/core';
 
+import { i18n } from '../i18n';
+
 export interface GuideContent {
   readonly title: string;
   readonly goal: string;
@@ -26,7 +28,7 @@ export interface GuideContent {
 export function guideContent(type: PuzzleType, technique: TechniqueId | null = null): GuideContent {
   const { goal, rules, techniques } = type.guide;
   return {
-    title: `${type.label}: rules and techniques`,
+    title: i18n.t('guide.title', { type: type.label }),
     goal,
     rules,
     techniques: techniques.map((id) => TECHNIQUE_GUIDE[id]),
@@ -36,7 +38,7 @@ export function guideContent(type: PuzzleType, technique: TechniqueId | null = n
 
 /** The link to a technique's explanation, e.g. "About this technique: Hidden single". */
 export function techniqueLinkLabel(technique: TechniqueId): string {
-  return `About this technique: ${TECHNIQUE_GUIDE[technique].name}`;
+  return i18n.t('guide.link', { technique: TECHNIQUE_GUIDE[technique].name });
 }
 
 /** Open or close a technique in the list (one at a time). */

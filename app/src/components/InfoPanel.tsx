@@ -2,6 +2,7 @@
 // legend of the highlight colours. (The label below the tree in the desktop app.)
 import type { TechniqueId } from '@constraintpuzzler/core';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { techniqueLinkLabel } from '../logic/guide';
 
@@ -9,12 +10,8 @@ import {
   HighlightRole,
   legend,
   REASON_GROUP_COLOR,
-  REASON_GROUP_LABEL,
   roleColor,
   RULED_OUT_COLOR,
-  RULED_OUT_LABEL,
-  TECHNIQUE_GROUP_LABEL,
-  TECHNIQUE_RULED_OUT_LABEL,
 } from '../logic/highlight';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
@@ -32,6 +29,7 @@ export function InfoPanel({
   onTechnique?: (technique: TechniqueId) => void;
 }) {
   useSession(session);
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const selection = session.selection;
   const cell = session.selectedCell();
@@ -59,7 +57,7 @@ export function InfoPanel({
       )}
       {session.solving !== null && (
         <Text style={styles.italic}>
-          {session.solving === 'solve' ? 'Solving…' : 'Finding the solution…'}
+          {t(session.solving === 'solve' ? 'screen.solving' : 'screen.findingSolution')}
         </Text>
       )}
       {(entries.length > 0 || session.hintRuledOut.size > 0) && (
@@ -74,7 +72,7 @@ export function InfoPanel({
             <View style={styles.legendEntry}>
               <View style={[styles.swatch, styles.reasonGroupSwatch]} />
               <Text style={styles.legendText}>
-                {technique ? TECHNIQUE_GROUP_LABEL : REASON_GROUP_LABEL}
+                {t(technique ? 'legend.techniqueGroup' : 'legend.reasonGroup')}
               </Text>
             </View>
           )}
@@ -82,7 +80,7 @@ export function InfoPanel({
             <View style={styles.legendEntry}>
               <View style={[styles.swatch, styles.ruledOutSwatch]} />
               <Text style={styles.legendText}>
-                {technique ? TECHNIQUE_RULED_OUT_LABEL : RULED_OUT_LABEL}
+                {t(technique ? 'legend.techniqueRuledOut' : 'legend.ruledOut')}
               </Text>
             </View>
           )}
@@ -99,6 +97,7 @@ function TechniqueLink({
   technique: TechniqueId;
   onPress: (technique: TechniqueId) => void;
 }) {
+  useTranslation(); // render again in another language
   return (
     <Pressable
       onPress={() => onPress(technique)}

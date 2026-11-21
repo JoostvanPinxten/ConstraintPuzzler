@@ -2,6 +2,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { PuzzleScreen } from './src/components/PuzzleScreen';
@@ -25,13 +26,14 @@ export default function App() {
     setActive((current) => (current === index ? -1 : current > index ? current - 1 : current));
   };
   const current = active >= 0 ? sessions[active] : undefined;
+  const { t } = useTranslation();
 
   return (
     <SafeAreaProvider>
       <SettingsProvider>
         <SafeAreaView style={styles.app}>
           <ScrollView horizontal style={styles.tabBar} contentContainerStyle={styles.tabs}>
-            <Tab label="Puzzles" selected={active === -1} onPress={() => setActive(-1)} />
+            <Tab label={t('tabs.puzzles')} selected={active === -1} onPress={() => setActive(-1)} />
             {sessions.map((session, index) => (
               <Tab
                 key={index}
@@ -67,6 +69,7 @@ function Tab({
   onPress: () => void;
   onClose?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={[styles.tab, selected && styles.tabSelected]}>
       <Pressable
@@ -83,7 +86,7 @@ function Tab({
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel={`Close ${label}`}
+          accessibilityLabel={t('tabs.close', { title: label })}
           style={styles.close}
         >
           <Text style={styles.tabText}>×</Text>

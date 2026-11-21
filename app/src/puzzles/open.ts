@@ -9,6 +9,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import { i18n } from '../i18n';
 import { PuzzleSession } from '../logic/session';
 import { EXAMPLES } from './examples.generated';
 
@@ -49,5 +50,7 @@ export async function pickPuzzleFile(type: PuzzleType): Promise<PuzzleSession | 
 /** A message for an error from opening a file. */
 export function openErrorMessage(error: unknown): string {
   if (error instanceof PuzzleFileError) return error.message;
-  return `The file is not a valid puzzle: ${error instanceof Error ? error.message : String(error)}`;
+  return i18n.t('start.openError', {
+    error: error instanceof Error ? error.message : String(error),
+  });
 }

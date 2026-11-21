@@ -34,6 +34,7 @@ import {
 
 import { HighlightRole, highlightRoles, mergeRole } from './highlight';
 import type { Selection } from './tree';
+import type { LanguageSetting } from './language';
 
 export interface Settings {
   /** show the solver's candidates in open cells and in descriptions */
@@ -42,6 +43,8 @@ export interface Settings {
   readonly allowGuessing: boolean;
   /** a confetti burst when the user finishes a puzzle */
   readonly celebrate: boolean;
+  /** the language of the app: a language code, or "system" for the device's language */
+  readonly language: LanguageSetting;
   /** draw a shape for every colour of a nonogram as well, for colour-blind players */
   readonly colorSymbols: boolean;
 }
@@ -52,6 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   allowGuessing: false,
   celebrate: true,
   colorSymbols: false,
+  language: 'system',
 };
 
 /** A message for the user, shown as a dialog; with `confirm`, the dialog offers an action. */

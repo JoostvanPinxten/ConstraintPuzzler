@@ -1,6 +1,6 @@
 // The start page: what the app is, then a card per puzzle type (a preview of its example, its
 // rule, and buttons to open an example or a file, or to read its rules), the settings and the version.
-import { PUZZLE_TYPES, type PuzzleType, type PuzzleTypeName } from '@constraintpuzzler/core';
+import { LANGUAGES, PUZZLE_TYPES, type PuzzleType } from '@constraintpuzzler/core';
 import Constants from 'expo-constants';
 import { useState } from 'react';
 import {
@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { PuzzleSession } from '../logic/session';
 import { openErrorMessage, openExample, pickPuzzleFile } from '../puzzles/open';
@@ -26,25 +27,14 @@ export function appVersion(): string {
   return Constants.expoConfig?.version ?? 'unknown';
 }
 
-/** The rule of each puzzle type, in one line. */
-export const PUZZLE_RULES: Readonly<Record<PuzzleTypeName, string>> = {
-  sudoku: '1 to 9 once in every row, column and 3×3 box.',
-  kakuro: 'Fill the runs so they add up to their clues, without repeating a digit.',
-  futoshiki: 'A Latin square: every row and column once, and every < and > holds.',
-  jidoku: 'Sudoku without given numbers: only < and > between neighbours in a box.',
-  sumbrero:
-    "Follow each clue's triangle: the hexagons in that direction add up to the clue, without repeating a digit.",
-  nonogram:
-    'Fill in cells so every row and column has blocks of the lengths of its clue, in that order.',
-};
-
-const FEATURES = ['Hints that explain why', 'Solve step by step', 'Create your own puzzles'];
+const FEATURES = ['start.featureHints', 'start.featureSteps', 'start.featureOwn'] as const;
 
 export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void }) {
   const [error, setError] = useState<string | null>(null);
   // the puzzle type whose rules are shown
   const [guide, setGuide] = useState<PuzzleType | null>(null);
   const { settings, update } = useSettings();
+  const { t } = useTranslation();
   // a phone: a smaller header, so the name fits on one line
   const compact = useWindowDimensions().width < 480;
   const openFile = (type: PuzzleType) => {
@@ -67,22 +57,21 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
               Constraint<Text style={styles.titleAccent}>Puzzler</Text>
             </Text>
             <Text style={[styles.tagline, compact && styles.taglineCompact]}>
-              Solve number puzzles by deduction, with hints that explain the next step, or watch the
-              solver do it.
+              {t('start.tagline')}
             </Text>
           </View>
         </View>
         <View style={[styles.heroInner, styles.features]}>
           {FEATURES.map((feature) => (
             <View key={feature} style={styles.feature}>
-              <Text style={styles.featureText}>{feature}</Text>
+              <Text style={styles.featureText}>{t(feature)}</Text>
             </View>
           ))}
         </View>
       </View>
 
       <View style={styles.page}>
-        <Text style={styles.sectionTitle}>Pick a puzzle</Text>
+        <Text style={styles.sectionTitle}>{t('start.pick')}</Text>
         {error !== null && <Text style={styles.error}>{error}</Text>}
         <View style={styles.grid}>
           {Object.values(PUZZLE_TYPES).map((type) => (
@@ -100,16 +89,30 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
         </View>
 
         <View style={styles.settings}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+          <Text style={styles.sectionTitle}>{t('start.settings')}</Text>
           <Toggle
-            label="Confetti when you finish a puzzle"
+            label={t('start.celebrate')}
             value={settings.celebrate}
             onChange={(celebrate) => update({ celebrate })}
           />
+          <View style={styles.languages} accessibilityRole="radiogroup">
+            <Text style={styles.languageLabel}>{t('start.language')}</Text>
+            {(['system', ...LANGUAGES.map((language) => language.code)] as const).map((code) => (
+              <Button
+                key={code}
+                label={
+                  code === 'system'
+                    ? t('start.languageSystem')
+                    : (LANGUAGES.find((language) => language.code === code)?.name ?? code)
+                }
+                active={settings.language === code}
+                onPress={() => update({ language: code })}
+                testID={`language-${code}`}
+              />
+            ))}
+          </View>
         </View>
-        <Text style={styles.about}>
-          {`Version ${appVersion()} · Puzzles are described as constraints over a grid of cells, and solved by propagating them.`}
-        </Text>
+        <Text style={styles.about}>{t('start.about', { version: appVersion() })}</Text>
       </View>
       <GuideDialog type={guide} onClose={() => setGuide(null)} />
     </ScrollView>
@@ -127,19 +130,20 @@ function PuzzleCard({
   onOpenFile: () => void;
   onRules: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.card}>
       <Pressable
         onPress={() => onOpenExample(type.defaultExample)}
         accessibilityRole="button"
-        accessibilityLabel={`Play ${type.label} (${type.defaultExample})`}
+        accessibilityLabel={t('start.play', { type: type.label, example: type.defaultExample })}
         style={({ pressed }) => [styles.preview, pressed && styles.previewActive]}
       >
         <BoardPreview type={type} height={150} />
       </Pressable>
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle}>{type.label}</Text>
-        <Text style={styles.rule}>{PUZZLE_RULES[type.name]}</Text>
+        <Text style={styles.rule}>{t(`rule.${type.name}`)}</Text>
         <View style={styles.buttons}>
           {Object.keys(type.examples).map((label) => (
             <Button
@@ -150,11 +154,11 @@ function PuzzleCard({
               testID={`open-${type.name}-${label}`}
             />
           ))}
-          <Button label="Open file…" onPress={onOpenFile} />
+          <Button label={t('start.openFile')} onPress={onOpenFile} />
           <Button
-            label="Rules"
+            label={t('toolbar.rules')}
             onPress={onRules}
-            accessibilityLabel={`Rules and techniques of ${type.label}`}
+            accessibilityLabel={t('toolbar.rulesOf', { type: type.label })}
             testID={`rules-${type.name}`}
           />
         </View>
@@ -233,5 +237,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: '#ffffff',
   },
+  languages: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  languageLabel: { color: COLORS.text, fontSize: 14, marginRight: 4 },
   about: { color: COLORS.muted, fontSize: 13, lineHeight: 19 },
 });

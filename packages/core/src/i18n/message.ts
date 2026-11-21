@@ -130,3 +130,55 @@ export const englishTranslate: Translate = (key, params) => {
 export function baseKey(key: string): string {
   return key.replace(PLURAL_SUFFIX, '');
 }
+
+const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+
+/** The names of the `{{param}}` placeholders in a template. */
+export function placeholders(template: string): string[] {
+  return [...template.matchAll(PLACEHOLDER)].map((match) => match[1] as string);
+}
+
+/** The base keys of a catalog with the placeholders of all their forms. */
+function catalogShape(catalog: Catalog): Map<string, string> {
+  const shape = new Map<string, Set<string>>();
+  for (const [key, template] of Object.entries(catalog)) {
+    const names = shape.get(baseKey(key)) ?? new Set<string>();
+    for (const name of placeholders(template)) names.add(name);
+    shape.set(baseKey(key), names);
+  }
+  return new Map([...shape].map(([key, names]) => [key, [...names].sort().join(', ')]));
+}
+
+/**
+ * What is wrong with a translation, compared with the English catalog: missing or extra keys,
+ * other placeholders, missing plural forms ("one" and "other"), and syntax the engine's English
+ * formatter does not support. Empty when the catalog is fine. Used by the tests of every package.
+ */
+export function catalogProblems(english: Catalog, catalog: Catalog): string[] {
+  const problems: string[] = [];
+  const expected = catalogShape(english);
+  const actual = catalogShape(catalog);
+  for (const [key, names] of expected) {
+    const found = actual.get(key);
+    if (found === undefined) problems.push(`missing '${key}'`);
+    else if (found !== names) problems.push(`'${key}' has {{${found}}}, expected {{${names}}}`);
+  }
+  for (const key of actual.keys()) {
+    if (!expected.has(key)) problems.push(`unknown '${key}'`);
+  }
+  for (const [key, template] of Object.entries(catalog)) {
+    if (baseKey(key) !== key) {
+      for (const form of ['one', 'other']) {
+        if (catalog[`${baseKey(key)}_${form}`] === undefined) {
+          problems.push(`'${baseKey(key)}' lacks the plural form '${form}'`);
+        }
+      }
+    }
+    if (!/^[\w.]+$/.test(key)) problems.push(`'${key}': keys are letters, digits, _ and .`);
+    if (template.includes('$t(')) problems.push(`'${key}': no $t() nesting`);
+    for (const brace of template.match(/\{\{[^}]*\}\}/g) ?? []) {
+      if (!/^\{\{\w+\}\}$/.test(brace)) problems.push(`'${key}': only {{name}}, not ${brace}`);
+    }
+  }
+  return [...new Set(problems)];
+}
