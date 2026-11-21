@@ -2,7 +2,8 @@
 import { CellGreaterThanCellConstraint } from '../constraints/cellgreaterthancellconstraint';
 import { createFutoshikiPuzzle } from '../puzzlefactory';
 import type { Cell } from '../structure/cell';
-import { msg } from '../i18n/message';
+import { msg, type Message } from '../i18n/message';
+import { errorText, MessageError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
 import { parseInteger, PuzzleFileError } from './common';
 import { readGridValues } from './sudoku';
@@ -10,7 +11,7 @@ import { readGridValues } from './sudoku';
 /** '3,4' (1-based) -> [2, 3] (0-based x, y). */
 function parseCell(text: string): [number, number] {
   const parts = text.split(',');
-  if (parts.length !== 2) throw new Error(`expected a cell like x,y, got '${text}'`);
+  if (parts.length !== 2) throw new MessageError(msg('futoshiki.cell', { text }));
   return parts.map((v) => parseInteger(v) - 1) as [number, number];
 }
 
@@ -35,7 +36,7 @@ export function addRelation(puzzle: Puzzle, greaterCell: Cell, lesserCell: Cell)
 export function splitGridAndRelations(
   rawLines: readonly string[],
   filename: string,
-  check: (relation: Relation) => string | null = () => null,
+  check: (relation: Relation) => Message | null = () => null,
 ): { gridLines: string[]; relations: Relation[] } {
   const lines = rawLines.map((line) => line.trim());
   const split = lines.indexOf('relativity');
@@ -47,14 +48,14 @@ export function splitGridAndRelations(
     const lineNumber = split + 2 + i;
     try {
       const parts = line.split('>');
-      if (parts.length !== 2) throw new Error(`expected x1,y1>x2,y2, got '${line}'`);
+      if (parts.length !== 2) throw new MessageError(msg('futoshiki.relation', { text: line }));
       const relation: Relation = [parseCell(parts[0] as string), parseCell(parts[1] as string)];
       const problem = check(relation);
-      if (problem !== null) throw new Error(problem);
+      if (problem !== null) throw new MessageError(problem);
       relations.push(relation);
     } catch (error) {
       if (error instanceof PuzzleFileError) throw error;
-      throw new PuzzleFileError(filename, lineNumber, (error as Error).message);
+      throw new PuzzleFileError(filename, lineNumber, errorText(error));
     }
   });
   return { gridLines, relations };

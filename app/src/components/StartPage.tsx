@@ -30,7 +30,8 @@ export function appVersion(): string {
 const FEATURES = ['start.featureHints', 'start.featureSteps', 'start.featureOwn'] as const;
 
 export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void }) {
-  const [error, setError] = useState<string | null>(null);
+  // the error of the last file opened, shown in the current language
+  const [error, setError] = useState<{ readonly error: unknown } | null>(null);
   // the puzzle type whose rules are shown
   const [guide, setGuide] = useState<PuzzleType | null>(null);
   const { settings, update } = useSettings();
@@ -41,7 +42,7 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
     setError(null);
     pickPuzzleFile(type)
       .then((session) => session !== null && onOpen(session))
-      .catch((e: unknown) => setError(openErrorMessage(e)));
+      .catch((e: unknown) => setError({ error: e }));
   };
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
@@ -72,7 +73,7 @@ export function StartPage({ onOpen }: { onOpen: (session: PuzzleSession) => void
 
       <View style={styles.page}>
         <Text style={styles.sectionTitle}>{t('start.pick')}</Text>
-        {error !== null && <Text style={styles.error}>{error}</Text>}
+        {error !== null && <Text style={styles.error}>{openErrorMessage(error.error)}</Text>}
         <View style={styles.grid}>
           {Object.values(PUZZLE_TYPES).map((type) => (
             <PuzzleCard

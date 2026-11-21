@@ -11,6 +11,7 @@ import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { TotalSumValueConstraint } from '../constraints/totalsumvalueconstraint';
 import { UniqueValueConstraint } from '../constraints/uniquevalueconstraint';
 import { msg, type MessageKey } from '../i18n/message';
+import { errorText, MessageError } from '../structure/errors';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import {
@@ -104,13 +105,13 @@ export function parseSumbreroLines(lines: readonly string[], filename = '<sumbre
         puzzle = new Puzzle('Test-sumbrero', parseRange(line.split('=')[1] ?? ''));
         return;
       }
-      if (puzzle === null) throw new Error("'range = min,max' must come before cells and sums");
+      if (puzzle === null) throw new MessageError(msg('sumbrero.rangeFirst'));
       const grid = puzzle.getGrid();
 
       if (keyword === 'cell') {
         const position = parsePosition(line.slice('cell'.length));
         if (grid.getPositionedCells().some((c) => c.getPosition().equals(position))) {
-          throw new Error(`cell ${position.toString()} is declared twice`);
+          throw new MessageError(msg('parse.cellTwice', { cell: position.toString() }));
         }
         grid.addCell(position);
         return;
@@ -120,11 +121,13 @@ export function parseSumbreroLines(lines: readonly string[], filename = '<sumbre
       const [kind, indexOf] = statement as [LineKind, (position: Position) => number];
       const rest = line.slice(keyword.length);
       const separator = rest.indexOf('=');
-      if (separator < 0) throw new Error(`expected ${keyword}(n) = value`);
+      if (separator < 0) throw new MessageError(msg('sumbrero.statement', { keyword }));
       const index = parseIndex(rest.slice(0, separator));
       const lineCells = grid.getPositionedCells().filter((c) => indexOf(c.getPosition()) === index);
       if (lineCells.length === 0)
-        throw new Error(`${kind.toLowerCase()} ${index} contains no cells`);
+        throw new MessageError(
+          msg('sumbrero.noCells', { line: msg(LINE_KIND_KEYS[kind], { index }) }),
+        );
 
       const group = puzzle.addConstraintGroup(msg(LINE_KIND_KEYS[kind], { index }));
       for (const c of lineCells) group.addCell(c);
@@ -134,11 +137,15 @@ export function parseSumbreroLines(lines: readonly string[], filename = '<sumbre
         .setTotalValue(parseInteger(rest.slice(separator + 1)));
     } catch (error) {
       if (error instanceof PuzzleFileError) throw error;
-      throw new PuzzleFileError(filename, i + 1, `${(error as Error).message} (${line})`);
+      throw new PuzzleFileError(
+        filename,
+        i + 1,
+        msg('file.withLine', { detail: errorText(error), line }),
+      );
     }
   });
   if (puzzle === null) {
-    throw new PuzzleFileError(filename, lines.length, "no 'range = min,max' line found");
+    throw new PuzzleFileError(filename, lines.length, msg('parse.noRange'));
   }
   return puzzle;
 }

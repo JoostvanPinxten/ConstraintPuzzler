@@ -13,14 +13,15 @@
  * that way; the solver can deduce them again.
  */
 import { ValueSource, type Cell } from './cell';
-import { ContradictionError } from './errors';
+import { msg, type Message } from '../i18n/message';
+import { ContradictionError, MessageError } from './errors';
 import type { Puzzle } from './puzzle';
 import type { PuzzleState, Value } from './types';
 
 /** The value cannot be entered: the cell is given, or it is not a value of the puzzle. */
-export class EntryError extends Error {
-  constructor(message: string) {
-    super(message);
+export class EntryError extends MessageError {
+  constructor(text: string | Message) {
+    super(text);
     this.name = 'EntryError';
   }
 }
@@ -56,10 +57,10 @@ export class UserEntries {
    */
   enter(cell: Cell, value: Value): void {
     if (cell.isGiven()) {
-      throw new EntryError(`Cell ${cell.getName()} is given; its value cannot be changed.`);
+      throw new EntryError(msg('entry.givenChange', { cell: cell.getName() }));
     }
     if (!this.puzzle.getValues().includes(value)) {
-      throw new EntryError(`${value} is not a value of this puzzle.`);
+      throw new EntryError(msg('entry.notAValue', { value }));
     }
     if (this.valueOf(cell) === value) return;
 
@@ -77,7 +78,7 @@ export class UserEntries {
   /** Remove the value of a cell that is not given. */
   clear(cell: Cell): void {
     if (cell.isGiven()) {
-      throw new EntryError(`Cell ${cell.getName()} is given; its value cannot be cleared.`);
+      throw new EntryError(msg('entry.givenClear', { cell: cell.getName() }));
     }
     if (this.valueOf(cell) === null) return;
     const entries = new Map(this.entries);
@@ -107,7 +108,7 @@ export class UserEntries {
     const state = this.puzzle.saveState();
     try {
       if (!cell.values.has(value)) {
-        throw new ContradictionError(`${value} is not possible in cell ${cell.getName()}`);
+        throw new ContradictionError(msg('entry.notPossible', { value, cell: cell.getName() }));
       }
       cell.setValue(value, ValueSource.ENTERED);
     } catch (error) {

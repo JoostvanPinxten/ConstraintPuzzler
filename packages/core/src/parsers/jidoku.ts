@@ -8,17 +8,18 @@
 import { createEmptySudoku } from '../puzzlefactory';
 import type { Puzzle } from '../structure/puzzle';
 import { addRelations, splitGridAndRelations, type Relation } from './futoshiki';
+import { msg, type Message } from '../i18n/message';
 import { PuzzleFileError } from './common';
 import { readGridValues } from './sudoku';
 
 /** Why a relation is not a Jidoku clue, or null when it is one. */
-export function jidokuRelationProblem([[x1, y1], [x2, y2]]: Relation): string | null {
+export function jidokuRelationProblem([[x1, y1], [x2, y2]]: Relation): Message | null {
   for (const v of [x1, y1, x2, y2]) {
-    if (v < 0 || v > 8) return 'cells must lie within the 9x9 grid (1-9)';
+    if (v < 0 || v > 8) return msg('jidoku.outside');
   }
-  if (Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1) return 'the cells must be orthogonal neighbours';
+  if (Math.abs(x1 - x2) + Math.abs(y1 - y2) !== 1) return msg('jidoku.neighbours');
   if (Math.floor(x1 / 3) !== Math.floor(x2 / 3) || Math.floor(y1 / 3) !== Math.floor(y2 / 3)) {
-    return 'the cells must lie in the same 3x3 box';
+    return msg('jidoku.sameBox');
   }
   return null;
 }
@@ -30,7 +31,7 @@ export function jidokuRelationProblem([[x1, y1], [x2, y2]]: Relation): string | 
 export function parseJidokuLines(rawLines: readonly string[], filename = '<jidoku>'): Puzzle {
   const { gridLines, relations } = splitGridAndRelations(rawLines, filename, jidokuRelationProblem);
   if (gridLines.length !== 9) {
-    throw new PuzzleFileError(filename, 1, `expected 9 grid lines, got ${gridLines.length}`);
+    throw new PuzzleFileError(filename, 1, msg('jidoku.gridLines', { count: gridLines.length }));
   }
   const puzzle = createEmptySudoku('Jidoku');
   readGridValues(puzzle, gridLines);

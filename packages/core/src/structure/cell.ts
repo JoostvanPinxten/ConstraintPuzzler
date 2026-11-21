@@ -1,5 +1,6 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { DeductionLog } from './deduction';
+import { msg } from '../i18n/message';
 import { ContradictionError } from './errors';
 import type { Grid } from './grid';
 import type { Position } from './position';
@@ -70,7 +71,9 @@ export class Cell {
 
   setValue(value: Value, source: ValueSource = ValueSource.GIVEN): void {
     if (!this.values.has(value)) {
-      throw new ContradictionError(`value ${value} not in my values: ${formatSet(this.values)}`);
+      throw new ContradictionError(
+        msg('cell.notAValue', { value, values: formatSet(this.values) }),
+      );
     }
     this.source = source;
     this.value = value;
@@ -86,7 +89,7 @@ export class Cell {
   remove(value: Value): void {
     // make sure the set value is not the value that needs to be removed
     if (this.value === value) {
-      throw new ContradictionError(`value removed that's already set...${this.toString()}`);
+      throw new ContradictionError(msg('cell.removeSet', { cell: this.toString() }));
     }
     if (!this.values.has(value)) return; // redundant remove
 
@@ -94,9 +97,7 @@ export class Cell {
     this.deductionLog()?.recordRemoval(this, value);
     if (this.values.size === 0) {
       // the puzzle state is contradictory: no value is left for this cell
-      throw new ContradictionError(
-        `No more options for cell, removed last value:${value}, ${this.toString()}`,
-      );
+      throw new ContradictionError(msg('cell.noOptions', { value, cell: this.toString() }));
     }
     this.possibleValuesChanged.emit(this);
   }

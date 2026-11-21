@@ -3,7 +3,7 @@
  * app's catalog with parameters, formatted only when shown. So a message that is on screen
  * follows the language when it changes, and the session itself has no texts.
  */
-import { isMessage, type Deduction, type Message } from '@constraintpuzzler/core';
+import { errorText, isMessage, type Deduction, type Message } from '@constraintpuzzler/core';
 
 import { formatCore, i18n, type AppKey } from '../i18n';
 
@@ -63,7 +63,7 @@ export const BUSY = ui('session.busy');
 export function contradictionNotice(error: Error): Notice {
   return {
     title: ui('notice.contradictionTitle'),
-    text: ui('notice.contradiction', { error: error.message }),
+    text: ui('notice.contradiction', { error: errorText(error) }),
   };
 }
 

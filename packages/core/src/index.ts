@@ -33,7 +33,7 @@ export { SolveCancelled, Solver, type AsyncSolveOptions } from './solver/solver'
 export { Cell, PositionedCell, ValueSource } from './structure/cell';
 export { Deduction, DeductionLog, NAKED_SINGLE, type Cause } from './structure/deduction';
 export { EntryError, UserEntries } from './structure/entries';
-export { ContradictionError } from './structure/errors';
+export { ContradictionError, MessageError, errorText } from './structure/errors';
 export { CheckResult, Game } from './structure/game';
 export { Grid } from './structure/grid';
 export { Position } from './structure/position';

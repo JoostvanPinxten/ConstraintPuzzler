@@ -1,4 +1,6 @@
 /** Building blocks shared by the puzzle file parsers. */
+import { msg, type Message } from '../i18n/message';
+import { MessageError } from '../structure/errors';
 import { Position } from '../structure/position';
 
 const POSITION_PATTERN = /^\(\s*(-?\d+)\s*,\s*(-?\d+)\s*\)$/;
@@ -6,13 +8,13 @@ const INDEX_PATTERN = /^\(\s*(-?\d+)\s*\)$/;
 const INTEGER_PATTERN = /^[+-]?\d+$/;
 
 /** A puzzle file could not be parsed; the message names the file and line. */
-export class PuzzleFileError extends Error {
+export class PuzzleFileError extends MessageError {
   constructor(
     readonly filename: string,
     readonly lineNumber: number,
-    message: string,
+    detail: string | Message,
   ) {
-    super(`${filename}, line ${lineNumber}: ${message}`);
+    super(msg('file.error', { file: filename, line: lineNumber, detail }));
     this.name = 'PuzzleFileError';
   }
 }
@@ -25,14 +27,15 @@ export function splitLines(text: string): string[] {
 /** Parses a whole number (whitespace around it allowed), like Python's int(), or throws. */
 export function parseInteger(text: string): number {
   const trimmed = text.trim();
-  if (!INTEGER_PATTERN.test(trimmed)) throw new Error(`expected a whole number, got '${trimmed}'`);
+  if (!INTEGER_PATTERN.test(trimmed))
+    throw new MessageError(msg('parse.integer', { text: trimmed }));
   return Number.parseInt(trimmed, 10);
 }
 
 /** Parses '(x,y)' (whitespace allowed) into a Position, or throws. */
 export function parsePosition(text: string): Position {
   const match = POSITION_PATTERN.exec(text.trim());
-  if (match === null) throw new Error(`expected a cell like (x,y), got '${text.trim()}'`);
+  if (match === null) throw new MessageError(msg('parse.position', { text: text.trim() }));
   return new Position(Number(match[1]), Number(match[2]));
 }
 
@@ -44,16 +47,16 @@ export function parsePositionList(text: string): Position[] {
 /** Parses '(n)' (whitespace allowed) into a number, or throws. */
 export function parseIndex(text: string): number {
   const match = INDEX_PATTERN.exec(text.trim());
-  if (match === null) throw new Error(`expected a number like (n), got '${text.trim()}'`);
+  if (match === null) throw new MessageError(msg('parse.index', { text: text.trim() }));
   return Number(match[1]);
 }
 
 /** Parses 'min,max' into the inclusive range of values, or throws. */
 export function parseRange(text: string): number[] {
   const parts = text.split(',');
-  if (parts.length !== 2) throw new Error(`expected a range like 1,9, got '${text.trim()}'`);
+  if (parts.length !== 2) throw new MessageError(msg('parse.range', { text: text.trim() }));
   const [minimum, maximum] = parts.map(parseInteger) as [number, number];
-  if (minimum > maximum) throw new Error(`range ${minimum},${maximum} is empty`);
+  if (minimum > maximum) throw new MessageError(msg('parse.emptyRange', { minimum, maximum }));
   return Array.from({ length: maximum - minimum + 1 }, (_, i) => minimum + i);
 }
 

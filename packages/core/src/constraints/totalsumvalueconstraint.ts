@@ -1,7 +1,7 @@
 import type { Cell } from '../structure/cell';
 import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
-import { ContradictionError } from '../structure/errors';
+import { ContradictionError, MessageError } from '../structure/errors';
 import { msg, valueList, type Message } from '../i18n/message';
 import { sortedValues, type Value, type ValueOf } from '../structure/types';
 import { Constraint, placedValues } from './constraint';
@@ -33,9 +33,7 @@ export class TotalSumValueConstraint extends Constraint {
     const openCount = this.group.cells.length - filledCells.length;
     if (openCount === 0) {
       if (total !== 0) {
-        throw new ContradictionError(
-          `All cells are filled, but they do not add up to ${this.totalValue}`,
-        );
+        throw new ContradictionError(msg('sum.notAddUp', { total: String(this.totalValue) }));
       }
       return;
     }
@@ -144,7 +142,7 @@ export class TotalSumValueConstraint extends Constraint {
       ? values.slice(0, cellCount).reduce((a, b) => a + b, 0) // the N smallest values
       : (values[0] ?? 0) * cellCount;
     if (value < minimum) {
-      throw new Error(`Infeasible sum value ${value},  minimum is ${minimum}`);
+      throw new MessageError(msg('sum.infeasible', { value, minimum }));
     }
     this.totalValue = value;
   }

@@ -3,6 +3,7 @@ import { TotalSumValueConstraint } from '../constraints/totalsumvalueconstraint'
 import { UniqueValueConstraint } from '../constraints/uniquevalueconstraint';
 import type { PositionedCell } from '../structure/cell';
 import { msg } from '../i18n/message';
+import { errorText, MessageError } from '../structure/errors';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import {
@@ -30,12 +31,12 @@ export function parseKakuroLines(lines: readonly string[], filename = '<kakuro>'
         puzzle = new Puzzle('Test-kakuro', parseRange(line.split('=')[1] ?? ''));
         return;
       }
-      if (puzzle === null) throw new Error("'range = min,max' must come before cells and totals");
+      if (puzzle === null) throw new MessageError(msg('kakuro.rangeFirst'));
 
       if (line.startsWith('cell')) {
         const position = parsePosition(line.slice('cell'.length));
         if (cells.has(position.key())) {
-          throw new Error(`cell ${position.toString()} is declared twice`);
+          throw new MessageError(msg('parse.cellTwice', { cell: position.toString() }));
         }
         cells.set(position.key(), puzzle.getGrid().addCell(position));
         return;
@@ -47,17 +48,17 @@ export function parseKakuroLines(lines: readonly string[], filename = '<kakuro>'
       const cellText = separator >= 0 ? rest.slice(0, separator).trim() : '';
       const valueText = separator >= 0 ? rest.slice(separator + 1) : rest;
       if (separator < 0 || !(cellText.startsWith('(') && cellText.endsWith(')'))) {
-        throw new Error('expected total((x,y);(x,y);...) = value');
+        throw new MessageError(msg('kakuro.total'));
       }
       const positions = parsePositionList(cellText.slice(1, -1));
       const value = parseInteger(valueText);
       for (const position of positions) {
         if (!cells.has(position.key())) {
-          throw new Error(`cell ${position.toString()} is used before it is declared`);
+          throw new MessageError(msg('kakuro.undeclared', { cell: position.toString() }));
         }
       }
       if (new Set(positions.map((p) => p.key())).size !== positions.length) {
-        throw new Error('a cell appears more than once in this total');
+        throw new MessageError(msg('kakuro.repeated'));
       }
       const group = puzzle.addConstraintGroup(msg('group.line'));
       for (const position of positions) group.addCell(cells.get(position.key()) as PositionedCell);
@@ -65,11 +66,15 @@ export function parseKakuroLines(lines: readonly string[], filename = '<kakuro>'
       group.addConstraint(TotalSumValueConstraint).setTotalValue(value);
     } catch (error) {
       if (error instanceof PuzzleFileError) throw error;
-      throw new PuzzleFileError(filename, i + 1, `${(error as Error).message} (${line})`);
+      throw new PuzzleFileError(
+        filename,
+        i + 1,
+        msg('file.withLine', { detail: errorText(error), line }),
+      );
     }
   });
   if (puzzle === null) {
-    throw new PuzzleFileError(filename, lines.length, "no 'range = min,max' line found");
+    throw new PuzzleFileError(filename, lines.length, msg('parse.noRange'));
   }
   return puzzle;
 }
