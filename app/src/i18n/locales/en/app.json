@@ -142,5 +142,6 @@
   "type.sum": "Total Sum Value Constraint",
   "type.greater": "Cell Greater Than Cell Constraint",
   "type.runs": "Runs Constraint",
-  "message.core": "{{message}}"
+  "message.core": "{{message}}",
+  "guide.example": "Example: {{example}}"
 }

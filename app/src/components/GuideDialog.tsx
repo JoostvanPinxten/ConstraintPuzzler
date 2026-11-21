@@ -110,6 +110,7 @@ function TechniqueEntry({
   onToggle: () => void;
   onLayout: (y: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View
       style={[styles.entry, open && styles.entryOpen]}
@@ -137,7 +138,7 @@ function TechniqueEntry({
             </Text>
           ))}
           {entry.example !== undefined && (
-            <Text style={styles.example}>{`Example: ${entry.example}`}</Text>
+            <Text style={styles.example}>{t('guide.example', { example: entry.example })}</Text>
           )}
           {entry.board !== undefined && (
             <ExampleBoard board={entry.board} testID={`board-${entry.id}`} />

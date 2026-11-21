@@ -9,7 +9,9 @@
  * checks that this formatter and i18next give the same text for every message.
  */
 import enCore from './locales/en/core.json';
+import enGuide from './locales/en/guide.json';
 import nlCore from './locales/nl/core.json';
+import nlGuide from './locales/nl/guide.json';
 
 /** The languages the app can be shown in. */
 export const LANGUAGES = [
@@ -24,10 +26,13 @@ export const DEFAULT_LANGUAGE: Language = 'en';
 
 type Catalog = Readonly<Record<string, string>>;
 
-/** The catalogs of the engine per language, as i18next resources of the namespace `core`. */
+/**
+ * The catalogs of the engine per language (its messages and the guide), as i18next resources
+ * of the namespace `core`.
+ */
 export const CORE_RESOURCES: Readonly<Record<Language, Catalog>> = {
-  en: enCore,
-  nl: nlCore,
+  en: { ...enCore, ...enGuide },
+  nl: { ...nlCore, ...nlGuide },
 };
 
 /** The i18next namespace of the engine's messages. */
@@ -40,7 +45,7 @@ type BaseKey<K> = K extends `${infer Base}_${'zero' | 'one' | 'two' | 'few' | 'm
   : K;
 
 /** A key of the engine's catalog (without the plural suffix). */
-export type MessageKey = BaseKey<keyof typeof enCore>;
+export type MessageKey = BaseKey<keyof typeof enCore | keyof typeof enGuide>;
 
 /** A list of values ("1, 3, 4", or their names), or "none" when empty. */
 export interface ValueList {
