@@ -1,15 +1,44 @@
 /**
  * The rules of every puzzle type, explained for players, with the techniques that help to solve
- * it (easiest first). The puzzle type registry (puzzletypes.ts) gives every type its guide.
+ * it (easiest first). The puzzle type registry (puzzletypes.ts) gives every type its guide. The
+ * texts are in the catalog (keys `guide.rules.<type>.goal` and `guide.rules.<type>.1`, `.2`, ...).
  */
+import { formatMessage, msg, type Message } from '../i18n/message';
 import type { TechniqueId } from './techniques';
+import { numberedKeys, requiredKey } from './texts';
 
 export interface PuzzleGuide {
-  /** one line: what you fill in */
+  /** the puzzle type (see PUZZLE_TYPES), whose texts these are */
+  readonly type: string;
+  /** one line: what you fill in (in English; see puzzleGuideTexts) */
   readonly goal: string;
   readonly rules: readonly string[];
   /** the techniques that apply, easiest first (keys of TECHNIQUE_GUIDE) */
   readonly techniques: readonly TechniqueId[];
+}
+
+/** The goal and rules of a puzzle type as messages. */
+export interface PuzzleGuideTexts {
+  readonly goal: Message;
+  readonly rules: readonly Message[];
+}
+
+/** The goal and rules of a puzzle type (its `type`), as messages. */
+export function puzzleGuideTexts(type: string): PuzzleGuideTexts {
+  return {
+    goal: msg(requiredKey(`guide.rules.${type}.goal`)),
+    rules: numberedKeys(`guide.rules.${type}.`).map((key) => msg(key)),
+  };
+}
+
+function guide(type: string, techniques: readonly TechniqueId[]): PuzzleGuide {
+  const texts = puzzleGuideTexts(type);
+  return {
+    type,
+    goal: formatMessage(texts.goal),
+    rules: texts.rules.map((rule) => formatMessage(rule)),
+    techniques,
+  };
 }
 
 const SUDOKU_TECHNIQUES: readonly TechniqueId[] = [
@@ -25,72 +54,43 @@ const SUDOKU_TECHNIQUES: readonly TechniqueId[] = [
   'guess',
 ];
 
-export const SUDOKU_GUIDE: PuzzleGuide = {
-  goal: 'Fill the grid with the numbers 1 to 9.',
-  rules: [
-    'Every row holds each number 1–9 exactly once.',
-    'Every column holds each number 1–9 exactly once.',
-    'Every 3×3 box holds each number 1–9 exactly once.',
-    'The given numbers cannot be changed; a good puzzle has exactly one solution.',
-  ],
-  techniques: SUDOKU_TECHNIQUES,
-};
+export const SUDOKU_GUIDE: PuzzleGuide = guide('sudoku', SUDOKU_TECHNIQUES);
 
-export const KAKURO_GUIDE: PuzzleGuide = {
-  goal: 'Fill the white cells with the numbers 1 to 9.',
-  rules: [
-    'A clue gives the sum of the run of white cells to its right (across) or below it (down).',
-    'The cells of a run add up to its clue.',
-    'A number appears at most once in a run.',
-  ],
-  techniques: ['sumCombinations', 'nakedSingle', 'elimination', 'nakedSubset', 'guess'],
-};
+export const KAKURO_GUIDE: PuzzleGuide = guide('kakuro', [
+  'sumCombinations',
+  'nakedSingle',
+  'elimination',
+  'nakedSubset',
+  'guess',
+]);
 
-export const FUTOSHIKI_GUIDE: PuzzleGuide = {
-  goal: 'Fill the N×N grid with the numbers 1 to N.',
-  rules: [
-    'Every row and every column holds each number 1–N exactly once.',
-    'A < or > sign between two cells says which of the two is smaller.',
-  ],
-  techniques: [
-    'inequality',
-    'nakedSingle',
-    'hiddenSingle',
-    'elimination',
-    'nakedSubset',
-    'hiddenSubset',
-    'xWing',
-    'swordfish',
-    'jellyfish',
-    'guess',
-  ],
-};
+export const FUTOSHIKI_GUIDE: PuzzleGuide = guide('futoshiki', [
+  'inequality',
+  'nakedSingle',
+  'hiddenSingle',
+  'elimination',
+  'nakedSubset',
+  'hiddenSubset',
+  'xWing',
+  'swordfish',
+  'jellyfish',
+  'guess',
+]);
 
-export const JIDOKU_GUIDE: PuzzleGuide = {
-  goal: 'Fill the grid with the numbers 1 to 9.',
-  rules: [
-    'As in Sudoku, every row, column and 3×3 box holds each number 1–9 exactly once.',
-    'There are usually no given numbers: the clues are < and > signs between neighbouring cells of a box, drawn as a bent edge that points to the smaller cell.',
-  ],
-  techniques: ['inequality', ...SUDOKU_TECHNIQUES],
-};
+export const JIDOKU_GUIDE: PuzzleGuide = guide('jidoku', ['inequality', ...SUDOKU_TECHNIQUES]);
 
-export const SUMBRERO_GUIDE: PuzzleGuide = {
-  goal: 'Fill every hexagon with a number from the puzzle’s range.',
-  rules: [
-    'Lines of hexagons run in three directions: straight down, down-right and up-right.',
-    'A clue gives the sum of its line: the hexagons of the line add up to it.',
-    'A number appears at most once in a line with a clue.',
-  ],
-  techniques: ['sumCombinations', 'nakedSingle', 'elimination', 'nakedSubset', 'guess'],
-};
+export const SUMBRERO_GUIDE: PuzzleGuide = guide('sumbrero', [
+  'sumCombinations',
+  'nakedSingle',
+  'elimination',
+  'nakedSubset',
+  'guess',
+]);
 
-export const NONOGRAM_GUIDE: PuzzleGuide = {
-  goal: 'Colour the cells to reveal a picture.',
-  rules: [
-    'The clue of a row or column lists the lengths of its blocks of filled cells, in order.',
-    'Blocks of the same colour have at least one blank cell between them; blocks of different colours may touch.',
-    'All other cells are blank. With several colours, a clue’s colour is the colour of its block.',
-  ],
-  techniques: ['wholeLine', 'overlap', 'reach', 'placements', 'guess'],
-};
+export const NONOGRAM_GUIDE: PuzzleGuide = guide('nonogram', [
+  'wholeLine',
+  'overlap',
+  'reach',
+  'placements',
+  'guess',
+]);

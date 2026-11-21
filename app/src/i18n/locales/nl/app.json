@@ -142,5 +142,6 @@
   "type.sum": "Som",
   "type.greater": "Kleiner dan",
   "type.runs": "Blokken",
-  "message.core": "{{message}}"
+  "message.core": "{{message}}",
+  "guide.example": "Voorbeeld: {{example}}"
 }

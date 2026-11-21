@@ -4,7 +4,9 @@
  * behind the hint the player asked about.
  */
 import {
+  puzzleGuideTexts,
   TECHNIQUE_GUIDE,
+  techniqueTexts,
   type ExampleBoard,
   type ExampleCell,
   type PuzzleType,
@@ -12,7 +14,7 @@ import {
   type TechniqueId,
 } from '@constraintpuzzler/core';
 
-import { i18n } from '../i18n';
+import { formatCore, i18n } from '../i18n';
 
 export interface GuideContent {
   readonly title: string;
@@ -26,19 +28,41 @@ export interface GuideContent {
 
 /** The Rules dialog for a puzzle type, opened at `technique` when the type uses it. */
 export function guideContent(type: PuzzleType, technique: TechniqueId | null = null): GuideContent {
-  const { goal, rules, techniques } = type.guide;
+  const { techniques } = type.guide;
+  const texts = puzzleGuideTexts(type.guide.type);
   return {
     title: i18n.t('guide.title', { type: type.label }),
-    goal,
-    rules,
-    techniques: techniques.map((id) => TECHNIQUE_GUIDE[id]),
+    goal: formatCore(texts.goal),
+    rules: texts.rules.map((rule) => formatCore(rule)),
+    techniques: techniques.map(techniqueGuide),
     opened: technique !== null && techniques.includes(technique) ? technique : null,
+  };
+}
+
+/** A technique's explanation in the current language (the core's guide is in English). */
+export function techniqueGuide(id: TechniqueId): TechniqueGuide {
+  const texts = techniqueTexts(id);
+  const board = TECHNIQUE_GUIDE[id].board;
+  return {
+    id,
+    name: formatCore(texts.name),
+    summary: formatCore(texts.summary),
+    steps: texts.steps.map((step) => formatCore(step)),
+    ...(texts.example === undefined ? {} : { example: formatCore(texts.example) }),
+    ...(board === undefined
+      ? {}
+      : {
+          board: {
+            ...board,
+            caption: texts.caption === undefined ? board.caption : formatCore(texts.caption),
+          },
+        }),
   };
 }
 
 /** The link to a technique's explanation, e.g. "About this technique: Hidden single". */
 export function techniqueLinkLabel(technique: TechniqueId): string {
-  return i18n.t('guide.link', { technique: TECHNIQUE_GUIDE[technique].name });
+  return i18n.t('guide.link', { technique: formatCore(techniqueTexts(technique).name) });
 }
 
 /** Open or close a technique in the list (one at a time). */
