@@ -1,6 +1,7 @@
 # Plan: multiple languages (English + Dutch)
 
-Branch `feature/i18n`, worktree `.claude/worktrees/i18n`, based on `origin/main` (80598f7).
+Done in a stack of seven PRs (#63–#69); how to add texts and languages is in
+[translations.md](translations.md). This is the plan as it was made.
 
 ## What has to be translated
 

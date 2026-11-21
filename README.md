@@ -39,6 +39,8 @@ To follow the solver instead of letting it finish the puzzle:
 
 The solver's candidate values (the small numbers in open cells) are hidden by default, so they don't give the solution away. Turn on *Show hints* to show them in the cells and in the explanations. In a nonogram with several colours, *Colour symbols* draws a shape for every colour too (on the cells, the clues and the colour buttons), for players who cannot tell some colours apart. The settings are remembered.
 
+The app is available in English and Dutch: it starts in your device's language and you can change it on the start page. [doc/translations.md](doc/translations.md) explains how to add a language.
+
 Selecting a cell, constraint group or rule in the list of groups and rules highlights the corresponding cells, coloured by the role they play (e.g. the smaller and the larger cell of a Futoshiki inequality), and the info panel explains the selection. Every change is undoable, including a Solve: *Undo* and *Redo* (Ctrl+Z / Ctrl+Y on a keyboard).
 
 You can also roll your own puzzle, by combining the `UniqueValueConstraint`, `ExactCoverConstraint`, `TotalSumValueConstraint`, `CellGreaterThanCellConstraint`, etc. See [doc/constraints.md](doc/constraints.md) for what each constraint type means, what it deduces and how to set it up, and [doc/puzzle-files.md](doc/puzzle-files.md) for the grid types and the file format of each puzzle.
@@ -61,6 +63,7 @@ Development
 - `desktop/` - the desktop app: the web build of `app/` in a [Tauri](https://tauri.app/) window
 - `e2e/` - [Playwright](https://playwright.dev/) tests of the web build in a browser
 - `puzzles/` - the example puzzle files (bundled into the app by `npm run examples -w @constraintpuzzler/app`)
+- the texts of the engine and the app are in JSON catalogs per language (`packages/core/src/i18n/locales/`, `app/src/i18n/locales/`); see [doc/translations.md](doc/translations.md)
 
 ## Checks and tests
 ```

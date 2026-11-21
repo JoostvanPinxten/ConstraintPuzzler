@@ -199,3 +199,31 @@ test('opens several puzzles in tabs and closes them', async ({ page }) => {
   await page.getByLabel('Close Sudoku: Easy').click();
   await expect(page.getByText('Sumbrero', { exact: true })).toBeVisible();
 });
+
+test.describe('in Dutch', () => {
+  // the browser's language picks the app's language
+  test.use({ locale: 'nl-NL' });
+
+  test('shows the app, hints and rules in the device language, and switches back', async ({
+    page,
+  }, info) => {
+    await page.goto('/');
+    await expect(page.getByText('Kies een puzzel')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'nl');
+    await page.getByTestId('open-sudoku-Hard').click();
+    await expect(page.getByTestId('board').locator('svg')).toBeVisible();
+    await page.getByTestId('hint').click();
+    await expect(page.getByText('Hint: welk vakje?')).toBeVisible();
+    await page.getByText('Hint: welk vakje?').click();
+    await expect(page.getByText(/^Hint: Kijk naar vakje \d+, \d+\.$/)).toBeVisible();
+    await page.getByTestId('guide-open').click();
+    await expect(page.getByText('Sudoku: regels en technieken')).toBeVisible();
+    await expect(page.getByText('Verborgen single')).toBeVisible();
+    await page.screenshot({ path: info.outputPath('dutch.png'), fullPage: true });
+    await page.getByTestId('guide-close').click();
+    await page.getByRole('tab', { name: 'Puzzels' }).click();
+    await page.getByTestId('language-en').click();
+    await expect(page.getByText('Pick a puzzle')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
+});
