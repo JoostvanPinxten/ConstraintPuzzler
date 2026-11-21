@@ -40,7 +40,6 @@ import {
   BUSY,
   contradictionNotice,
   narrowingMessage,
-  plain,
   ui,
   type Notice,
   type UiMessage,
@@ -346,7 +345,7 @@ export class PuzzleSession {
       this.inputMessage = null;
     } catch (error) {
       if (!(error instanceof EntryError)) throw error;
-      this.inputMessage = plain(error.message);
+      this.inputMessage = ui('message.core', { message: error.text });
     }
     if (this.game.isSolved(this.violations())) {
       this.inputMessage = ui('session.solved');

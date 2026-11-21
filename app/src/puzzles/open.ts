@@ -1,6 +1,7 @@
 // Opening puzzles: the bundled examples, or a file the user picks.
 import {
   PUZZLE_TYPES,
+  errorText,
   PuzzleFileError,
   type PuzzleType,
   type PuzzleTypeName,
@@ -9,7 +10,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
-import { i18n } from '../i18n';
+import { formatCore, i18n } from '../i18n';
 import { PuzzleSession } from '../logic/session';
 import { EXAMPLES } from './examples.generated';
 
@@ -49,8 +50,7 @@ export async function pickPuzzleFile(type: PuzzleType): Promise<PuzzleSession | 
 
 /** A message for an error from opening a file. */
 export function openErrorMessage(error: unknown): string {
-  if (error instanceof PuzzleFileError) return error.message;
-  return i18n.t('start.openError', {
-    error: error instanceof Error ? error.message : String(error),
-  });
+  const text = formatCore(errorText(error));
+  if (error instanceof PuzzleFileError) return text;
+  return i18n.t('start.openError', { error: text });
 }

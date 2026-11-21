@@ -1,7 +1,7 @@
 import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
-import { ContradictionError } from '../structure/errors';
+import { ContradictionError, MessageError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
 import { sortedValues, type Value, type ValueOf } from '../structure/types';
 import { formatMessage, msg, type Message } from '../i18n/message';
@@ -170,11 +170,13 @@ export class RunsConstraint extends Constraint {
     this.palette = palette;
     for (const run of runs) {
       if (run.color === BLANK || !Number.isInteger(run.length) || run.length < 1) {
-        throw new Error(`invalid block ${run.length}:${run.color}`);
+        throw new MessageError(msg('runs.invalidBlock', { length: run.length, color: run.color }));
       }
     }
     if (this.minimumLength(runs) > this.group.cells.length && this.group.cells.length > 0) {
-      throw new Error(`the blocks ${this.clueText(runs)} do not fit in ${this.group.cells.length}`);
+      throw new MessageError(
+        msg('runs.noFit', { clue: clueMessage(this, runs), count: this.group.cells.length }),
+      );
     }
     this.runs = [...runs];
   }
@@ -209,7 +211,10 @@ export class RunsConstraint extends Constraint {
     const result = this.placements(cells.map((c) => c.getPossibleValues()));
     if (result === null) {
       throw new ContradictionError(
-        `${this.group.getName()} cannot hold the blocks ${this.clueText()}`,
+        msg('runs.cannotHold', {
+          group: this.group.nameMessage(),
+          clue: clueMessage(this, this.runs),
+        }),
       );
     }
     const wholeLine = this.runs.length === 0 || this.minimumLength() === cells.length;

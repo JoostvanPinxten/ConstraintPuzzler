@@ -3,7 +3,7 @@ import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
 import { msg, valueList, type Message } from '../i18n/message';
 import { ContradictionError } from '../structure/errors';
-import { formatValues, sortedValues, type Value, type ValueOf } from '../structure/types';
+import { sortedValues, type Value, type ValueOf } from '../structure/types';
 import { combinations, Constraint, placedValues } from './constraint';
 
 /** The values of the group's cells all differ. */
@@ -66,8 +66,12 @@ export class UniqueValueConstraint extends Constraint {
           for (const c of subset) for (const v of c.values) values.add(v);
           if (values.size < size) {
             throw new ContradictionError(
-              `${this.group.getName()}: ${size} cells share only ${values.size} candidates` +
-                ` (${formatValues(values)})`,
+              msg('unique.tooFew', {
+                group: this.group.nameMessage(),
+                size,
+                count: values.size,
+                values: valueList(values),
+              }),
             );
           }
           if (values.size > size) continue;

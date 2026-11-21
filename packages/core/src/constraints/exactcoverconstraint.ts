@@ -1,7 +1,7 @@
 import type { Cell } from '../structure/cell';
 import { msg, valueList, type Message } from '../i18n/message';
 import { ContradictionError } from '../structure/errors';
-import { formatValues, sortedValues, type Value } from '../structure/types';
+import { sortedValues, type Value } from '../structure/types';
 import { combinations, placedValues } from './constraint';
 import { UniqueValueConstraint } from './uniquevalueconstraint';
 
@@ -44,7 +44,11 @@ export class ExactCoverConstraint extends UniqueValueConstraint {
           for (const v of subset) for (const c of cellsOf(v)) cells.add(c);
           if (cells.size < size) {
             throw new ContradictionError(
-              `${this.group.getName()}: ${formatValues(subset)} fit in only ${cells.size} cells`,
+              msg('exactCover.tooFewCells', {
+                group: this.group.nameMessage(),
+                values: valueList(subset),
+                count: cells.size,
+              }),
             );
           }
           if (cells.size > size) continue;

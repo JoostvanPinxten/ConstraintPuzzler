@@ -8,6 +8,7 @@ import {
 import type { Cell } from '../structure/cell';
 import { paletteColorName } from '../constraints/runsexplanation';
 import { msg, type Message } from '../i18n/message';
+import { errorText, MessageError } from '../structure/errors';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import type { Value } from '../structure/types';
@@ -29,17 +30,19 @@ function parseClue(text: string, codes: ReadonlyMap<string, Value>): Run[] {
   const single = codes.size === 1;
   return text.split(/\s+/).map((token) => {
     const match = RUN_TOKEN.exec(token);
-    if (match === null) throw new Error(`expected a block like 3 or 3r, got '${token}'`);
+    if (match === null) throw new MessageError(msg('nonogram.block', { token }));
     const length = Number(match[1]);
-    if (length < 1) throw new Error(`a block needs at least one cell, got '${token}'`);
+    if (length < 1) throw new MessageError(msg('nonogram.blockLength', { token }));
     const code = (match[2] ?? '').toLowerCase();
     if (code === '') {
       if (!single)
-        throw new Error(`block '${token}' needs a colour (one of ${[...codes.keys()].join(', ')})`);
+        throw new MessageError(
+          msg('nonogram.blockColor', { token, codes: [...codes.keys()].join(', ') }),
+        );
       return { color: [...codes.values()][0] as Value, length };
     }
     const color = codes.get(code);
-    if (color === undefined) throw new Error(`unknown colour '${code}' in '${token}'`);
+    if (color === undefined) throw new MessageError(msg('nonogram.unknownColor', { code, token }));
     return { color, length };
   });
 }
@@ -60,17 +63,13 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
     const section = SECTIONS.find((s) => s === text.toLowerCase());
     if (section !== undefined) {
       if (sections.has(section))
-        throw new PuzzleFileError(filename, i + 1, `a second '${section}' section`);
+        throw new PuzzleFileError(filename, i + 1, msg('nonogram.secondSection', { section }));
       current = section;
       sections.set(section, []);
       return;
     }
     if (current === null) {
-      throw new PuzzleFileError(
-        filename,
-        i + 1,
-        `expected 'colors', 'rows' or 'columns', got '${text}'`,
-      );
+      throw new PuzzleFileError(filename, i + 1, msg('nonogram.section', { text }));
     }
     (sections.get(current) as Line[]).push({ text, number: i + 1 });
   });
@@ -89,12 +88,12 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
         throw new PuzzleFileError(
           filename,
           line.number,
-          `expected a colour like 'r red #d62728', got '${line.text}'`,
+          msg('nonogram.color', { text: line.text }),
         );
       }
       const code = (match[1] as string).toLowerCase();
       if (codes.has(code))
-        throw new PuzzleFileError(filename, line.number, `colour code '${code}' is used twice`);
+        throw new PuzzleFileError(filename, line.number, msg('nonogram.colorTwice', { code }));
       const value = palette.length;
       codes.set(code, value);
       palette.push({ value, name: match[2] as string, hex: (match[3] as string).toLowerCase() });
@@ -104,13 +103,13 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
   const clues = (section: Section): { runs: Run[]; line: Line }[] => {
     const lines = sections.get(section);
     if (lines === undefined || lines.length === 0) {
-      throw new PuzzleFileError(filename, rawLines.length, `no '${section}' section`);
+      throw new PuzzleFileError(filename, rawLines.length, msg('nonogram.noSection', { section }));
     }
     return lines.map((line) => {
       try {
         return { runs: parseClue(line.text, codes), line };
       } catch (error) {
-        throw new PuzzleFileError(filename, line.number, (error as Error).message);
+        throw new PuzzleFileError(filename, line.number, errorText(error));
       }
     });
   };
@@ -132,7 +131,11 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
       throw new PuzzleFileError(
         filename,
         (columns[0] as { line: Line }).line.number,
-        `the rows have ${inRows} ${color.name} cells, the columns ${inColumns}`,
+        msg('nonogram.counts', {
+          rows: inRows,
+          color: paletteColorName(color),
+          columns: inColumns,
+        }),
       );
     }
   }
@@ -160,7 +163,7 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
       throw new PuzzleFileError(
         filename,
         clue.line.number,
-        `${group.getName()}: ${(error as Error).message}`,
+        msg('file.inGroup', { group: group.nameMessage(), detail: errorText(error) }),
       );
     }
   };

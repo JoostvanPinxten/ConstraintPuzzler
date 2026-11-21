@@ -208,13 +208,12 @@ export class Game {
    * the value is cleared.
    */
   toggleNote(cell: Cell, value: Value): void {
-    if (cell.isGiven())
-      throw new EntryError(`Cell ${cell.getName()} is given; it cannot have notes.`);
+    if (cell.isGiven()) throw new EntryError(msg('entry.givenNotes', { cell: cell.getName() }));
     if (!this.puzzle.getValues().includes(value)) {
-      throw new EntryError(`${value} is not a value of this puzzle.`);
+      throw new EntryError(msg('entry.notAValue', { value }));
     }
     if (this.valueOf(cell) !== null) {
-      throw new EntryError(`Cell ${cell.getName()} has a value; clear it to make notes.`);
+      throw new EntryError(msg('entry.hasValue', { cell: cell.getName() }));
     }
     this.perform(() => {
       const notes = new Set(this.notes.get(cell) ?? []);

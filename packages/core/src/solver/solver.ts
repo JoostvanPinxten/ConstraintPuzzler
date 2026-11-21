@@ -1,6 +1,7 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { ValueSource, type Cell } from '../structure/cell';
 import { Deduction, DeductionLog } from '../structure/deduction';
+import { msg } from '../i18n/message';
 import { ContradictionError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
 import type { Finding, Technique, TechniqueClass } from '../techniques/technique';
@@ -342,7 +343,7 @@ export class Solver {
     try {
       yield* this.propagateSteps();
       if (this.allowGuessing && !this.puzzle.isSolved() && !(yield* this.searchSteps())) {
-        throw new ContradictionError('No solution found, all guesses lead to a contradiction');
+        throw new ContradictionError(msg('solver.allGuessesFail'));
       }
     } catch (error) {
       this.puzzle.restoreState(initialState);
@@ -399,7 +400,7 @@ export class Solver {
     const allowGuessing = this.allowGuessing;
     try {
       const count = yield* this.countSolutionsSteps(2);
-      if (count === 0) throw new ContradictionError('The puzzle has no solution');
+      if (count === 0) throw new ContradictionError(msg('solver.noSolution'));
       this.allowGuessing = true;
       yield* this.solveSteps();
       return { solution: this.puzzle.saveState(), unique: count === 1 };
