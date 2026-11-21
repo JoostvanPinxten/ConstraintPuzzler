@@ -112,7 +112,7 @@ export function Toolbar({
         disabled={!session.canRedo()}
       />
       <Button
-        label={session.hintLabel()}
+        label={t(session.hintLabel())}
         onPress={() => session.hint(settings)}
         disabled={busy}
         testID="hint"

@@ -12,6 +12,13 @@ import {
 import { openExample, openText } from '../puzzles/open';
 import { HighlightRole } from './highlight';
 import { DEFAULT_SETTINGS, PuzzleSession } from './session';
+import { i18n } from '../i18n';
+import { formatUi, type UiMessage } from './messages';
+
+/** A session message as the player reads it (in English under Jest). */
+function text(message: UiMessage | null | undefined): string | null {
+  return message == null ? null : formatUi(message);
+}
 
 const EASY = (): PuzzleSession => openExample('sudoku', 'Easy');
 const cellAt = (session: PuzzleSession, x: number, y: number): Cell =>
@@ -90,7 +97,7 @@ describe('entering values', () => {
     session.selectCell(last);
     session.typeDigit(solutionOf(last)?.getValue() as number);
     expect(session.finishedCount).toBe(1);
-    expect(session.inputMessage).toBe('Solved!');
+    expect(text(session.inputMessage)).toBe('Solved!');
 
     session.undo();
     session.redo();
@@ -118,7 +125,7 @@ describe('entering values', () => {
     session.selectCell(given);
     session.pressKey('3');
     expect(given.getValue()).toBe(6);
-    expect(session.inputMessage).toMatch(/given/);
+    expect(text(session.inputMessage)).toMatch(/given/);
   });
 
   it('shows a mistake in red with the cells it clashes with', () => {
@@ -176,7 +183,7 @@ describe('entering values', () => {
       session.selectCell(cell);
       session.typeDigit(found.cells[i]?.value as number);
     }
-    expect(session.inputMessage).toBe('Solved!');
+    expect(text(session.inputMessage)).toBe('Solved!');
   });
 
   it('undoes and redoes, and tells subscribers', () => {
@@ -220,25 +227,25 @@ describe('highlighting', () => {
 describe('hints', () => {
   it('reveals the region, then the cell, then the value', () => {
     const session = EASY();
-    expect(session.hintLabel()).toBe('Hint');
+    expect(i18n.t(session.hintLabel())).toBe('Hint');
     session.hint();
     expect(session.hints.level).toBe(REGION);
     expect(session.hintRegion.size).toBeGreaterThan(0);
     expect(session.selection).toBeNull();
-    expect(session.hintLabel()).toBe('Hint: which cell?');
+    expect(i18n.t(session.hintLabel())).toBe('Hint: which cell?');
     expect(session.highlight().get([...session.hintRegion][0]!)).toBe(HighlightRole.HINT);
 
     session.hint();
     expect(session.hints.level).toBe(CELL);
     const deduction = session.hints.deduction!;
     expect(session.selectedCell()).toBe(deduction.cell);
-    expect(session.stepMessage).toContain(deduction.cell.getName());
-    expect(session.hintLabel()).toBe('Hint: show value');
+    expect(text(session.stepMessage)).toContain(deduction.cell.getName());
+    expect(i18n.t(session.hintLabel())).toBe('Hint: show value');
 
     session.hint();
     expect(session.hints.level).toBe(VALUE);
-    expect(session.stepMessage).toBe(`Hint: ${session.hints.message()}`);
-    expect(session.stepMessage).toContain(deduction.describe());
+    expect(text(session.stepMessage)).toBe(`Hint: ${session.hints.message()}`);
+    expect(text(session.stepMessage)).toContain(deduction.describe());
     expect(deduction.cell.hasValue()).toBe(false); // nothing is filled in
   });
 
@@ -338,7 +345,7 @@ describe('hints', () => {
     ]);
     const roles = session.highlight();
     expect(session.hintReasons.size).toBe(10); // 4 in row 7, 3 in column 5, 3 more in block 8
-    expect(session.stepMessage).toContain(
+    expect(text(session.stepMessage)).toContain(
       'Row 7 has 5, 7, 6 and 8; Column 5 has 6, 9 and 3; Block 8 also has 1, 5 and 2.',
     );
     for (const cell of session.hintReasons) expect(roles.get(cell)).toBe(HighlightRole.REASON);
@@ -366,7 +373,7 @@ describe('hints', () => {
     const session = openExample('sudoku', 'Easy');
     session.solver.solve();
     session.hint();
-    expect(session.notice?.title).toBe('No hint');
+    expect(text(session.notice?.title)).toBe('No hint');
     session.dismissNotice();
     expect(session.notice).toBeNull();
   });
@@ -380,7 +387,7 @@ describe('solver steps', () => {
     expect(session.puzzle.getNumberOfOpenCells()).toBe(open - 1);
     const step = session.solver.lastStep!;
     expect(session.selectedCell()).toBe(step.cell);
-    expect(session.stepMessage).toBe(`Solver step: ${step.describe()}`);
+    expect(text(session.stepMessage)).toBe(`Solver step: ${step.describe()}`);
     expect(session.canUndo()).toBe(true);
   });
 
@@ -395,8 +402,8 @@ describe('solver steps', () => {
   it('says when a step makes no progress', () => {
     const session = openExample('sudoku', 'Hard');
     for (let i = 0; i < 200 && session.notice === null; i++) session.solveStep();
-    expect(session.notice?.title).toBe('No progress');
-    expect(session.notice?.text).toContain('Allow guessing');
+    expect(text(session.notice?.title)).toBe('No progress');
+    expect(text(session.notice?.text)).toContain('Allow guessing');
   });
 });
 
@@ -417,7 +424,7 @@ describe('solving in the background', () => {
     expect(session.solving).toBe('solve');
     session.selectCell(cellAt(session, 0, 0));
     session.typeDigit(1);
-    expect(session.inputMessage).toMatch(/busy/);
+    expect(text(session.inputMessage)).toMatch(/busy/);
     expect(session.puzzle.saveState()).toEqual(before);
     await solving;
     expect(session.puzzle.isSolved()).toBe(true);
@@ -429,7 +436,7 @@ describe('solving in the background', () => {
     for (let i = 0; i < 200 && session.notice === null; i++) {
       session.solveStep();
       if (session.solver.lastStep === null && session.stepMessage !== null) {
-        messages.push(session.stepMessage);
+        messages.push(text(session.stepMessage) ?? '');
       }
     }
     expect(
@@ -473,27 +480,27 @@ describe('solving in the background', () => {
     const finding = session.hints.finding!;
     expect(session.shownFinding).toBe(finding);
     expect(session.notice).toBeNull();
-    expect(session.stepMessage).toBe(
+    expect(text(session.stepMessage)).toBe(
       `Hint: Look at where ${finding.value} can go in ${finding.groups
         .map((g) => g.getName())
         .join(' and ')} (${finding.technique.getType()}).`,
     );
-    expect(session.hintLabel()).toBe('Hint: show pattern');
+    expect(i18n.t(session.hintLabel())).toBe('Hint: show pattern');
     expect(session.hintPattern.size).toBe(0);
 
     session.hint();
-    expect(session.hintLabel()).toBe('Hint: what goes?');
+    expect(i18n.t(session.hintLabel())).toBe('Hint: what goes?');
     expect(session.hintPattern).toEqual(new Set(finding.pattern));
     expect(session.hintRuledOut.size).toBe(0);
 
     session.hint({ ...DEFAULT_SETTINGS, showHints: false });
-    expect(session.hintLabel()).toBe('Hint');
+    expect(i18n.t(session.hintLabel())).toBe('Hint');
     expect(session.hintReasonGroups).toEqual(new Set(finding.cover));
     expect(session.hintRuledOut).toEqual(new Set(finding.targets));
-    expect(session.stepMessage).toContain(finding.reason);
-    expect(session.stepMessage).toMatch(/turn on Show hints to see them/);
+    expect(text(session.stepMessage)).toContain(finding.reason);
+    expect(text(session.stepMessage)).toMatch(/turn on Show hints to see them/);
     session.hint({ ...DEFAULT_SETTINGS, showHints: true });
-    expect(session.stepMessage).not.toMatch(/Show hints/);
+    expect(text(session.stepMessage)).not.toMatch(/Show hints/);
     expect(session.puzzle.saveState()).toEqual(before);
 
     // Step does what the hint said
@@ -507,7 +514,7 @@ describe('solving in the background', () => {
     const session = openExample('sudoku', 'Hard');
     await session.solve(DEFAULT_SETTINGS);
     expect(session.puzzle.isSolved()).toBe(false);
-    expect(session.stepMessage).toMatch(/Allow guessing/);
+    expect(text(session.stepMessage)).toMatch(/Allow guessing/);
   });
 
   it('can be cancelled', async () => {
@@ -516,7 +523,7 @@ describe('solving in the background', () => {
     const solving = session.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
     void session.solve(); // pressing Solve again cancels
     await solving;
-    expect(session.stepMessage).toBe('Solving was cancelled.');
+    expect(text(session.stepMessage)).toBe('Solving was cancelled.');
     expect(session.puzzle.saveState()).toEqual(before);
     expect(session.canUndo()).toBe(false);
   });
@@ -529,7 +536,7 @@ describe('solving in the background', () => {
     expect(session.game.isMistake(cellAt(session, 0, 0))).toBe(false);
     const before = session.puzzle.saveState();
     await session.solve({ ...DEFAULT_SETTINGS, allowGuessing: true });
-    expect(session.notice?.title).toBe('Puzzle cannot be solved');
+    expect(text(session.notice?.title)).toBe('Puzzle cannot be solved');
     expect(session.puzzle.saveState()).toEqual(before);
   });
 });
@@ -538,7 +545,7 @@ describe('check', () => {
   it('finds the solution once and reports correct entries', async () => {
     const session = EASY();
     await session.check();
-    expect(session.notice?.text).toContain('Nothing is filled in');
+    expect(text(session.notice?.text)).toContain('Nothing is filled in');
     expect(session.game.solution).not.toBeNull();
   });
 
@@ -550,7 +557,7 @@ describe('check', () => {
     session.selectCell(topLeft);
     session.typeDigit(right === 4 ? 7 : 4);
     await session.check();
-    expect(session.notice?.text).toContain('1 of 1 filled-in cells are wrong');
+    expect(text(session.notice?.text)).toContain('1 of 1 filled-in cells are wrong');
     session.notice?.confirm?.action();
     expect(session.checkMarks).toEqual(new Set([topLeft]));
     // the selected cell keeps its (stronger) selection colour

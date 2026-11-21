@@ -20,6 +20,13 @@ import { resolveLanguage } from '../logic/language';
 
 export const APP_NAMESPACE = 'app';
 
+type BaseKey<K> = K extends `${infer Base}_${'zero' | 'one' | 'two' | 'few' | 'many' | 'other'}`
+  ? Base
+  : K;
+
+/** A key of the app's catalog (without the plural suffix). */
+export type AppKey = BaseKey<keyof typeof en>;
+
 /** The app's catalogs per language. */
 export const APP_RESOURCES: Readonly<Record<Language, Readonly<Record<string, string>>>> = {
   en,

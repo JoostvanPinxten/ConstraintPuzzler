@@ -3,6 +3,7 @@
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { formatUi } from '../logic/messages';
 import type { PuzzleSession } from '../logic/session';
 import { COLORS } from '../theme';
 import { useSession } from '../useSession';
@@ -17,12 +18,12 @@ export function NoticeDialog({ session }: { session: PuzzleSession }) {
     <Modal transparent animationType="fade" onRequestClose={() => session.dismissNotice()}>
       <View style={styles.backdrop}>
         <View style={styles.dialog} accessibilityRole="alert" testID="notice">
-          <Text style={styles.title}>{notice.title}</Text>
-          <Text style={styles.text}>{notice.text}</Text>
+          <Text style={styles.title}>{formatUi(notice.title)}</Text>
+          <Text style={styles.text}>{formatUi(notice.text)}</Text>
           <View style={styles.buttons}>
             {notice.confirm !== undefined && (
               <Button
-                label={notice.confirm.label}
+                label={formatUi(notice.confirm.label)}
                 primary
                 onPress={() => {
                   const action = notice.confirm?.action;

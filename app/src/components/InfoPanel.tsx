@@ -13,6 +13,7 @@ import {
   roleColor,
   RULED_OUT_COLOR,
 } from '../logic/highlight';
+import { formatUi } from '../logic/messages';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
 import { PlacementsView } from './PlacementsView';
@@ -40,15 +41,16 @@ export function InfoPanel({
   return (
     <View style={styles.panel} testID="info">
       {selection === null && session.stepMessage === null && (
-        <Text style={styles.muted}>
-          Tap a cell in the puzzle, or select a cell, group or rule in the list, to see its cells
-          and rules.
-        </Text>
+        <Text style={styles.muted}>{t('info.empty')}</Text>
       )}
       {selection !== null && <Description session={session} showHints={settings.showHints} />}
       {note !== null && <Text style={styles.error}>{note}</Text>}
-      {session.inputMessage !== null && <Text style={styles.error}>{session.inputMessage}</Text>}
-      {session.stepMessage !== null && <Text style={styles.italic}>{session.stepMessage}</Text>}
+      {session.inputMessage !== null && (
+        <Text style={styles.error}>{formatUi(session.inputMessage)}</Text>
+      )}
+      {session.stepMessage !== null && (
+        <Text style={styles.italic}>{formatUi(session.stepMessage)}</Text>
+      )}
       {session.hintPlacements !== null && (
         <PlacementsView session={session} diagram={session.hintPlacements} />
       )}
