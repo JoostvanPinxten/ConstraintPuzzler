@@ -44,3 +44,4 @@ export { IntersectionRemoval } from './techniques/intersection';
 export { Technique, type Finding, type TechniqueClass } from './techniques/technique';
 export { TECHNIQUES } from './techniques/techniques';
 export * from './structure/types';
+export * from './i18n/message';
