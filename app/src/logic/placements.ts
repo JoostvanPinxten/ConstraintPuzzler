@@ -4,6 +4,8 @@
  */
 import { BLANK, type PlacementDiagram, type Value } from '@constraintpuzzler/core';
 
+import { i18n } from '../i18n';
+
 /**
  * What the picture shows, e.g. "The column now, then every place block 1 can go: each covers
  * the outlined cell." `valueName` names a colour (Puzzle.valueName).
@@ -12,8 +14,7 @@ export function placementsCaption(
   diagram: PlacementDiagram,
   valueName: (value: Value) => string,
 ): string {
-  const line = diagram.vertical ? 'column' : 'row';
-  const now = `The ${line} now (grey: open), then`;
+  const line = i18n.t(diagram.vertical ? 'placements.column' : 'placements.row');
   if (diagram.block !== null) {
     const others = diagram.rows.some((row, r) => {
       const span = diagram.spans?.[r];
@@ -21,21 +22,23 @@ export function placementsCaption(
         span !== undefined &&
         row.some((v, j) => v !== null && v !== BLANK && (j < span[0] || j > span[1]))
       );
-    })
-      ? ', with the other blocks (pale) pushed as far from it as they fit'
-      : '';
-    return `${now} every place block ${diagram.block + 1} can go${others}: each covers the outlined cell.`;
+    });
+    return i18n.t(others ? 'placements.blockOthers' : 'placements.block', {
+      line,
+      block: diagram.block + 1,
+    });
   }
   const shown = diagram.rows.length;
+  const total = diagram.total;
   const ways =
-    diagram.total === 1
-      ? 'the only way its blocks fit'
-      : shown < diagram.total
-        ? `${shown} of the ${diagram.total} ways its blocks fit`
-        : `the ${diagram.total} ways its blocks fit`;
+    total === 1
+      ? i18n.t('placements.waysOnly')
+      : shown < total
+        ? i18n.t('placements.waysSome', { shown, total })
+        : i18n.t('placements.waysAll', { total });
   const outcome =
     diagram.value !== null
-      ? `${diagram.total === 1 ? 'it makes' : 'every one makes'} the outlined cell ${valueName(diagram.value)}`
-      : `${diagram.total === 1 ? 'it does not give' : 'none gives'} the outlined cell the removed colour`;
-  return `${now} ${ways}: ${outcome}.`;
+      ? i18n.t('placements.makes', { count: total, value: valueName(diagram.value) })
+      : i18n.t('placements.excludes', { count: total });
+  return i18n.t('placements.ways', { line, ways, outcome });
 }

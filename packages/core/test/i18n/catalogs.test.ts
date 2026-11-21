@@ -8,32 +8,17 @@ import {
   DEFAULT_LANGUAGE,
   LANGUAGES,
   baseKey,
+  catalogProblems,
   englishTranslate,
   formatMessage,
   interpolate,
   lookup,
   msg,
+  placeholders,
   valueList,
   type Language,
   type MessageKey,
 } from '../../src/i18n/message';
-
-const PLACEHOLDER = /\{\{(\w+)\}\}/g;
-
-function placeholders(template: string): string[] {
-  return [...template.matchAll(PLACEHOLDER)].map((match) => match[1] as string).sort();
-}
-
-/** The base keys of a catalog with the placeholders of all their forms. */
-function shape(catalog: Readonly<Record<string, string>>): Map<string, string[]> {
-  const result = new Map<string, Set<string>>();
-  for (const [key, template] of Object.entries(catalog)) {
-    const names = result.get(baseKey(key)) ?? new Set<string>();
-    for (const name of placeholders(template)) names.add(name);
-    result.set(baseKey(key), names);
-  }
-  return new Map([...result].map(([key, names]) => [key, [...names].sort()]));
-}
 
 /** Sample parameters for a template: `count` as a number, the rest as text. */
 function sampleParams(template: string, count: number): Record<string, string | number> {
@@ -43,39 +28,32 @@ function sampleParams(template: string, count: number): Record<string, string | 
 }
 
 describe('the message catalogs', () => {
-  const english = shape(CORE_RESOURCES[DEFAULT_LANGUAGE]);
-
   for (const { code } of LANGUAGES) {
-    const catalog = CORE_RESOURCES[code];
-
-    it(`${code}: has every message, with the same placeholders`, () => {
-      expect(shape(catalog)).toEqual(english);
-    });
-
-    it(`${code}: has every plural form the language needs`, () => {
-      const forms = new Intl.PluralRules(code).resolvedOptions().pluralCategories;
-      for (const key of Object.keys(catalog)) {
-        if (baseKey(key) === key) continue;
-        for (const form of forms) {
-          // English and Dutch need only "one" and "other"; "zero" etc. are optional extras
-          if (form === 'one' || form === 'other') {
-            expect(catalog, `${code}: ${baseKey(key)}_${form}`).toHaveProperty(
-              `${baseKey(key)}_${form}`,
-            );
-          }
-        }
-      }
-    });
-
-    it(`${code}: uses only {{param}} placeholders and plural keys`, () => {
-      for (const [key, template] of Object.entries(catalog)) {
-        expect(template, key).not.toContain('$t(');
-        const braces = template.match(/\{\{[^}]*\}\}/g) ?? [];
-        for (const brace of braces) expect(brace, key).toMatch(/^\{\{\w+\}\}$/);
-        expect(key, key).toMatch(/^[\w.]+$/);
-      }
+    it(`${code}: is complete and uses only the supported syntax`, () => {
+      expect(catalogProblems(CORE_RESOURCES[DEFAULT_LANGUAGE], CORE_RESOURCES[code])).toEqual([]);
     });
   }
+
+  it('reports what is wrong with a translation', () => {
+    const english = { a: '{{x}} a', b_one: 'one', b_other: '{{count}} b' };
+    expect(
+      catalogProblems(english, {
+        a: '{{y}} {{ z }}',
+        b_other: '{{count}}',
+        c: 'x',
+        'd e': '$t(a)',
+      }),
+    ).toEqual([
+      "'a' has {{y}}, expected {{x}}",
+      "unknown 'c'",
+      "unknown 'd e'",
+      "'a': only {{name}}, not {{ z }}",
+      "'b' lacks the plural form 'one'",
+      "'d e': keys are letters, digits, _ and .",
+      "'d e': no $t() nesting",
+    ]);
+    expect(catalogProblems(english, {})).toEqual(["missing 'a'", "missing 'b'"]);
+  });
 
   it('the English formatter gives the same text as i18next', async () => {
     const i18n = i18next.createInstance();

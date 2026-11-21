@@ -1,5 +1,6 @@
 // How far the puzzle is filled in: a bar plus "filled / total" of the cells that were open.
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { PuzzleSession } from '../logic/session';
 import { COLORS } from '../theme';
@@ -7,6 +8,7 @@ import { useSession } from '../useSession';
 
 export function ProgressBar({ session }: { session: PuzzleSession }) {
   useSession(session);
+  const { t } = useTranslation();
   const { filled, total } = session.progress();
   const fraction = total === 0 ? 1 : filled / total;
   const percent = Math.round(fraction * 100);
@@ -17,8 +19,13 @@ export function ProgressBar({ session }: { session: PuzzleSession }) {
       style={styles.row}
       testID="progress"
       accessibilityRole="progressbar"
-      accessibilityLabel="Cells filled in"
-      accessibilityValue={{ min: 0, max: total, now: filled, text: `${filled} of ${total}` }}
+      accessibilityLabel={t('screen.progress')}
+      accessibilityValue={{
+        min: 0,
+        max: total,
+        now: filled,
+        text: t('screen.progressValue', { filled, total }),
+      }}
     >
       <View style={styles.track}>
         <View

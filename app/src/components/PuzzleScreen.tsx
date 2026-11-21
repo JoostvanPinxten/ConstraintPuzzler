@@ -3,6 +3,7 @@
 import type { TechniqueId } from '@constraintpuzzler/core';
 import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { PuzzleSession } from '../logic/session';
 import { COLORS } from '../theme';
@@ -50,6 +51,7 @@ export function PuzzleScreen({
   active?: boolean;
 }) {
   useSession(session);
+  const { t } = useTranslation();
   const [showParts, setShowParts] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   // the Rules dialog: closed (null), or open at a technique (or at the top, null)
@@ -114,7 +116,7 @@ export function PuzzleScreen({
         {controls}
         {info}
         <Button
-          label={showParts ? 'Hide groups and rules' : 'Show groups and rules'}
+          label={t(showParts ? 'screen.hideParts' : 'screen.showParts')}
           onPress={() => setShowParts(!showParts)}
         />
         {showParts && (

@@ -6,6 +6,7 @@
  */
 import { CellGreaterThanCellConstraint, type Cell, type Puzzle } from '@constraintpuzzler/core';
 
+import { i18n } from '../i18n';
 import { selectionCells, type Selection } from './tree';
 
 /** How a cell takes part in the selection. A higher value wins when roles overlap. */
@@ -52,31 +53,25 @@ const ROLE_RGBA: Record<HighlightRole, [number, number, number, number]> = {
   [HighlightRole.SELECTED]: [255, 190, 0, 190],
 };
 
-export const ROLE_LABELS: Partial<Record<HighlightRole, string>> = {
-  [HighlightRole.PEER]: 'shares a group with the cell',
-  [HighlightRole.HINT]: 'where to look',
-  [HighlightRole.PATTERN]: 'where the value can still go',
-  [HighlightRole.OPEN]: 'open cell',
-  [HighlightRole.SOLVED]: 'solved cell',
-  [HighlightRole.LESSER]: 'smaller cell',
-  [HighlightRole.GREATER]: 'larger cell',
-  [HighlightRole.REASON]: 'number that leads to the hint',
-  [HighlightRole.WRONG]: 'wrong according to Check',
-  [HighlightRole.SELECTED]: 'selected cell',
-};
+/** The catalog keys of the legend labels (i18n/locales/<language>/app.json). */
+export const ROLE_LABELS = {
+  [HighlightRole.PEER]: 'legend.peer',
+  [HighlightRole.HINT]: 'legend.hint',
+  [HighlightRole.PATTERN]: 'legend.pattern',
+  [HighlightRole.OPEN]: 'legend.open',
+  [HighlightRole.SOLVED]: 'legend.solved',
+  [HighlightRole.LESSER]: 'legend.lesser',
+  [HighlightRole.GREATER]: 'legend.greater',
+  [HighlightRole.REASON]: 'legend.reason',
+  [HighlightRole.WRONG]: 'legend.wrong',
+  [HighlightRole.SELECTED]: 'legend.selected',
+} as const satisfies Partial<Record<HighlightRole, string>>;
 
-/** The legend label of the hatched cells (see PuzzleSession.hintRuledOut). */
-export const RULED_OUT_LABEL = 'value ruled out by a highlighted number';
-/** The colour of the hatching. */
+/** The colour of the hatching of ruled out values (see PuzzleSession.hintRuledOut). */
 export const RULED_OUT_COLOR = '#4a5560';
 
-/** The legend label and colour of the border around the groups behind a hint. */
-export const REASON_GROUP_LABEL = 'group through which a number rules a value out';
+/** The colour of the border around the groups behind a hint. */
 export const REASON_GROUP_COLOR = '#00869a';
-
-/** The same, when a technique (e.g. an X-Wing) is shown: its cover groups and their targets. */
-export const TECHNIQUE_GROUP_LABEL = 'group that cannot hold the value outside the pattern';
-export const TECHNIQUE_RULED_OUT_LABEL = 'value ruled out by the pattern';
 
 /** The opaque colour (#rrggbb) a role shows on the white board. */
 export function roleColor(role: HighlightRole): string {
@@ -138,8 +133,8 @@ export function legend(roles: Iterable<HighlightRole>): { color: string; label: 
   return (
     [...new Set(roles)]
       // a role without a label (REASON_GROUP) has its own entry, with the border
-      .filter((role) => ROLE_LABELS[role] !== undefined)
+      .filter((role): role is keyof typeof ROLE_LABELS => role in ROLE_LABELS)
       .sort((a, b) => b - a)
-      .map((role) => ({ color: roleColor(role), label: ROLE_LABELS[role] as string }))
+      .map((role) => ({ color: roleColor(role), label: i18n.t(ROLE_LABELS[role]) }))
   );
 }
