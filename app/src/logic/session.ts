@@ -34,7 +34,17 @@ import {
 
 import { HighlightRole, highlightRoles, mergeRole } from './highlight';
 import type { Selection } from './tree';
+import type { AppKey } from '../i18n';
 import type { LanguageSetting } from './language';
+import {
+  BUSY,
+  contradictionNotice,
+  narrowingMessage,
+  plain,
+  ui,
+  type Notice,
+  type UiMessage,
+} from './messages';
 
 export interface Settings {
   /** show the solver's candidates in open cells and in descriptions */
@@ -58,16 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'system',
 };
 
-/** A message for the user, shown as a dialog; with `confirm`, the dialog offers an action. */
-export interface Notice {
-  readonly title: string;
-  readonly text: string;
-  readonly confirm?: { readonly label: string; readonly action: () => void };
-}
-
 export type SolvingJob = 'solve' | 'check';
-
-const BUSY = 'The solver is busy; wait for it or cancel it first.';
 
 export class PuzzleSession {
   readonly puzzle: Puzzle;
@@ -97,9 +98,9 @@ export class PuzzleSession {
   /** the cells Check found to be wrong (after the user asked to see them) */
   checkMarks = new Set<Cell>();
   /** about the last input, e.g. why a value was refused, or "Solved!" */
-  inputMessage: string | null = null;
+  inputMessage: UiMessage | null = null;
   /** about the last hint, solver step, Solve or Check */
-  stepMessage: string | null = null;
+  stepMessage: UiMessage | null = null;
   /**
    * the technique behind the stepMessage, to explain it ("About this technique"): the hint's
    * at its last level, or the solver step's; null for other messages
@@ -344,10 +345,10 @@ export class PuzzleSession {
       this.inputMessage = null;
     } catch (error) {
       if (!(error instanceof EntryError)) throw error;
-      this.inputMessage = error.message;
+      this.inputMessage = plain(error.message);
     }
     if (this.game.isSolved(this.violations())) {
-      this.inputMessage = 'Solved!';
+      this.inputMessage = ui('session.solved');
       if (!wasSolved) this.finishedCount++;
     }
     this.changed();
@@ -377,29 +378,26 @@ export class PuzzleSession {
   // --- guidance --------------------------------------------------------------------------
 
   /** Show a message about a hint or step, with the technique behind it (if any). */
-  private say(message: string | null, technique: TechniqueId | null = null): void {
+  private say(message: UiMessage | null, technique: TechniqueId | null = null): void {
     this.stepMessage = message;
     this.stepTechnique = message === null ? null : technique;
   }
 
-  /** The text of the Hint button: what the next press reveals. */
-  hintLabel(): string {
+  /** The text of the Hint button (a catalog key): what the next press reveals. */
+  hintLabel(): AppKey {
     if (this.hints.finding !== null) {
-      if (this.hints.level === REGION) return 'Hint: show pattern';
-      if (this.hints.level === CELL) return 'Hint: what goes?';
-      return 'Hint';
+      if (this.hints.level === REGION) return 'hint.showPattern';
+      if (this.hints.level === CELL) return 'hint.whatGoes';
+      return 'hint.button';
     }
-    if (this.hints.deduction === null) return 'Hint';
-    if (this.hints.level === REGION) return 'Hint: which cell?';
-    if (this.hints.level === CELL) return 'Hint: show value';
-    return 'Hint';
+    if (this.hints.deduction === null) return 'hint.button';
+    if (this.hints.level === REGION) return 'hint.whichCell';
+    if (this.hints.level === CELL) return 'hint.showValue';
+    return 'hint.button';
   }
 
   private contradiction(error: ContradictionError): void {
-    this.notice = {
-      title: 'Puzzle cannot be solved',
-      text: `The solver ran into a contradiction:\n\n${error.message}`,
-    };
+    this.notice = contradictionNotice(error);
   }
 
   /**
@@ -420,12 +418,7 @@ export class PuzzleSession {
       return;
     }
     if (hint === null) {
-      this.notice = {
-        title: 'No hint',
-        text:
-          'No value follows from a single round of the rules, and no technique applies.' +
-          ' Use Step to narrow down the candidates, or Solve.',
-      };
+      this.notice = { title: ui('notice.noHintTitle'), text: ui('notice.noHint') };
       this.resetGuidance();
       this.changed();
       return;
@@ -435,11 +428,11 @@ export class PuzzleSession {
       this.hintPlacements = null;
       this.inputMessage = null;
       // a technique works on the solver's candidates, which the user only sees with Show hints
-      const note =
+      const key =
         this.hints.level === VALUE && !settings.showHints
-          ? ' (This uses the candidates the solver keeps; turn on Show hints to see them.)'
-          : '';
-      this.say(`Hint: ${this.hints.message()}${note}`, this.revealedTechnique());
+          ? 'hint.messageCandidates'
+          : 'hint.message';
+      this.say(ui(key, { message: this.hints.message() }), this.revealedTechnique());
       this.changed();
       return;
     }
@@ -463,7 +456,7 @@ export class PuzzleSession {
     }
     this.hintPlacements = this.hints.level === VALUE ? placementsOf(this.hints.deduction) : null;
     this.inputMessage = null;
-    this.say(`Hint: ${this.hints.message()}`, this.revealedTechnique());
+    this.say(ui('hint.message', { message: this.hints.message() }), this.revealedTechnique());
     this.changed();
   }
 
@@ -490,11 +483,11 @@ export class PuzzleSession {
     const step = this.solver.lastStep;
     if (step !== null) {
       this.selection = { kind: 'cell', cell: step.cell };
-      this.say(`Solver step: ${step.describe()}`, step.techniqueId());
+      this.say(ui('step.message', { message: step.describe() }), step.techniqueId());
     } else if (changed) {
       const deductions = this.solver.log.deductions;
       this.say(
-        `Solver step: ${narrowingMessage(deductions)}`,
+        ui('step.message', { message: narrowingMessage(deductions) }),
         deductions[0]?.techniqueId() ?? null,
       );
       const finding = findingOf(deductions);
@@ -502,12 +495,8 @@ export class PuzzleSession {
     }
     if (!changed) {
       this.notice = {
-        title: 'No progress',
-        text:
-          'A deduction step does not change the puzzle any further.' +
-          (settings.allowGuessing
-            ? ' Use Solve to continue by guessing.'
-            : ' Turn on Allow guessing and use Solve to continue.'),
+        title: ui('notice.noProgressTitle'),
+        text: ui(settings.allowGuessing ? 'notice.noProgressGuessing' : 'notice.noProgress'),
       };
     }
     // solveStep returns early on a solved puzzle, so this step finished it
@@ -535,7 +524,7 @@ export class PuzzleSession {
       this.game.applySolution(copy.saveState());
       this.resetGuidance();
       this.inputMessage = null;
-      this.say(solved ? null : 'The solver got stuck; try Allow guessing.');
+      this.say(solved ? null : ui('step.stuck'));
     });
   }
 
@@ -567,21 +556,16 @@ export class PuzzleSession {
     const solution = this.game.solution;
     if (solution === null) return;
     if (!this.game.solutionIsUnique) {
-      this.notice = {
-        title: 'Check',
-        text:
-          'This puzzle has more than one solution, so the values cannot be checked against' +
-          ' the solution; only values that break a rule are shown (in red).',
-      };
+      this.notice = { title: ui('check.title'), text: ui('check.notUnique') };
     } else {
       const result = this.game.check(solution);
       const marks = new Set([...result.wrongValues, ...result.wrongNotes]);
       this.notice = result.isAllCorrect()
-        ? { title: 'Check', text: result.summary() }
+        ? { title: ui('check.title'), text: plain(result.summary()) }
         : {
-            title: 'Check',
-            text: result.summary(),
-            confirm: { label: 'Show them', action: () => this.showCheckMarks(marks) },
+            title: ui('check.title'),
+            text: plain(result.summary()),
+            confirm: { label: ui('check.showThem'), action: () => this.showCheckMarks(marks) },
           };
     }
     this.changed();
@@ -589,7 +573,7 @@ export class PuzzleSession {
 
   showCheckMarks(cells: Set<Cell>): void {
     this.checkMarks = cells;
-    this.say('Check: the cells marked in red are wrong.');
+    this.say(ui('check.marked'));
     this.changed();
   }
 
@@ -610,7 +594,7 @@ export class PuzzleSession {
       return await work(abort.signal);
     } catch (error) {
       if (error instanceof SolveCancelled) {
-        this.say(job === 'solve' ? 'Solving was cancelled.' : 'Check was cancelled.');
+        this.say(ui(job === 'solve' ? 'step.solveCancelled' : 'step.checkCancelled'));
       } else if (error instanceof ContradictionError) {
         this.contradiction(error);
       } else {
@@ -630,18 +614,6 @@ function placementsOf(deduction: Deduction | null): PlacementDiagram | null {
   const cause = deduction?.cause;
   if (deduction == null || !(cause instanceof RunsConstraint)) return null;
   return cause.placementDiagram(deduction);
-}
-
-/**
- * What a step that only removed candidates did: the first reason, and how many candidates
- * went, e.g. after an X-Wing.
- */
-export function narrowingMessage(deductions: readonly Deduction[]): string {
-  const removed = deductions.reduce((n, d) => n + d.removed.size, 0);
-  const reasons = [...new Set(deductions.map((d) => d.reason()))];
-  const more = reasons.length > 1 ? ` (and ${reasons.length - 1} more)` : '';
-  const what = removed === 1 ? '1 candidate' : `${removed} candidates`;
-  return `removed ${what}. ${reasons[0] ?? ''}${more}.`;
 }
 
 /** The technique finding behind a step's removals, if a technique made them. */

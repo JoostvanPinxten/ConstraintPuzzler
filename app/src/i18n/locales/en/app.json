@@ -1,7 +1,6 @@
 {
   "tabs.puzzles": "Puzzles",
   "tabs.close": "Close {{title}}",
-
   "start.tagline": "Solve number puzzles by deduction, with hints that explain the next step, or watch the solver do it.",
   "start.featureHints": "Hints that explain why",
   "start.featureSteps": "Solve step by step",
@@ -15,14 +14,12 @@
   "start.play": "Play {{type}} ({{example}})",
   "start.openFile": "Open file…",
   "start.openError": "The file is not a valid puzzle: {{error}}",
-
   "rule.sudoku": "1 to 9 once in every row, column and 3×3 box.",
   "rule.kakuro": "Fill the runs so they add up to their clues, without repeating a digit.",
   "rule.futoshiki": "A Latin square: every row and column once, and every < and > holds.",
   "rule.jidoku": "Sudoku without given numbers: only < and > between neighbours in a box.",
   "rule.sumbrero": "Follow each clue's triangle: the hexagons in that direction add up to the clue, without repeating a digit.",
   "rule.nonogram": "Fill in cells so every row and column has blocks of the lengths of its clue, in that order.",
-
   "toolbar.undo": "Undo",
   "toolbar.redo": "Redo",
   "toolbar.step": "Step",
@@ -39,9 +36,7 @@
   "pad.notes": "Notes",
   "pad.notesOn": "Notes mode on",
   "pad.notesOff": "Notes mode off",
-
   "dialog.close": "Close",
-
   "help.title": "How to play",
   "help.values": "Values",
   "help.values1": "Tap a cell (or use the arrow keys), then tap a number or type it to enter it.",
@@ -57,12 +52,10 @@
   "help.switches1": "Show hints: show the candidates that are left in open cells and in the descriptions.",
   "help.switches2": "Allow guessing: let Step and Solve guess when nothing follows from the rules.",
   "help.switches3": "Colour symbols (nonograms with several colours): draw a shape for every colour too, so colours that look alike can be told apart.",
-
   "guide.title": "{{type}}: rules and techniques",
   "guide.rules": "Rules",
   "guide.techniques": "Techniques, easiest first",
   "guide.link": "About this technique: {{technique}}",
-
   "screen.showParts": "Show groups and rules",
   "screen.hideParts": "Hide groups and rules",
   "screen.solving": "Solving…",
@@ -71,7 +64,6 @@
   "screen.progress": "Cells filled in",
   "tree.expand": "Expand {{label}}",
   "tree.collapse": "Collapse {{label}}",
-
   "legend.peer": "shares a group with the cell",
   "legend.hint": "where to look",
   "legend.pattern": "where the value can still go",
@@ -86,7 +78,6 @@
   "legend.reasonGroup": "group through which a number rules a value out",
   "legend.techniqueGroup": "group that cannot hold the value outside the pattern",
   "legend.techniqueRuledOut": "value ruled out by the pattern",
-
   "placements.row": "row",
   "placements.column": "column",
   "placements.block": "The {{line}} now (grey: open), then every place block {{block}} can go: each covers the outlined cell.",
@@ -98,5 +89,35 @@
   "placements.makes_one": "it makes the outlined cell {{value}}",
   "placements.makes_other": "every one makes the outlined cell {{value}}",
   "placements.excludes_one": "it does not give the outlined cell the removed colour",
-  "placements.excludes_other": "none gives the outlined cell the removed colour"
+  "placements.excludes_other": "none gives the outlined cell the removed colour",
+  "message.plain": "{{text}}",
+  "info.empty": "Tap a cell in the puzzle, or select a cell, group or rule in the list, to see its cells and rules.",
+  "session.busy": "The solver is busy; wait for it or cancel it first.",
+  "session.solved": "Solved!",
+  "hint.button": "Hint",
+  "hint.whichCell": "Hint: which cell?",
+  "hint.showValue": "Hint: show value",
+  "hint.showPattern": "Hint: show pattern",
+  "hint.whatGoes": "Hint: what goes?",
+  "hint.message": "Hint: {{message}}",
+  "hint.messageCandidates": "Hint: {{message}} (This uses the candidates the solver keeps; turn on Show hints to see them.)",
+  "step.message": "Solver step: {{message}}",
+  "step.narrowing_one": "removed {{count}} candidate. {{reason}}.",
+  "step.narrowing_other": "removed {{count}} candidates. {{reason}}.",
+  "step.narrowingMore_one": "removed {{count}} candidate. {{reason}} (and {{more}} more).",
+  "step.narrowingMore_other": "removed {{count}} candidates. {{reason}} (and {{more}} more).",
+  "step.stuck": "The solver got stuck; try Allow guessing.",
+  "step.solveCancelled": "Solving was cancelled.",
+  "step.checkCancelled": "Check was cancelled.",
+  "notice.contradictionTitle": "Puzzle cannot be solved",
+  "notice.contradiction": "The solver ran into a contradiction:\n\n{{error}}",
+  "notice.noHintTitle": "No hint",
+  "notice.noHint": "No value follows from a single round of the rules, and no technique applies. Use Step to narrow down the candidates, or Solve.",
+  "notice.noProgressTitle": "No progress",
+  "notice.noProgress": "A deduction step does not change the puzzle any further. Turn on Allow guessing and use Solve to continue.",
+  "notice.noProgressGuessing": "A deduction step does not change the puzzle any further. Use Solve to continue by guessing.",
+  "check.title": "Check",
+  "check.notUnique": "This puzzle has more than one solution, so the values cannot be checked against the solution; only values that break a rule are shown (in red).",
+  "check.showThem": "Show them",
+  "check.marked": "Check: the cells marked in red are wrong."
 }

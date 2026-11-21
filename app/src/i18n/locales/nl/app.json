@@ -1,7 +1,6 @@
 {
   "tabs.puzzles": "Puzzels",
   "tabs.close": "{{title}} sluiten",
-
   "start.tagline": "Los cijferpuzzels op door logisch te redeneren, met hints die de volgende stap uitleggen, of kijk hoe de oplosser het doet.",
   "start.featureHints": "Hints die uitleggen waarom",
   "start.featureSteps": "Stap voor stap oplossen",
@@ -15,14 +14,12 @@
   "start.play": "{{type}} spelen ({{example}})",
   "start.openFile": "Bestand openen…",
   "start.openError": "Het bestand is geen geldige puzzel: {{error}}",
-
   "rule.sudoku": "1 tot en met 9 één keer in elke rij, kolom en elk 3×3-blok.",
   "rule.kakuro": "Vul de reeksen zo dat ze optellen tot hun aanwijzing, zonder een cijfer te herhalen.",
   "rule.futoshiki": "Een Latijns vierkant: elk cijfer één keer per rij en kolom, en elke < en > klopt.",
   "rule.jidoku": "Sudoku zonder gegeven cijfers: alleen < en > tussen buren in een blok.",
   "rule.sumbrero": "Volg de driehoek van elke aanwijzing: de zeshoeken in die richting tellen op tot de aanwijzing, zonder een cijfer te herhalen.",
   "rule.nonogram": "Kleur vakjes zo dat elke rij en kolom blokken heeft met de lengtes van de aanwijzing, in die volgorde.",
-
   "toolbar.undo": "Ongedaan maken",
   "toolbar.redo": "Opnieuw",
   "toolbar.step": "Stap",
@@ -39,9 +36,7 @@
   "pad.notes": "Notities",
   "pad.notesOn": "Notitiemodus aan",
   "pad.notesOff": "Notitiemodus uit",
-
   "dialog.close": "Sluiten",
-
   "help.title": "Hoe speel je",
   "help.values": "Cijfers",
   "help.values1": "Tik op een vakje (of gebruik de pijltjestoetsen) en tik of typ dan een cijfer om het in te vullen.",
@@ -57,12 +52,10 @@
   "help.switches1": "Kandidaten tonen: laat de kandidaten zien die over zijn in open vakjes en in de beschrijvingen.",
   "help.switches2": "Gokken toestaan: laat Stap en Oplossen gokken als er niets uit de regels volgt.",
   "help.switches3": "Kleursymbolen (nonogrammen met meerdere kleuren): teken ook een vorm voor elke kleur, zodat kleuren die op elkaar lijken uit elkaar te houden zijn.",
-
   "guide.title": "{{type}}: regels en technieken",
   "guide.rules": "Regels",
   "guide.techniques": "Technieken, makkelijkste eerst",
   "guide.link": "Over deze techniek: {{technique}}",
-
   "screen.showParts": "Groepen en regels tonen",
   "screen.hideParts": "Groepen en regels verbergen",
   "screen.solving": "Bezig met oplossen…",
@@ -71,7 +64,6 @@
   "screen.progress": "Ingevulde vakjes",
   "tree.expand": "{{label}} uitklappen",
   "tree.collapse": "{{label}} inklappen",
-
   "legend.peer": "deelt een groep met het vakje",
   "legend.hint": "waar je moet kijken",
   "legend.pattern": "waar het cijfer nog kan staan",
@@ -86,7 +78,6 @@
   "legend.reasonGroup": "groep waardoor een cijfer een waarde uitsluit",
   "legend.techniqueGroup": "groep die de waarde niet buiten het patroon kan hebben",
   "legend.techniqueRuledOut": "waarde uitgesloten door het patroon",
-
   "placements.row": "rij",
   "placements.column": "kolom",
   "placements.block": "De {{line}} nu (grijs: open), en dan elke plek waar blok {{block}} kan staan: elk bedekt het omlijnde vakje.",
@@ -98,5 +89,35 @@
   "placements.makes_one": "die maakt het omlijnde vakje {{value}}",
   "placements.makes_other": "elk ervan maakt het omlijnde vakje {{value}}",
   "placements.excludes_one": "die geeft het omlijnde vakje niet de weggehaalde kleur",
-  "placements.excludes_other": "geen enkele geeft het omlijnde vakje de weggehaalde kleur"
+  "placements.excludes_other": "geen enkele geeft het omlijnde vakje de weggehaalde kleur",
+  "message.plain": "{{text}}",
+  "info.empty": "Tik op een vakje in de puzzel, of kies een vakje, groep of regel in de lijst, om de vakjes en regels ervan te zien.",
+  "session.busy": "De oplosser is bezig; wacht erop of annuleer hem eerst.",
+  "session.solved": "Opgelost!",
+  "hint.button": "Hint",
+  "hint.whichCell": "Hint: welk vakje?",
+  "hint.showValue": "Hint: toon cijfer",
+  "hint.showPattern": "Hint: toon patroon",
+  "hint.whatGoes": "Hint: wat valt af?",
+  "hint.message": "Hint: {{message}}",
+  "hint.messageCandidates": "Hint: {{message}} (Dit gebruikt de kandidaten die de oplosser bijhoudt; zet Kandidaten tonen aan om ze te zien.)",
+  "step.message": "Stap van de oplosser: {{message}}",
+  "step.narrowing_one": "{{count}} kandidaat weggehaald. {{reason}}.",
+  "step.narrowing_other": "{{count}} kandidaten weggehaald. {{reason}}.",
+  "step.narrowingMore_one": "{{count}} kandidaat weggehaald. {{reason}} (en nog {{more}}).",
+  "step.narrowingMore_other": "{{count}} kandidaten weggehaald. {{reason}} (en nog {{more}}).",
+  "step.stuck": "De oplosser loopt vast; probeer Gokken toestaan.",
+  "step.solveCancelled": "Oplossen is geannuleerd.",
+  "step.checkCancelled": "Controleren is geannuleerd.",
+  "notice.contradictionTitle": "Puzzel is niet op te lossen",
+  "notice.contradiction": "De oplosser kwam een tegenspraak tegen:\n\n{{error}}",
+  "notice.noHintTitle": "Geen hint",
+  "notice.noHint": "Er volgt geen cijfer uit één ronde van de regels, en er is geen techniek die werkt. Gebruik Stap om de kandidaten te verkleinen, of Oplossen.",
+  "notice.noProgressTitle": "Geen voortgang",
+  "notice.noProgress": "Een stap van de oplosser verandert de puzzel niet meer. Zet Gokken toestaan aan en gebruik Oplossen om verder te gaan.",
+  "notice.noProgressGuessing": "Een stap van de oplosser verandert de puzzel niet meer. Gebruik Oplossen om gokkend verder te gaan.",
+  "check.title": "Controleren",
+  "check.notUnique": "Deze puzzel heeft meer dan één oplossing, dus de cijfers kunnen niet met de oplossing vergeleken worden; alleen cijfers die een regel breken worden getoond (in rood).",
+  "check.showThem": "Toon ze",
+  "check.marked": "Controleren: de rood gemarkeerde vakjes zijn fout."
 }
