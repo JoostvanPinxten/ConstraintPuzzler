@@ -97,7 +97,9 @@ export function ExampleBoard({ board, testID }: { board: Board; testID?: string 
                   strokeWidth={0.1 * U}
                 />
               )}
-              {cell.value === 'x' && <Circle cx={(x + 0.5) * U} cy={(y + 0.5) * U} r={0.07 * U} fill="#000000" />}
+              {cell.value === 'x' && (
+                <Circle cx={(x + 0.5) * U} cy={(y + 0.5) * U} r={0.07 * U} fill="#000000" />
+              )}
               {cell.value !== null && cell.value !== '#' && cell.value !== 'x' && (
                 <SvgText
                   x={(x + 0.5) * U}
