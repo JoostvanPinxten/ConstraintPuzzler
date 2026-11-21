@@ -3,6 +3,7 @@ import type { Deduction } from '../structure/deduction';
 import type { TechniqueId } from '../guide/techniques';
 import type { Value, ValueOf } from '../structure/types';
 import type { ConstraintGroup } from './constraintgroup';
+import { formatMessage, msg, plainText, type Message } from '../i18n/message';
 
 /** The values that have been filled in for the given cells. */
 export function placedValues(cells: Iterable<Cell>): Value[] {
@@ -115,14 +116,32 @@ export abstract class Constraint {
     return this.constructor.name;
   }
 
-  /** Why this constraint made a change (a Deduction), in words. */
-  explain(_deduction: Deduction): string {
-    return `${this.group.getName()} (${this.summary()})`;
+  /** Why this constraint made a change (a Deduction), in English (see explainMessage). */
+  explain(deduction: Deduction): string {
+    return formatMessage(this.explainMessage(deduction));
+  }
+
+  /** Why this constraint made a change (a Deduction), as a message. */
+  explainMessage(_deduction: Deduction): Message {
+    return msg('constraint.explain', {
+      group: this.group.nameMessage(),
+      rule: this.summaryMessage(),
+    });
+  }
+
+  /** A short description of the rule, e.g. "sum = 17", in English (see summaryMessage). */
+  summary(): string {
+    return formatMessage(this.summaryMessage());
   }
 
   /** A short description of the rule, e.g. "sum = 17", used as its name in the GUI. */
-  summary(): string {
-    return this.getType();
+  summaryMessage(): Message {
+    return plainText(this.getType());
+  }
+
+  /** The description of the rule, in English (see describeMessage). */
+  describe(showHints = true): string {
+    return formatMessage(this.describeMessage(showHints));
   }
 
   /**
@@ -130,8 +149,8 @@ export abstract class Constraint {
    * the description leaves out the candidate values the solver has deduced, so it does not
    * give away hints about the solution.
    */
-  describe(_showHints = true): string {
-    return this.summary();
+  describeMessage(_showHints = true): Message {
+    return this.summaryMessage();
   }
 
   /**

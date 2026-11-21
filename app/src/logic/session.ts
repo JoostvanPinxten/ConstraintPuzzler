@@ -44,6 +44,7 @@ import {
   ui,
   type Notice,
   type UiMessage,
+  type UiParam,
 } from './messages';
 
 export interface Settings {
@@ -432,7 +433,7 @@ export class PuzzleSession {
         this.hints.level === VALUE && !settings.showHints
           ? 'hint.messageCandidates'
           : 'hint.message';
-      this.say(ui(key, { message: this.hints.message() }), this.revealedTechnique());
+      this.say(ui(key, { message: this.hintText() }), this.revealedTechnique());
       this.changed();
       return;
     }
@@ -456,8 +457,13 @@ export class PuzzleSession {
     }
     this.hintPlacements = this.hints.level === VALUE ? placementsOf(this.hints.deduction) : null;
     this.inputMessage = null;
-    this.say(ui('hint.message', { message: this.hints.message() }), this.revealedTechnique());
+    this.say(ui('hint.message', { message: this.hintText() }), this.revealedTechnique());
     this.changed();
+  }
+
+  /** What the hint says now, as an engine message (or empty). */
+  private hintText(): UiParam {
+    return this.hints.hintMessage() ?? '';
   }
 
   /** The hint's technique, once the hint is shown in full (naming it earlier gives it away). */
@@ -483,7 +489,7 @@ export class PuzzleSession {
     const step = this.solver.lastStep;
     if (step !== null) {
       this.selection = { kind: 'cell', cell: step.cell };
-      this.say(ui('step.message', { message: step.describe() }), step.techniqueId());
+      this.say(ui('step.message', { message: step.describeMessage() }), step.techniqueId());
     } else if (changed) {
       const deductions = this.solver.log.deductions;
       this.say(
@@ -561,10 +567,13 @@ export class PuzzleSession {
       const result = this.game.check(solution);
       const marks = new Set([...result.wrongValues, ...result.wrongNotes]);
       this.notice = result.isAllCorrect()
-        ? { title: ui('check.title'), text: plain(result.summary()) }
+        ? {
+            title: ui('check.title'),
+            text: ui('message.core', { message: result.summaryMessage() }),
+          }
         : {
             title: ui('check.title'),
-            text: plain(result.summary()),
+            text: ui('message.core', { message: result.summaryMessage() }),
             confirm: { label: ui('check.showThem'), action: () => this.showCheckMarks(marks) },
           };
     }

@@ -1,6 +1,7 @@
 import type { Cell } from '../structure/cell';
 import type { TechniqueId } from '../guide/techniques';
 import type { Deduction } from '../structure/deduction';
+import { msg, valueList, type Message } from '../i18n/message';
 import { ContradictionError } from '../structure/errors';
 import { formatValues, sortedValues, type Value, type ValueOf } from '../structure/types';
 import { combinations, Constraint, placedValues } from './constraint';
@@ -10,7 +11,7 @@ export class UniqueValueConstraint extends Constraint {
   static override difficulty = 2; // a value that fits only one cell of the group
 
   /** why a candidate was removed by a subset deduction: cell -> value -> reason */
-  removalReasons = new Map<Cell, Map<Value, string>>();
+  removalReasons = new Map<Cell, Map<Value, Message>>();
 
   override reset(): void {
     super.reset();
@@ -22,7 +23,7 @@ export class UniqueValueConstraint extends Constraint {
   }
 
   /** Remove values from cells, remembering the reason for explain(). */
-  removeWithReason(cells: Iterable<Cell>, values: Iterable<Value>, reason: string): void {
+  removeWithReason(cells: Iterable<Cell>, values: Iterable<Value>, reason: Message): void {
     const toRemove = new Set(values);
     for (const cell of cells) {
       for (const value of sortedValues(cell.getPossibleValues())) {
@@ -39,8 +40,8 @@ export class UniqueValueConstraint extends Constraint {
   }
 
   /** The reason a subset deduction gave for this removal, if it made it. */
-  subsetReason(deduction: Deduction): string | null {
-    const reasons = new Set<string | undefined>();
+  subsetReason(deduction: Deduction): Message | null {
+    const reasons = new Set<Message | undefined>();
     for (const value of deduction.removed) {
       reasons.add(this.removalReasons.get(deduction.cell)?.get(value));
     }
@@ -73,9 +74,12 @@ export class UniqueValueConstraint extends Constraint {
           const others = openCells.filter((c) => !subset.includes(c));
           if (!others.some((c) => [...values].some((v) => c.values.has(v)))) continue;
           const names = subset.map((c) => c.getName()).join('; ');
-          const reason =
-            `${this.group.getName()}: ${names} can only hold ${formatValues(values)} between` +
-            ` them, so no other cell can (${this.summary()})`;
+          const reason = msg('unique.nakedSubset', {
+            group: this.group.nameMessage(),
+            cells: names,
+            values: valueList(values),
+            rule: this.summaryMessage(),
+          });
           this.withTechnique('nakedSubset', () => this.removeWithReason(others, values, reason));
           found = true;
           break;
@@ -111,19 +115,22 @@ export class UniqueValueConstraint extends Constraint {
     return 'Unique Value Constraint';
   }
 
-  override summary(): string {
-    return 'all different';
+  override summaryMessage(): Message {
+    return msg('unique.summary');
   }
 
-  override explain(deduction: Deduction): string {
+  override explainMessage(deduction: Deduction): Message {
     const reason = this.subsetReason(deduction);
     if (reason !== null) return reason;
-    const group = this.group.getName();
+    const group = this.group.nameMessage();
     if (deduction.setsValue()) {
-      return `${group} needs ${deduction.value} and it fits nowhere else`;
+      return msg('unique.needs', { group, value: deduction.value as Value });
     }
-    const removed = sortedValues(deduction.removed).join(', ');
-    return `${group} already has ${removed} (${this.summary()})`;
+    return msg('unique.alreadyHas', {
+      group,
+      values: valueList(deduction.removed),
+      rule: this.summaryMessage(),
+    });
   }
 
   /** The cells that share their value with another cell of the group. */
@@ -143,10 +150,10 @@ export class UniqueValueConstraint extends Constraint {
     return result;
   }
 
-  override describe(_showHints = true): string {
+  override describeMessage(_showHints = true): Message {
     const placed = placedValues(this.group.getCells());
-    if (placed.length === 0) return 'The values must all differ; nothing is placed yet.';
-    return `The values must all differ; placed so far: ${formatValues(placed)}.`;
+    if (placed.length === 0) return msg('unique.describeEmpty');
+    return msg('unique.describe', { values: valueList(placed) });
   }
 
   override getAllowedValuesForValueList(

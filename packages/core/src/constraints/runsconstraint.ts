@@ -4,7 +4,9 @@ import type { Deduction } from '../structure/deduction';
 import { ContradictionError } from '../structure/errors';
 import type { Puzzle } from '../structure/puzzle';
 import { sortedValues, type Value, type ValueOf } from '../structure/types';
+import { formatMessage, msg, type Message } from '../i18n/message';
 import { Constraint } from './constraint';
+import { clueMessage, describeRuns, explainRuns } from './runsexplanation';
 
 /** The value of an empty (white) cell. */
 export const BLANK: Value = 0;
@@ -45,7 +47,7 @@ export const RUNS_TECHNIQUE_DIFFICULTY: Readonly<Record<RunsTechnique, number>> 
   placements: 5,
 };
 
-interface Reason {
+export interface Reason {
   readonly technique: RunsTechnique;
   /** the block that covers the cell, and its first and last start (overlap) */
   readonly run?: number;
@@ -98,11 +100,6 @@ export function paletteOf(puzzle: Puzzle): readonly PaletteColor[] | null {
     if (constraint instanceof RunsConstraint) return constraint.palette;
   }
   return null;
-}
-
-/** '4' or '4-6' (1-based positions in a line). */
-function cellRange(from: number, to: number): string {
-  return from === to ? `cell ${from + 1}` : `cells ${from + 1}-${to + 1}`;
 }
 
 /**
@@ -200,12 +197,9 @@ export class RunsConstraint extends Constraint {
     return this.palette.find((c) => c.value === value)?.name ?? String(value);
   }
 
-  /** '3 1' for one colour, else '3 red, 1 black'; 'no blocks' when empty. */
+  /** '3 1' for one colour, else '3 red, 1 black'; 'no blocks' when empty (in English). */
   clueText(runs: readonly Run[] = this.runs): string {
-    if (runs.length === 0) return 'no blocks';
-    const colors = this.palette.filter((c) => c.value !== BLANK).length;
-    if (colors <= 1) return runs.map((r) => String(r.length)).join(' ');
-    return runs.map((r) => `${r.length} ${this.colorName(r.color)}`).join(', ');
+    return formatMessage(clueMessage(this, runs));
   }
 
   notify(_cell: Cell): void {}
@@ -281,7 +275,7 @@ export class RunsConstraint extends Constraint {
   }
 
   /** The reason of a deduction this constraint made (the hardest, for several values). */
-  private reasonOf(deduction: Deduction): Reason {
+  reasonOf(deduction: Deduction): Reason {
     const reasons = this.reasons.get(deduction.cell);
     const values = deduction.setsValue() ? [deduction.value as Value] : [...deduction.removed];
     let hardest: Reason = { technique: 'placements' };
@@ -535,96 +529,16 @@ export class RunsConstraint extends Constraint {
     return 'Runs Constraint';
   }
 
-  override summary(): string {
-    return `blocks ${this.clueText()}`;
+  override summaryMessage(): Message {
+    return msg('runs.summary', { clue: clueMessage(this, this.runs) });
   }
 
-  override describe(_showHints = true): string {
-    const cells = this.group.getCells();
-    const known = cells.filter((c) => c.getValue() !== null).length;
-    const rule =
-      this.runs.length === 0
-        ? 'This line has no blocks: all its cells are blank'
-        : `The blocks, in this order: ${this.clueText()}`;
-    if (known === cells.length) return `${rule}; complete.`;
-    return `${rule}; ${known} of ${cells.length} cells known.`;
+  override describeMessage(_showHints = true): Message {
+    return describeRuns(this);
   }
 
-  override explain(deduction: Deduction): string {
-    const group = this.group.getName();
-    const line = group.toLowerCase().startsWith('column') ? 'column' : 'line';
-    const reason = this.reasonOf(deduction);
-    const index = this.group.cells.indexOf(deduction.cell);
-    const value = deduction.setsValue()
-      ? (deduction.value as Value)
-      : (sortedValues(deduction.removed)[0] as Value);
-    const name = this.colorName(value);
-    switch (reason.technique) {
-      case 'wholeLine':
-        if (this.runs.length === 0) return `${group} has no blocks, so all its cells are blank`;
-        return `the blocks of ${group} (${this.clueText()}) and the gaps they need fill the whole ${line}`;
-      case 'overlap': {
-        const b = reason.run ?? 0;
-        const run = this.runs[b] as Run;
-        const first = reason.first ?? index;
-        const last = reason.last ?? index;
-        const color = this.colorName(run.color);
-        const where =
-          first === last
-            ? `can only start at cell ${first + 1}`
-            : `starts somewhere in ${cellRange(first, last)}`;
-        const why = this.boundsWhy(b, first, last);
-        return (
-          `block ${b + 1} of ${group} (${this.clueText([run])}) ${where}` +
-          (why === '' ? '' : ` (${why})`) +
-          `, so it always covers ${cellRange(last, first + run.length - 1)}: this cell is ${color}`
-        );
-      }
-      case 'reach':
-        if (deduction.setsValue())
-          return `no block of ${group} can reach this cell, so it is blank`;
-        if (!this.runs.some((r) => r.color === value)) return `${group} has no ${name} blocks`;
-        return `no ${name} block of ${group} can reach this cell`;
-      case 'placements': {
-        const all = `of all ways to place the blocks of ${group} (${this.clueText()}) that fit the cells known so far`;
-        if (deduction.setsValue()) return `${all}, every one makes this cell ${name}`;
-        return `${all}, none makes this cell ${name}`;
-      }
-    }
-  }
-
-  /**
-   * Why block b starts no earlier than `first` and no later than `last`: the blocks before or
-   * after it need the room, or else the cells known so far. Empty when it can start anywhere.
-   */
-  private boundsWhy(b: number, first: number, last: number): string {
-    const n = this.group.cells.length;
-    const run = this.runs[b] as Run;
-    const open = this.placements(this.group.cells.map(() => new Set(this.group.getValues())));
-    const reasons: string[] = [];
-    const blocks = (runs: readonly Run[], side: string, cells: number): string => {
-      const which = runs.length === 1 ? `the block ${side} it` : `the blocks ${side} it`;
-      const filled = runs.reduce((sum, r) => sum + r.length, 0);
-      const gaps = cells - filled > 1 ? ', with gaps' : cells > filled ? ', with a gap' : '';
-      const room = side === 'before' ? 'first' : 'last';
-      const need = runs.length === 1 ? 'needs' : 'need';
-      return `${which} (${this.clueText(runs)}) ${need} at least the ${room} ${cells === 1 ? 'cell' : `${cells} cells`}${gaps}`;
-    };
-    const known: string[] = [];
-    if (first > 0) {
-      if (open !== null && open.firstStart[b] === first) {
-        reasons.push(blocks(this.runs.slice(0, b), 'before', first));
-      } else known.push(`before cell ${first + 1}`);
-    }
-    if (last + run.length < n) {
-      if (open !== null && open.lastStart[b] === last) {
-        reasons.push(blocks(this.runs.slice(b + 1), 'after', n - last - run.length));
-      } else known.push(`after cell ${last + 1}`);
-    }
-    if (known.length > 0) {
-      reasons.push(`the cells known so far keep it from starting ${known.join(' or ')}`);
-    }
-    return reasons.join('; ');
+  override explainMessage(deduction: Deduction): Message {
+    return explainRuns(this, deduction);
   }
 
   override toString(): string {

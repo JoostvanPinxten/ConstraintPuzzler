@@ -2,6 +2,7 @@
 import { TotalSumValueConstraint } from '../constraints/totalsumvalueconstraint';
 import { UniqueValueConstraint } from '../constraints/uniquevalueconstraint';
 import type { PositionedCell } from '../structure/cell';
+import { msg } from '../i18n/message';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import {
@@ -58,7 +59,7 @@ export function parseKakuroLines(lines: readonly string[], filename = '<kakuro>'
       if (new Set(positions.map((p) => p.key())).size !== positions.length) {
         throw new Error('a cell appears more than once in this total');
       }
-      const group = puzzle.addConstraintGroup('Line');
+      const group = puzzle.addConstraintGroup(msg('group.line'));
       for (const position of positions) group.addCell(cells.get(position.key()) as PositionedCell);
       group.addConstraint(UniqueValueConstraint);
       group.addConstraint(TotalSumValueConstraint).setTotalValue(value);

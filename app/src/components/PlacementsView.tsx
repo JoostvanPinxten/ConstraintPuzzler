@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Polygon, Rect } from 'react-native-svg';
 
+import { formatCore } from '../i18n';
 import { HighlightRole, roleColor } from '../logic/highlight';
 import { textColorOn } from '../logic/layout';
 import { placementsCaption } from '../logic/placements';
@@ -49,7 +50,10 @@ export function PlacementsView({
   return (
     <View style={styles.box} testID="hint-placements">
       <Text style={styles.caption}>
-        {placementsCaption(diagram, (v) => session.puzzle.valueName(v))}
+        {placementsCaption(diagram, (v) => {
+          const name = session.puzzle.valueNameMessage(v);
+          return typeof name === 'object' ? formatCore(name) : String(name);
+        })}
       </Text>
       <Svg width={width} height={height}>
         {lines.map((line, l) =>

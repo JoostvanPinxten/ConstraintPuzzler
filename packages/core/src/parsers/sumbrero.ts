@@ -10,6 +10,7 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import { TotalSumValueConstraint } from '../constraints/totalsumvalueconstraint';
 import { UniqueValueConstraint } from '../constraints/uniquevalueconstraint';
+import { msg, type MessageKey } from '../i18n/message';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import {
@@ -70,6 +71,13 @@ export function lineKind(group: ConstraintGroup): LineKind | null {
   return kind in LINE_DIRECTIONS ? (kind as LineKind) : null;
 }
 
+/** The catalog keys of the line names, e.g. "Descending row 3". */
+const LINE_KIND_KEYS: Readonly<Record<LineKind, MessageKey>> = {
+  [COLUMN]: 'group.sumbreroColumn',
+  [DESCENDING_ROW]: 'group.descendingRow',
+  [ASCENDING_ROW]: 'group.ascendingRow',
+};
+
 const LINE_STATEMENTS: Record<string, [LineKind, (position: Position) => number]> = {
   column: [COLUMN, (p) => p.x()],
   row_descending: [DESCENDING_ROW, descendingRow],
@@ -118,7 +126,7 @@ export function parseSumbreroLines(lines: readonly string[], filename = '<sumbre
       if (lineCells.length === 0)
         throw new Error(`${kind.toLowerCase()} ${index} contains no cells`);
 
-      const group = puzzle.addConstraintGroup(`${kind} ${index}`);
+      const group = puzzle.addConstraintGroup(msg(LINE_KIND_KEYS[kind], { index }));
       for (const c of lineCells) group.addCell(c);
       group.addConstraint(UniqueValueConstraint);
       group

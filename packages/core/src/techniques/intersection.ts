@@ -1,7 +1,8 @@
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
-import { cellNames, spotsFor, Technique, type Finding } from './technique';
+import { msg, type Message } from '../i18n/message';
+import { cellNames, spotsFor, Technique, withReason, type Finding } from './technique';
 
 interface Overlap {
   /** the group whose candidates for a value all lie in the overlap */
@@ -25,8 +26,8 @@ export class IntersectionRemoval extends Technique {
 
   private overlapsCache: Overlap[] | null = null;
 
-  override getType(): string {
-    return 'Intersection removal';
+  override typeMessage(): Message {
+    return msg('technique.intersection');
   }
 
   /** Every ordered pair of exact cover groups that share at least two cells. */
@@ -55,19 +56,20 @@ export class IntersectionRemoval extends Technique {
           .getCells()
           .filter((c) => !cells.has(c) && !c.hasValue() && c.values.has(value));
         if (targets.length === 0) continue;
-        const reason =
-          `${from.getName()} can only hold ${value} in ${cellNames(spots)}, which ${to.getName()}` +
-          ` shares with it; so ${value} is in one of those cells and in no other cell of` +
-          ` ${to.getName()} (${this.getType().toLowerCase()})`;
-        return {
+        return withReason({
           technique: this,
           value,
           groups: [from],
           cover: [to],
           pattern: spots,
           targets,
-          reason,
-        };
+          reasonMessage: msg('intersection.reason', {
+            from: from.nameMessage(),
+            to: to.nameMessage(),
+            value,
+            cells: cellNames(spots),
+          }),
+        });
       }
     }
     return null;

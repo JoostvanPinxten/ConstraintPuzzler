@@ -1,7 +1,8 @@
 import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
+import { msg, valueList, type Message } from '../i18n/message';
 import type { Deduction } from '../structure/deduction';
-import { formatValues, sortedValues, type ValueOf } from '../structure/types';
+import { sortedValues, type ValueOf } from '../structure/types';
 import { Constraint } from './constraint';
 
 /** Enforces lesserCell < greaterCell. */
@@ -57,24 +58,29 @@ export class CellGreaterThanCellConstraint extends Constraint {
     return new Set();
   }
 
-  override summary(): string {
-    if (this.lesserCell === null || this.greaterCell === null) {
-      return 'smaller than (cells not set)';
-    }
-    return `(${this.lesserCell.getName()}) < (${this.greaterCell.getName()})`;
+  override summaryMessage(): Message {
+    if (this.lesserCell === null || this.greaterCell === null) return msg('greater.summaryNotSet');
+    return msg('greater.summary', {
+      lesser: this.lesserCell.getName(),
+      greater: this.greaterCell.getName(),
+    });
   }
 
-  override describe(showHints = true): string {
+  override describeMessage(showHints = true): Message {
     const lesser = this.lesserCell;
     const greater = this.greaterCell;
-    if (lesser === null || greater === null) {
-      return 'The cells of this constraint have not been set.';
+    if (lesser === null || greater === null) return msg('greater.notSet');
+    const text = msg('greater.describe', { lesser: lesser.getName(), greater: greater.getName() });
+    const lesserValue = lesser.getValue();
+    const greaterValue = greater.getValue();
+    if (lesserValue !== null && greaterValue !== null) {
+      return msg('greater.satisfied', { text, lesser: lesserValue, greater: greaterValue });
     }
-    const text = `Cell (${lesser.getName()}) is smaller than cell (${greater.getName()})`;
-    if (lesser.hasValue() && greater.hasValue()) {
-      return `${text}; satisfied: ${lesser.getValue()} < ${greater.getValue()}.`;
-    }
-    if (!showHints) return `${text}.`;
-    return `${text}; candidates ${formatValues(lesser.values)} < ${formatValues(greater.values)}.`;
+    if (!showHints) return msg('sentence.end', { text });
+    return msg('greater.candidates', {
+      text,
+      lesser: valueList(lesser.values),
+      greater: valueList(greater.values),
+    });
   }
 }

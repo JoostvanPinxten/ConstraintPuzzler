@@ -1,6 +1,7 @@
 import { ExactCoverConstraint } from '../constraints/exactcoverconstraint';
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { TechniqueId } from '../guide/techniques';
+import { formatMessage, type Message } from '../i18n/message';
 import type { Cell } from '../structure/cell';
 import type { Deduction } from '../structure/deduction';
 import type { Puzzle } from '../structure/puzzle';
@@ -24,8 +25,18 @@ export interface Finding {
   readonly pattern: readonly Cell[];
   /** the cells that lose the value */
   readonly targets: readonly Cell[];
-  /** the finding in words */
+  /** the finding in words, in English */
   readonly reason: string;
+  /** the finding in words, as a message */
+  readonly reasonMessage: Message;
+}
+
+/** A finding without its reason in English, which `withReason` adds. */
+export type FindingDraft = Omit<Finding, 'reason'>;
+
+/** The finding with its reason in English. */
+export function withReason(draft: FindingDraft): Finding {
+  return { ...draft, reason: formatMessage(draft.reasonMessage) };
 }
 
 export type TechniqueClass<T extends Technique = Technique> = (new (puzzle: Puzzle) => T) & {
@@ -59,8 +70,13 @@ export abstract class Technique {
     return this.getDifficulty();
   }
 
-  /** The name of the technique, e.g. "X-Wing". */
-  abstract getType(): string;
+  /** The name of the technique, e.g. "X-Wing" (in English, see typeMessage). */
+  getType(): string {
+    return formatMessage(this.typeMessage());
+  }
+
+  /** The name of the technique, e.g. "X-Wing", as a message. */
+  abstract typeMessage(): Message;
 
   /** The technique as explained to players (its TECHNIQUE_GUIDE entry). */
   abstract readonly guideId: TechniqueId;
@@ -117,9 +133,14 @@ export abstract class Technique {
     return found.size === 1 && finding !== undefined ? finding : null;
   }
 
-  /** Why this technique removed the candidates of a Deduction, in words. */
+  /** Why this technique removed the candidates of a Deduction, in English. */
   explain(deduction: Deduction): string {
-    return this.findingFor(deduction)?.reason ?? this.getType();
+    return formatMessage(this.explainMessage(deduction));
+  }
+
+  /** Why this technique removed the candidates of a Deduction, as a message. */
+  explainMessage(deduction: Deduction): Message {
+    return this.findingFor(deduction)?.reasonMessage ?? this.typeMessage();
   }
 
   /** Whether the finding still removes something in the current state. */

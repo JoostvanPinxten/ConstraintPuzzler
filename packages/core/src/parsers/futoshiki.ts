@@ -2,6 +2,7 @@
 import { CellGreaterThanCellConstraint } from '../constraints/cellgreaterthancellconstraint';
 import { createFutoshikiPuzzle } from '../puzzlefactory';
 import type { Cell } from '../structure/cell';
+import { msg } from '../i18n/message';
 import type { Puzzle } from '../structure/puzzle';
 import { parseInteger, PuzzleFileError } from './common';
 import { readGridValues } from './sudoku';
@@ -18,7 +19,7 @@ export type Relation = readonly [greater: [number, number], lesser: [number, num
 
 /** Adds a 'Relativity' group with a CellGreaterThanCellConstraint: greater > lesser. */
 export function addRelation(puzzle: Puzzle, greaterCell: Cell, lesserCell: Cell): void {
-  const group = puzzle.addConstraintGroup('Relativity');
+  const group = puzzle.addConstraintGroup(msg('group.relativity'));
   const constraint = group.addConstraint(CellGreaterThanCellConstraint);
   group.addCell(greaterCell);
   group.addCell(lesserCell);

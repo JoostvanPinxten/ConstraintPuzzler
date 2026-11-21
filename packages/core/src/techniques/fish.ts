@@ -2,7 +2,8 @@ import { combinations } from '../constraints/constraint';
 import type { ConstraintGroup } from '../constraints/constraintgroup';
 import type { TechniqueId } from '../guide/techniques';
 import type { Cell } from '../structure/cell';
-import { listNames, spotsFor, Technique, type Finding, type TechniqueClass } from './technique';
+import { andList, msg, type Message } from '../i18n/message';
+import { spotsFor, Technique, withReason, type Finding, type TechniqueClass } from './technique';
 
 /**
  * A "fish" of size n (X-Wing: 2, Swordfish: 3, Jellyfish: 4): when n parallel lines (e.g.
@@ -78,14 +79,22 @@ export abstract class Fish extends Technique {
           }
         }
         if (targets.length === 0) continue;
-        const baseNames = listNames(base.map((g) => g.getName()));
-        const coverNames = listNames(cover.map((g) => g.getName()));
-        const reason =
-          `${this.getType()} on ${value}: ${baseNames} can only hold ${value} in cells of` +
-          ` ${coverNames}; each of those gets its ${value} there, so no other cell of` +
-          ` ${coverNames} can hold ${value}`;
+        const reasonMessage = msg('fish.reason', {
+          type: this.typeMessage(),
+          value,
+          base: andList(base.map((g) => g.nameMessage())),
+          cover: andList(cover.map((g) => g.nameMessage())),
+        });
         const pattern = base.flatMap((b) => spotsOf.get(b) as Cell[]);
-        return { technique: this, value, groups: base, cover, pattern, targets, reason };
+        return withReason({
+          technique: this,
+          value,
+          groups: base,
+          cover,
+          pattern,
+          targets,
+          reasonMessage,
+        });
       }
     }
     return null;
@@ -112,8 +121,8 @@ export class XWing extends Fish {
   static override size = 2;
   static override difficulty = 6;
 
-  override getType(): string {
-    return 'X-Wing';
+  override typeMessage(): Message {
+    return msg('technique.xWing');
   }
 }
 
@@ -123,8 +132,8 @@ export class Swordfish extends Fish {
   static override size = 3;
   static override difficulty = 7;
 
-  override getType(): string {
-    return 'Swordfish';
+  override typeMessage(): Message {
+    return msg('technique.swordfish');
   }
 }
 
@@ -134,7 +143,7 @@ export class Jellyfish extends Fish {
   static override size = 4;
   static override difficulty = 8;
 
-  override getType(): string {
-    return 'Jellyfish';
+  override typeMessage(): Message {
+    return msg('technique.jellyfish');
   }
 }

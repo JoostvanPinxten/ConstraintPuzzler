@@ -6,6 +6,8 @@ import {
   type Run,
 } from '../constraints/runsconstraint';
 import type { Cell } from '../structure/cell';
+import { paletteColorName } from '../constraints/runsexplanation';
+import { msg, type Message } from '../i18n/message';
 import { Position } from '../structure/position';
 import { Puzzle } from '../structure/puzzle';
 import type { Value } from '../structure/types';
@@ -140,7 +142,7 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
     palette.map((c) => c.value),
   );
   // hints and the info panel say "red", not "1"
-  puzzle.setValueNames(new Map(palette.map((c) => [c.value, c.name])));
+  puzzle.setValueNames(new Map(palette.map((c) => [c.value, paletteColorName(c)])));
   const grid = puzzle.getGrid();
   const cells: Cell[][] = [];
   for (let y = 0; y < height; y++) {
@@ -148,20 +150,24 @@ export function parseNonogramLines(rawLines: readonly string[], filename = '<non
     for (let x = 0; x < width; x++) row.push(grid.addCell(new Position(x + 1, y + 1)));
     cells.push(row);
   }
-  const addLine = (name: string, lineCells: Cell[], clue: { runs: Run[]; line: Line }): void => {
+  const addLine = (name: Message, lineCells: Cell[], clue: { runs: Run[]; line: Line }): void => {
     const group = puzzle.addConstraintGroup(name);
     const constraint = group.addConstraint(RunsConstraint);
     for (const cell of lineCells) group.addCell(cell);
     try {
       constraint.setRuns(clue.runs, palette);
     } catch (error) {
-      throw new PuzzleFileError(filename, clue.line.number, `${name}: ${(error as Error).message}`);
+      throw new PuzzleFileError(
+        filename,
+        clue.line.number,
+        `${group.getName()}: ${(error as Error).message}`,
+      );
     }
   };
-  rows.forEach((clue, y) => addLine(`Row ${y + 1}`, cells[y] as Cell[], clue));
+  rows.forEach((clue, y) => addLine(msg('group.row', { index: y + 1 }), cells[y] as Cell[], clue));
   columns.forEach((clue, x) =>
     addLine(
-      `Column ${x + 1}`,
+      msg('group.column', { index: x + 1 }),
       cells.map((row) => row[x] as Cell),
       clue,
     ),

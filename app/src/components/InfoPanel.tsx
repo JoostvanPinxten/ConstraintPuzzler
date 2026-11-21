@@ -13,6 +13,7 @@ import {
   roleColor,
   RULED_OUT_COLOR,
 } from '../logic/highlight';
+import { formatCore } from '../i18n';
 import { formatUi } from '../logic/messages';
 import type { PuzzleSession } from '../logic/session';
 import { describeSelection } from '../logic/tree';
@@ -34,7 +35,9 @@ export function InfoPanel({
   const { settings } = useSettings();
   const selection = session.selection;
   const cell = session.selectedCell();
-  const note = cell !== null ? session.game.violationNote(cell, session.violations()) : null;
+  const noteMessage =
+    cell !== null ? session.game.violationNoteMessage(cell, session.violations()) : null;
+  const note = noteMessage === null ? null : formatCore(noteMessage);
   const entries = legend(session.highlight().values());
   const technique = session.shownFinding !== null;
 
